@@ -13,7 +13,7 @@ let state_from_proc i =
       begin match List.nth a i with
       (* Could be done with
       | VConstr(s)  -> s
-      But we would lose the error of a wrong model, changing it for an error in the scene.
+      But we would lose the error of a wrong model, changing it for an error of a scene.
       *)
       | VConstr("Invalid")    -> "Invalid"
       | VConstr("Shared")     -> "Shared"
@@ -63,7 +63,7 @@ let build_scene () =
   (* Create trans *)
   Petri.add_trans pmodel "get shared"     (["gnt_shared"], {x=250; y=450});
   Petri.add_trans pmodel "get exclusive"  (["gnt_exclusive"], {x=500; y=200});
-  Petri.add_trans pmodel "goto invalid"   (["inv_2"; "inv_1"], {x=500;y=450});
+  Petri.add_trans pmodel "goto invalid" (["inv_2"; "inv_1"], {x=500;y=450});
 
   (* Create arcs *)
   Petri.add_arc pmodel (Petri.StateToTrans("Invalid", "get shared"));

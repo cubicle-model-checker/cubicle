@@ -1,84 +1,140 @@
+(*        Library for making petri net         *)
+(* see https://en.wikipedia.org/wiki/Petri_net *)
+(*                                             *)
+
 open Graphics
 open Maps
 
 (* Library for making petri net *)
 
-(*
-  On demande a l'utilisateur de créer un réseau de pétri.
-  Pour cela, l'utilisateur entre :
-    Places
-    Transition
-    Arc
-
-  On peut dire qu'il définit :
-    Une place (Quel type ?)
-    Une fonction qui a un proc associe une place
-  OU ALORS
-    Une fonction qui pour une  place renvoie les procs qui y appartiennet : Permet plus aisément de décrire les procs
-    Et de les afficher correctement et les scales a usein d'un prikc 
-
-  Réglages possible:
-    Couleur a donner a un proc (Tous noir, Une certaine couleur si c'était un pion qui a pris une transition au dernier tour, ...)
-
-L'utilisateur veut créer un réseau de pétri.
-Il a besoin de définir :
-  Un nombre d'état possible
-  Une fonction qui a tout proc donne un état
-  Des transitions (Simplement des string, doivent correspondre a des transitions cubicle)
-  Des arcs, a savoir des flèches qui relient des états a des transition
-*)
 
 (* Graphical Settings *)
 let window_size = 600
-let state_size  = 50
-let proc_perc   = 80 (* size taken by proc in perc of state_size *)
-let proc_space_perc = 50
-let trans_size  = 50
 
-(* Petri Settings *)
+let state_size  = 50
+let state_text_size   = 50
+let state_text_space  = 2
+
+let proc_perc   = 80 (* How much percentage of the available space should proc take *)
+let proc_space_perc = 50
+
+let trans_size  = 50  
+let trans_text_size = 50
+let trans_text_space = 2
+
+let indic_size = 50
+let indic_text_size = 50
+let indic_text_space = 2
+
+let button_size = 50
+let button_text_size = 50
+let button_text_space = 2
+
+(* Point of the arrow settings *)
+let arrow_size    = 20  (* Length of the pointy bit *)
+let arrow_pointy  = 30  (* How pointy is it ?       *)
+
+module Vector =
+struct
+  type t = { x : int; y : int }
+
+  let add a b = { x = a.x + b.x; y = a.y + b.y }
+  let sub a b = { x = a.x - b.x; y = a.y - b.y }
+
+  let mult k a = { x = k* a.x; y = k* a.y }
+  let div  k a = { x = a.x /k; y = a.y /k}
+
+  let dot a b     = a.x * b.x + a.y * b.y
+  let norm a      = int_of_float (sqrt (float_of_int (dot a a)))
+  let normalize a = div (norm a) a
+  let setsize   k a = div (norm a) (mult k a)
+  let pp a = Format.printf "(%d, %d)" a.x a.y
+
+  let orth v = [| { x = v.y; y = -v.x }  ; {x = -v.y; y=v.x}|]
+
+  let distance a b = Int.abs (a.x - b.x) + Int.abs (a.y - b.y)
+
+  let zero = { x = 0; y = 0 }
+end
+
 module Petri : sig
+
   type arc = 
-    | Out of string * int     (* From transition to state *)
-    | In  of int    * string  (* From state to transition *)
-  
-  type pos = { x : int; y : int }
+    | TransToState of string * string  (* From transition to state *)
+    | StateToTrans of string * string  (* From state to transition *)
+
+  exception Unknown_trans of string
+  exception Unknown_state of string
+
   type t
 
   val empty               : unit -> t
-  val add_state           : t -> (int * pos) -> unit
-  val add_trans           : t -> (string*pos) -> unit
+  val add_state           : t -> string -> Vector.t -> unit
+  val add_trans           : t -> string -> (string list * Vector.t) -> unit
   val add_arc             : t -> arc -> unit
-  val set_state_fun       : t -> (int -> int) -> unit
-  val set_state           : t -> (int * pos) list -> unit
+  val add_indic           : t -> string -> (unit -> bool) -> Vector.t -> unit
+  val add_button          : t -> string -> (unit -> unit) -> Vector.t -> unit
 
-  val get_states          : t -> pos IntMap.t
-  val get_trans           : t -> (string,pos) Hashtbl.t
-  val get_state_for_proc  : t -> int -> int
+  val set_state_fun       : t -> (int -> string) -> unit
+
+  val get_state_pos       : t -> string -> Vector.t
+  val get_state_map       : t -> (string, Vector.t) Hashtbl.t
+
+  val get_trans_table     : t -> (string, string list * Vector.t) Hashtbl.t
+  val get_trans_pos       : t -> string -> Vector.t
+  val get_trans_repr      : t -> string -> string list
+  val get_state_for_proc  : t -> int -> string
   val get_arcs            : t -> arc list
+  val get_indics          : t -> (string * (unit -> bool) * Vector.t) list
+  val get_buttons         : t -> (string * (unit -> unit) * Vector.t) list
 end
 =
 struct
   
   type arc = 
-  | Out of string * int     
-  | In  of int    * string
-  type pos = { x : int; y : int }
-  (* Place, Place_pos; Transition, Transition_pos; Arcs ; place_id -> proc on this place*)
-  type t = pos IntMap.t ref * (string, pos) Hashtbl.t * arc list ref * (int -> int) ref
-  
-  let empty () = (ref IntMap.empty, Hashtbl.create 10, ref [], ref (fun (x : int) -> 0))
+  | TransToState of string * string  
+  | StateToTrans  of string * string
+  type t = 
+    { states  : (string, Vector.t) Hashtbl.t;
+      trans   : (string, string list * Vector.t) Hashtbl.t;
+      arcs    : arc list ref;
+      sfp_fun : (int -> string) ref;
+      indics  : (string * (unit -> bool) * Vector.t ) list ref;
+      buttons : (string * (unit -> unit) * Vector.t) list ref;
+    }
+
+  exception Unknown_trans of string
+  exception Unknown_state of string
+
+  let empty () : t = 
+    {
+      states  = Hashtbl.create 10;
+      trans   = Hashtbl.create 10; 
+      arcs    = ref [];
+      sfp_fun = ref (fun (x : int) -> "");
+      indics  = ref [];  
+      buttons = ref [];
+    }
  
-  let add_state (ss,_,_,_) (s_id, sp) = ss := IntMap.add s_id sp (!ss)
-  let add_trans (_,ts,_,_) (tname, tpos) = Hashtbl.add ts tname tpos 
-  let add_arc        (_,_,arcs,_) arc = arcs := arc::!arcs
+  let add_state pet sname sp    = Hashtbl.add pet.states sname sp
+  let add_trans pet tname tval  = Hashtbl.add pet.trans tname tval
+  let add_arc   pet arc         = pet.arcs := arc::!(pet.arcs)
+  let add_indic pet iname ifun ival   = pet.indics := (iname, ifun, ival)::!(pet.indics)
+  let add_button pet bname bfun bpos  = pet.buttons := (bname, bfun, bpos)::!(pet.buttons)
 
-  let set_state_fun (_,_,_,f) g = f := g
-  let set_state     pet ss' = List.iter (add_state pet) ss'
+  let set_state_fun pet g = pet.sfp_fun := g
+  
+  let get_state_pos pet  i = try Hashtbl.find pet.states i with Not_found -> raise (Unknown_state i)
+  let get_state_map pet = pet.states
 
-  let get_states (i,_,_,_)  = !i
-  let get_trans  (_,ts,_,_) = ts
-  let get_state_for_proc (_,_,_,f) p = !f p
-  let get_arcs (_,_,a,_) = !a
+  let get_trans_table pet = pet.trans
+  let get_trans_pos   pet tname = try (let (_,p) = Hashtbl.find pet.trans tname in p) with Not_found -> raise (Unknown_trans tname)
+  let get_trans_repr  pet tname = try (let (r,_) = Hashtbl.find pet.trans tname in r) with Not_found -> raise (Unknown_trans tname)
+
+  let get_state_for_proc pet p = !(pet.sfp_fun) p
+  let get_arcs pet = !(pet.arcs)
+  let get_indics pet = !(pet.indics) 
+  let get_buttons pet = !(pet.buttons)
 
 end
 
@@ -86,18 +142,89 @@ let petrinstance = ref (Petri.empty ())
 let set_petri p  = petrinstance := p
 let get_petri () = !petrinstance
 
+
 let pre_init () = 
     let ws = string_of_int window_size in
     open_graph (" "^ws^"x"^ws);
     auto_synchronize false
 
+let get_pressed_key () = if key_pressed () then Some(read_key ()) else None
+let handle_input    () = 
+  match get_pressed_key () with
+  | Some(c) -> 
+      begin match c with
+      | ' ' -> Format.printf "Toggled pause. \n%!"; Simulator.toggle_pause ()
+      | 'a' -> Format.printf "Taking step back...\n%!"; Simulator.take_step_back ()
+      | 'z' -> Format.printf "Taking step forward...\n%!"; Simulator.take_step_forward ()
+      | 'r' -> Format.printf "Resetting simulation...\n%!"; Simulator.reset ()
+      | c   -> Format.printf "Pressed unbound key : '%c'\n%!" c 
+      end
+  | _ -> ()
+
+let handle_mouse () = 
+  if button_down () then 
+    let bs = button_size / 2 in 
+    let (mx, my) = mouse_pos () in 
+    let handle_button ((_ : string), (bfun : (unit -> unit)), (bpos : Vector.t)) =
+      if mx >= bpos.x - bs && mx <= bpos.x + bs && my >= bpos.y - bs && my <= bpos.y + bs then
+        bfun()
+    in 
+    List.iter handle_button (Petri.get_buttons (get_petri ()))
+  
+
+let update dt  = (* Automatically manage pausing and navigating through the trace. *)
+  handle_input ();
+  handle_mouse ()
+
 let draw_for_state () =
   clear_graph ();
 
-  let sttable = Petri.get_states (get_petri ()) in
-  let trtable = Petri.get_trans  (get_petri ()) in
+  let pet = get_petri () in
+  let sttable = Petri.get_state_map pet   in
+  let trtable = Petri.get_trans_table pet in
 
-  let draw_state state_id ({x; y} : Petri.pos) = 
+  (* Draw arcs *)
+  set_color black;
+  let draw_arc a =
+    let draw_arrow (from : Vector.t) (toward : Vector.t) = 
+      let a = Vector.setsize arrow_pointy (Vector.sub from toward) in
+      let draw_pointy pointy = 
+          let o = Vector.add toward (Vector.setsize arrow_size pointy) in
+          let o = Vector.add a o in
+          moveto toward.x toward.y;
+          lineto o.x o.y;
+        in
+        moveto from.x from.y;
+        lineto toward.x toward.y;
+        let ort = Vector.orth (Vector.sub toward from) in
+        draw_pointy (ort.(0));
+        draw_pointy (ort.(1));
+      in
+
+    let fst, scnd = match a with
+    | Petri.StateToTrans(st,tr) -> 
+        let (f,s) = (Petri.get_state_pos pet st, Petri.get_trans_pos pet tr)  in
+        (* Get on the border of the circle not inside *)
+        let diff = Vector.setsize state_size (Vector.sub s f)                 in
+        let f = Vector.add diff f in
+        (* Get on the border of the square not inside *)
+        let diff = Vector.setsize trans_size (Vector.sub f s) in
+        let s = Vector.add diff s in 
+
+        f,s
+    | Petri.TransToState(tr,st) -> 
+        let (f,s) = (Petri.get_trans_pos pet tr, Petri.get_state_pos pet st)  in
+        let diff = Vector.setsize state_size (Vector.sub f s)                 in
+        f,(Vector.add diff s)
+    in
+    draw_arrow fst scnd;
+  in
+  List.iter draw_arc (Petri.get_arcs pet); 
+
+
+  (* Draw states *)
+  set_text_size state_text_size; 
+  let draw_state state_id ({x; y} : Vector.t) = 
     set_color black;
     draw_circle x y state_size;
     let proc_in_state = ref [] in
@@ -105,6 +232,12 @@ let draw_for_state () =
       let ps = Petri.get_state_for_proc (get_petri ()) i in
       if ps = state_id then proc_in_state := i::(!proc_in_state)
     done;
+
+    let (tsx, tsy) = text_size state_id in
+    let nx = x - (tsx / 2) in
+    let ny = y - tsy - state_size - state_text_space in
+    moveto nx ny;
+    draw_string state_id;
 
     let nb_proc = List.length (!proc_in_state) in
     if nb_proc > 0 then
@@ -115,55 +248,78 @@ let draw_for_state () =
             proc
           with Failure(_) -> []
         in
+        (* Organize proc in a cell *)
         let row_size = int_of_float (Float.ceil (Float.sqrt (float_of_int nb_proc))) in
         let psize = (proc_perc * state_size) / (row_size * 100) in
         let rpsize = (psize * proc_space_perc) / 100 in
-        let cen = ((row_size-1) * psize) / 4 in
+        let cen = if row_size <= 1 then 0 else (row_size * psize) / 4 in
         let xtopleft = x - cen in 
         let ytopleft = y - cen in
+        let rpdiv = rpsize / 2 in
         let draw_proc i p =
           let xingrid = i mod row_size in
           let yingrid = i / row_size in
-          let rx = xtopleft + (xingrid*psize) in
-          let ry = ytopleft + (yingrid*psize) in
+          let rx  = xtopleft + (xingrid*psize) in
+          let ry  = ytopleft + (yingrid*psize) in
           let col = if List.mem p procs then red else black in
           set_color col;
           fill_circle rx ry rpsize;
         in
         List.iteri draw_proc (!proc_in_state);
       )
-
   in
-  IntMap.iter draw_state sttable;
+  Hashtbl.iter draw_state sttable;
 
+  (* Draw transitions *)
   let ts = trans_size / 2 in
-  let draw_trans trans_name ({x;y} : Petri.pos) =
+  set_text_size trans_text_size; 
+  let draw_trans trans_name (slist, ({x;y} : Vector.t)) =
     let col =
       try
         let ((t_name, _), _) = Traces.get (Simulator.full_trace) in
-        if t_name = trans_name then red else black
+        if List.mem t_name slist then red else black
       with Failure(_) -> (black)
     in
     set_color col;
-    fill_rect (x-ts) (y-ts) trans_size trans_size
+    fill_rect (x-ts) (y-ts) trans_size trans_size;
+    let (tsx, tsy) = text_size trans_name in
+    let nx = x - (tsx / 2) in
+    let ny = y + tsy - trans_size - trans_text_space in
+    moveto nx ny;
+    draw_string trans_name
   in
   
   Hashtbl.iter draw_trans trtable;
   set_color black;
 
-  let draw_arc a = 
-    let fst, scnd = match a with
-    | Petri.In(st,tr) -> IntMap.find st sttable, Hashtbl.find trtable tr
-    | Petri.Out(tr,st) -> Hashtbl.find trtable tr, IntMap.find st sttable
-    in
-    moveto fst.x fst.y;
-    lineto scnd.x scnd.y;
-    (* TODO
-       Should be drawing arrow here instead of line
-       Should be taking into account the size of the object that you want to draw an arrow  to : You don't want the arrow to go to it's center but to it's border
-    *)
+  (* Draw indicators *)
+  let hs = indic_size / 2 in
+  let draw_indicator ((name : string), (f : unit -> bool), (pos : Vector.t)) =
+    let status = f () in
+    let color  = if status then red else black in
+    set_color color;
+    fill_rect (pos.x - hs) (pos.y - hs) indic_size indic_size;
+    let (tsx, tsy) = text_size name in
+    let nx = pos.x - (tsx / 2) in
+    let ny = pos.y - tsy - indic_size - button_text_space in
+    moveto nx ny;
+    draw_string name;
   in
 
-  List.iter draw_arc (Petri.get_arcs (get_petri ())); 
+  List.iter draw_indicator (Petri.get_indics pet);
+
+  (* Draw buttons *)
+  let bs = button_size / 2 in 
+  let draw_button ((name : string), (f : unit -> unit), (pos : Vector.t)) =
+    set_color black;
+    fill_rect (pos.x - bs) (pos.y - bs) button_size button_size;
+    let (tsx, tsy) = text_size name in
+    let nx = pos.x - (tsx / 2) in
+    let ny = pos.y - tsy - button_size - button_text_space in
+    moveto nx ny;
+    draw_string name;
+    ()
+  in 
+  List.iter draw_button (Petri.get_buttons pet);
 
   synchronize ()

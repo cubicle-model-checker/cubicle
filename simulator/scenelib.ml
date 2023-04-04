@@ -24,10 +24,17 @@ let trans_text_space = 2
 
 let indic_size = 50
 let indic_text_size = 50
+let indic_text_space = 2
+
+let button_size = 50
+let button_text_size = 50
+let button_text_space = 2
 
 (* Point of the arrow settings *)
 let arrow_size    = 20  (* Length of the pointy bit *)
 let arrow_pointy  = 30  (* How pointy is it ?       *)
+
+
 
 module Vector =
 struct
@@ -68,6 +75,8 @@ module Petri : sig
   val add_trans           : t -> string -> (string list * Vector.t) -> unit
   val add_arc             : t -> arc -> unit
   val add_indic           : t -> string -> (unit -> bool) -> Vector.t -> unit
+  val add_button          : t -> string -> (unit -> unit) -> Vector.t -> unit
+
   val set_state_fun       : t -> (int -> string) -> unit
 
   val get_state_pos       : t -> string -> Vector.t
@@ -79,6 +88,7 @@ module Petri : sig
   val get_state_for_proc  : t -> int -> string
   val get_arcs            : t -> arc list
   val get_indics          : t -> (string * (unit -> bool) * Vector.t) list
+  val get_buttons         : t -> (string * (unit -> unit) * Vector.t) list
 end
 =
 struct
@@ -92,6 +102,7 @@ struct
       arcs    : arc list ref;
       sfp_fun : (int -> string) ref;
       indics  : (string * (unit -> bool) * Vector.t ) list ref;
+      buttons : (string * (unit -> unit) * Vector.t) list ref;
     }
 
   exception Unknown_trans of string
@@ -104,12 +115,14 @@ struct
       arcs    = ref [];
       sfp_fun = ref (fun (x : int) -> "");
       indics  = ref [];  
+      buttons = ref [];
     }
  
   let add_state pet sname sp    = Hashtbl.add pet.states sname sp
   let add_trans pet tname tval  = Hashtbl.add pet.trans tname tval
   let add_arc   pet arc         = pet.arcs := arc::!(pet.arcs)
   let add_indic pet iname ifun ival   = pet.indics := (iname, ifun, ival)::!(pet.indics)
+  let add_button pet bname bfun bpos  = pet.buttons := (bname, bfun, bpos)::!(pet.buttons)
 
   let set_state_fun pet g = pet.sfp_fun := g
   
@@ -123,6 +136,7 @@ struct
   let get_state_for_proc pet p = !(pet.sfp_fun) p
   let get_arcs pet = !(pet.arcs)
   let get_indics pet = !(pet.indics) 
+  let get_buttons pet = !(pet.buttons)
 
 end
 
@@ -149,8 +163,20 @@ let handle_input    () =
       end
   | _ -> ()
 
+let handle_mouse () = 
+  if button_down () then 
+    let bs = button_size / 2 in 
+    let (mx, my) = mouse_pos () in 
+    let handle_button ((_ : string), (bfun : (unit -> unit)), (bpos : Vector.t)) =
+      if mx >= bpos.x - bs && mx <= bpos.x + bs && my >= bpos.y - bs && my <= bpos.y + bs then
+        bfun()
+    in 
+    List.iter handle_button (Petri.get_buttons (get_petri ()))
+  
+
 let update dt  = (* Automatically manage pausing and navigating through the trace. *)
-  handle_input ()
+  handle_input ();
+  handle_mouse ()
 
 let draw_for_state () =
   clear_graph ();
@@ -277,11 +303,25 @@ let draw_for_state () =
     fill_rect (pos.x - hs) (pos.y - hs) indic_size indic_size;
     let (tsx, tsy) = text_size name in
     let nx = pos.x - (tsx / 2) in
-    let ny = pos.y - tsy - state_size - state_text_space in
+    let ny = pos.y - tsy - indic_size - button_text_space in
     moveto nx ny;
     draw_string name;
   in
 
   List.iter draw_indicator (Petri.get_indics pet);
+
+  (* Draw buttons *)
+  let bs = button_size / 2 in 
+  let draw_button ((name : string), (f : unit -> unit), (pos : Vector.t)) =
+    set_color black;
+    fill_rect (pos.x - bs) (pos.y - bs) button_size button_size;
+    let (tsx, tsy) = text_size name in
+    let nx = pos.x - (tsx / 2) in
+    let ny = pos.y - tsy - button_size - button_text_space in
+    moveto nx ny;
+    draw_string name;
+    ()
+  in 
+  List.iter draw_button (Petri.get_buttons pet);
 
   synchronize ()

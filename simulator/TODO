@@ -54,11 +54,20 @@ Mais qui n'itère que sur un modèle.
 
 ## Petri:
 
-- Ordonner proprement les procs pour qu'on comprenne bien qui est le nouveau proc
-- Centrer automatiquement l'affichage de tout le graphe sur l'image et le scale
-- Afficher sur l'écran si la simulation est en pause, le numéro du step ou on est.
-- Ajouter la possibilité d'exporter une trace pour pouvoir la lire plus tard -> Nécéssite une fonctionalité "Save trace" d'un simulateur qui construit un modèle qui lirait cette trace
+Problème : La librairie Petri peut devenir très complexe. Il peut devenir nécéssaire d'avoir une librairie sur plein de fichiers différents
 
+- Améliorer les boutons: Avoir des boutons permettant d'indiquer si un bouton est cliquable, si la souris est sur un bouton changer sa couleur, ...
+-> Les boutons peuvent devenir complexe et on peut penser a l'ajout d'un module Button
+
+Dans un monde idéal : 
+- Avoir des flèches qui sont des courbes et plus des droites pour permettre plus de flexibilité
+- Centrer automatiquement l'affichage pour permettre de scale facilement OU ALORS permettre un zoom + de se déplacer dans l'espace 
+-> Faisable en ajoutant une caméra mais ça complique beaucoup 
+- Afficher si la simulation est en pause ainsi que le numéro du step courant
+- Ajouter la possibilité d'exporter une trace pour pouvoir la lire plus tard -> Nécéssite une fonctionalité "Save trace" d'un simulateur qui construit un modèle qui lirait cette trace
+- Ordonner proprement les procs pour qu'on comprenne bien qui est le nouveau proc
+
+- Menu d'aide en appuyant sur h
 
 ## Divers
 
@@ -71,10 +80,6 @@ Notament:
 - Raise une erreur custom en cas de out of bounds
 
 ## TESTER PETRI
-
-- germanish : On voudait req_share & req_exclusive controllé par des boutons
-	
-PB : QuitExclusive n'est pas quit exclusive
 
 - dekker_n
 
