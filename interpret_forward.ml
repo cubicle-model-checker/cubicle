@@ -1227,6 +1227,13 @@ let fuzzy_cubicle glob_env trans all_procs tsys =
     Queue.push seed cands) transition_list;
 
   (*Queue.iter (fun el -> Format.eprintf "S1: %a, S2%a@." Hstring.print (fst el.(0)) Hstring.print (fst el.(1))) cands;*)
+
+  Queue.iter (fun el -> Format.eprintf "Seed:@.";
+    Array.iter (fun (x,y) -> Format.eprintf "%a(%a); " Hstring.print x Variable.print_vars y) el;
+    Format.eprintf "@.") cands;
+
+
+  
   let running = ref true in
   while !running do
     let candidate = if Queue.is_empty cands then Queue.pop done_cand else Queue.pop cands in
