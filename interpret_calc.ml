@@ -819,7 +819,7 @@ let check_reqs reqs env sigma tname=
 	    let t21 = Term.subst sigma t2 in 
 	    Format.eprintf "Checking requirements, comparing t1 and t2: %a -- %a@." Term.print t11 Term.print t21;
 	  end;
-	let b, nv = check_comp_req t1 t2 env sigma op in
+	let b, nv = check_comp_req t1 t2 !glob sigma op in
 	glob := nv; 
 	if b  then ()
 	else raise (TopError (FalseReq tname))		
@@ -832,6 +832,7 @@ let check_reqs reqs env sigma tname=
 
 
 let check_switches swts env name sigma  =
+  let env = ref env in
   List.fold_left (fun (acc,flag) (sa, t) ->
     let v=
       SAtom.fold (fun atom acc2 ->
@@ -846,17 +847,21 @@ let check_switches swts env name sigma  =
 		    try List.assoc n1 sigma with
 			Not_found -> assert false 
 		  in
-		  check_comp (Elem(g, Var)) t2 env sigma op && acc2
+		  let b,me = check_comp_req (Elem(g, Var)) t2 !env sigma op in
+		  env := me;
+		   b && acc2
 		|  _, Elem(n1,Var) ->
 
 		  let g =
 		    try List.assoc n1 sigma with
 			Not_found -> assert false 
 		  in
-		  check_comp (Elem(g, Var)) t1 env sigma op && acc2
-	        
+		  let b,me = check_comp_req (Elem(g, Var)) t1 !env sigma op in
+		  env := me;
+		  b && acc2
 		| _ ->
-		  let b = check_comp t1 t2 env sigma op in
+		  let b,me = check_comp_req t1 t2 !env sigma op in
+		  env := me;
 		  b && acc2
 	  end 
 	  | True -> true && acc2
@@ -864,26 +869,39 @@ let check_switches swts env name sigma  =
 	  | _ -> assert false		
     ) sa true in
     if v && not flag then
-      (Env.add name (to_interpret (Term.subst sigma t) ) env , v)  
+      (Env.add name (to_interpret (Term.subst sigma t) ) !env , v)  
     else 
     (acc,flag)  
-  ) (env,false) swts 
+  ) (!env,false) swts 
       
 	
 
 let update_vals env assigns sigma =
+  let env = ref env in 
   List.fold_left (fun acc (name, assign) ->
     let elem = Elem(name, Glob) in
     match assign with
       | UTerm t ->
 	begin
 	  match t with
-	    | Elem (_, Glob) | Access _ ->
-	      let v = Env.find (Term.subst sigma t) env in
-	      Env.add elem v acc
+	    | Elem (n, Glob) | Access (n,_) ->
+	      begin
+		let v =
+		  try Env.find (Term.subst sigma t) !env
+		  with Not_found ->
+		    begin
+		      let _,ty = Smt.Symbol.type_of n in
+		      let new_el = {value = random_value ty; typ = ty } in
+ 		      new_el
+		    end
+		in
+		env := Env.add t v !env;
+		let acc = Env.add t v acc in
+		Env.add elem v acc
+	      end 
 	    | Arith(t', cs) ->
 	      let i_cs = int_of_consts cs in
-	      let {value = v; typ = typ} = Env.find elem env in
+	      let {value = v; typ = typ} = Env.find elem !env in
 	      let v' = match v with
 		| VInt vi -> VInt (vi + i_cs) |  _ -> assert false in	      
 	      Env.add elem {value = v';  typ = typ} acc
@@ -896,9 +914,9 @@ let update_vals env assigns sigma =
 	      Env.add elem (to_interpret (Term.subst sigma t)) acc
 	end 
       | UCase t ->
-	fst (check_switches t env elem sigma )
+	fst (check_switches t !env elem sigma )
   (* (Satom.t * term ) list --> c1 : t1 ...*)
-  ) env assigns 
+  ) !env assigns 
 
 let upd_arr_direct sigma orig upd tname =
   let (ups, upt) = List.hd upd.up_swts in
@@ -909,17 +927,34 @@ let upd_arr_direct sigma orig upd tname =
       let t = Term.subst sigma elem in
       begin
 	match upt with
-	  | Elem(_, Glob) -> let t2 = Env.find upt orig in
-					t, t2
-	  | Access _ -> let upt = Term.subst sigma upt in
-			let t2 = Env.find upt orig in
+	  | Elem(n, Glob) -> let t2, more =
+			       try
+				 Env.find upt orig, None
+			       with Not_found ->
+				 begin
+				   let _,ty = Smt.Symbol.type_of n in
+				   let new_el = {value = random_value ty; typ = ty } in
+ 				   new_el, Some (upt, new_el)
+				 end
+			     in
+			     t, t2, more
+	  | Access (na, _ ) -> let upt = Term.subst sigma upt in
+			let t2, more =
+			  try Env.find upt orig, None
+			  with Not_found ->
+			    begin
+			      let _,ty = Smt.Symbol.type_of na in
+			      let new_el = {value = random_value ty; typ = ty } in
+ 			      new_el, Some (upt, new_el)
+			    end
 			
-					t, t2
+			in
+			t, t2, more
 	  | ProcManip ([tpm], addsub) -> let tt = Term.subst sigma tpm in
-			   t, (to_interpret (ProcManip([tt],addsub))) 
+			   t, (to_interpret (ProcManip([tt],addsub))), None 
 
 	    
-	  | _ -> t, (to_interpret (Term.subst sigma upt))
+	  | _ -> t, (to_interpret (Term.subst sigma upt)), None
       end 
       | _ -> assert false
 
@@ -1023,6 +1058,8 @@ let switchy_satoms op g1 g2 sacc =
       else false && sacc 
 
 let upd_array_case sigma orig upd tname env =
+  let orig = ref orig in
+  let env = ref env in 
   let all_procs = Variable.give_procs (Options.get_interpret_procs ()) in 
   (*List.iter (fun x -> Format.eprintf "pre filter: %a@." Hstring.print x) all_procs;*)
   (*let all_procs = List.filter (fun x ->
@@ -1031,7 +1068,9 @@ let upd_array_case sigma orig upd tname env =
     v.value = VAlive) all_procs in*)
   (*List.iter (fun x -> Format.eprintf "Post filter: %a@." Hstring.print x) all_procs;*)
   let swts = upd.up_swts in
- List.fold_left (fun acc proc ->
+  List.fold_left (fun acc proc ->
+      let added = ref [] in 
+
     let e, _ = 
       List.fold_left (fun (acc2,f) (sa,t) ->
 	let t = 
@@ -1043,7 +1082,20 @@ let upd_array_case sigma orig upd tname env =
 		  List.assoc pl sigma
 		with Not_found -> proc
 	      in
-	      Env.find (Access(n,[pl'])) orig		
+	      let elem = (Access(n,[pl'])) in
+	      begin
+		try 
+		  Env.find elem !orig
+		with Not_found -> 
+		  begin
+		    let _,ty = Smt.Symbol.type_of n in
+		    let new_el = {value = random_value ty; typ = ty } in
+		    (*orig := Env.add elem new_el !orig;
+		    env := Env.add elem new_el !env;*)
+		    added := (elem, new_el)::!added;
+ 		    new_el
+		  end 
+	      end 
 	    end
 	  | Access (n,[pl1;pl2]) ->
 	    begin
@@ -1057,10 +1109,34 @@ let upd_array_case sigma orig upd tname env =
 		  List.assoc pl2 sigma
 		with Not_found -> proc
 	      in
-	      Env.find (Access(n,[pl1';pl2'])) orig
-		
+	      let elem = (Access(n,[pl1';pl2'])) in
+	      try 
+		Env.find elem !orig
+	      with Not_found -> 
+		begin
+		  let _,ty = Smt.Symbol.type_of n in
+		  let new_el = {value = random_value ty; typ = ty } in
+		  (*orig := Env.add elem new_el !orig;
+		  env := Env.add elem new_el !env;*)
+		  added := (elem, new_el)::!added;
+ 		  new_el
+		end 
 	    end 
-	  | Elem(_, Glob) -> Env.find t env
+	  | Elem(n, Glob) ->
+	    begin
+	      try 
+		Env.find t !orig (*NOTE: changed from env to orig*)
+	      with Not_found ->
+		begin
+		  let _,ty = Smt.Symbol.type_of n in
+		  let new_el = {value = random_value ty; typ = ty } in
+		  (*orig := Env.add t new_el !orig;
+		  env := Env.add t new_el !env;*)
+		  added := (t, new_el)::!added;
+ 		  new_el
+		end 
+	    end
+	      
 	  | Elem(np, Var) -> let tt = Variable.subst sigma np in {value = VProc tt; typ = Smt.Type.type_proc} 
 	  | ProcManip([pmt], addsub) ->
 	    let pmt = Term.subst sigma pmt in
@@ -1099,26 +1175,26 @@ let upd_array_case sigma orig upd tname env =
 		      try List.assoc n1 sigma with
 			  Not_found ->  proc
 		    in
-		    check_comp (Elem(g, Var)) t2 orig sigma op  && sacc
+		    check_comp (Elem(g, Var)) t2 !orig sigma op  && sacc
 		  | _, Elem(n1,Var) ->
 		    let g =
 		      try List.assoc n1 sigma with
 			  Not_found ->  proc
 		    in
-		    check_comp t1 (Elem(g, Var))orig sigma op  && sacc
+		    check_comp t1 (Elem(g, Var)) !orig sigma op  && sacc
 		      	    
 		  | Access(n1, [pn1]), _ ->
 		    let g =
 		      try List.assoc pn1 sigma with
 			Not_found -> proc
 		    in
-		    check_comp (Access(n1,[g])) t2 orig sigma op  && sacc
+		    check_comp (Access(n1,[g])) t2 !orig sigma op  && sacc
 		    
 		  | _, Access(n1, [pn1]) ->
 		    let g =
 		      try List.assoc pn1 sigma with
 			Not_found -> proc
-		    in check_comp t1 (Access(n1,[g])) orig sigma op && sacc(*DO THIS FOR MATRIX*)
+		    in check_comp t1 (Access(n1,[g])) !orig sigma op && sacc(*DO THIS FOR MATRIX*)
 
 		  | Access(n1, [pn1;pn2]), _ ->
 		    let g =
@@ -1129,7 +1205,7 @@ let upd_array_case sigma orig upd tname env =
 		      try List.assoc pn2 sigma with
 			Not_found -> proc
 		    in
-		    check_comp (Access(n1,[g;g1])) t2 orig sigma op  && sacc
+		    check_comp (Access(n1,[g;g1])) t2 !orig sigma op  && sacc
 		    
 		  | _, Access(n1, [pn1;pn2]) ->
 		    let g =
@@ -1139,36 +1215,36 @@ let upd_array_case sigma orig upd tname env =
 		    let g1 =
 		      try List.assoc pn2 sigma with
 			  Not_found -> proc
-		    in check_comp t1 (Access(n1,[g;g1])) orig sigma op && sacc
-
-		    
-
-
-
-
+		    in check_comp t1 (Access(n1,[g;g1])) !orig sigma op && sacc
 		    
 		  | _ ->
 		    (*let t1 = Term.subst sigma t1 in
 		    let t2 = Term.subst sigma t2 in*) 
-		    check_comp t1 t2 orig sigma op && sacc
+		    check_comp t1 t2 !orig sigma op && sacc
 	    end
 	  | True -> true && sacc
 	  | False -> false && sacc
-	  | Ite _ -> assert false
-	    
-	) sa true
-	  
+	  | Ite _ -> assert false	    
+	) sa true	  
       in
       if flag && not f then
-	let temp = Access(upd.up_arr, [proc]) in
-	Env.add temp t acc2, true
-      else acc2, f 	
+	begin
+	  let temp = Access(upd.up_arr, [proc]) in
+	  orig := List.fold_left (fun a (el, v) -> Env.add el v a) !orig !added;
+	  env := List.fold_left (fun a (el, v) -> Env.add el v a) !env !added;  
+	  let acc2 = List.fold_left (fun a (el, v) -> Env.add el v a) acc2 !added in 
+	  Env.add temp t acc2, true
+	end
+      else
+	 acc2, f
     ) (acc,false) swts
     in e  
-  ) env all_procs
+  ) !env all_procs
   
 
 let upd_matrix sigma orig upd env =
+  let orig = ref orig in
+  let env = ref env in 
   (*List.iter (fun x -> Format.eprintf "%a@." Hstring.print x) upd.up_arg;*)
   let s = Hstring.view (List.hd upd.up_arg) in
   let s1 = String.sub s 0 1 in
@@ -1210,7 +1286,7 @@ let upd_matrix sigma orig upd env =
 	  end
 	else facc,fflag
 	  
-      ) (orig,false) upd.up_swts
+      ) (!orig,false) upd.up_swts
       in e
       
     | false ->
@@ -1229,9 +1305,9 @@ let upd_matrix sigma orig upd env =
 	let proc1,proc2 =
 	  match procs with | [p1;p2] -> p1,p2 | _ -> assert false
 	in
-	let  e, _ = 
+	let added = ref [] in
+	let  e, _ =  
 	  List.fold_left (fun (acc2, f) (sa,t) ->
-
 	    let t = 
 	      match t with
 		| Access(n,[pl]) ->
@@ -1242,7 +1318,25 @@ let upd_matrix sigma orig upd env =
 		      with Not_found ->
 		        if Hstring.compare pl (List.hd upd.up_arg) = 0
 			then proc1 else proc2
-		    in Env.find (Access(n,[pl'])) orig		
+		    in
+		    let el_m = (Access(n,[pl'])) in
+		    (*Format.eprintf "el_m: %a@." Term.print el_m;*)
+		    try
+		      let gg = Env.find el_m !orig in
+		      Format.eprintf "found %a @." Term.print el_m; gg
+		    with Not_found ->
+		      begin
+			let _,ty = Smt.Symbol.type_of n in
+			let new_el = {value = random_value ty; typ = ty } in
+			(*orig := Env.add el_m new_el !orig;
+			env := Env.add el_m new_el !env;*)
+			Format.eprintf "el_m %a@." Term.print el_m;
+			added := (el_m, new_el)::!added;
+			Format.eprintf "added length: %d@." (List.length !added);
+
+ 			new_el
+		      end
+			
 		  end
 		| Access(n,[pl1;pl2]) ->
 		  (*Format.eprintf "pl1: %a, pl2: %a@." Hstring.print pl1 Hstring.print pl2;
@@ -1263,10 +1357,34 @@ let upd_matrix sigma orig upd env =
 			if Hstring.compare pl2 (List.hd upd.up_arg) = 0
 			then proc1 else proc2
 
-		    in Env.find (Access(n,[pl1';pl2'])) orig
-		    
+		    in
+		    let el_m = (Access(n,[pl1';pl2'])) in
+		    try 
+		      Env.find el_m !orig
+		    with Not_found ->
+		      begin
+			let _,ty = Smt.Symbol.type_of n in
+			let new_el = {value = random_value ty; typ = ty } in
+			(*orig := Env.add el_m new_el !orig;
+			env := Env.add el_m new_el !env;*)
+			added := (el_m, new_el)::!added;
+ 			new_el
+		      end 
 		  end 
-		| Elem(_, Glob) -> Env.find t orig
+		| Elem(n, Glob) ->
+		  begin
+		    try 
+		      Env.find t !orig 
+		    with Not_found ->
+		      begin
+			let _,ty = Smt.Symbol.type_of n in
+			let new_el = {value = random_value ty; typ = ty } in
+			(*orig := Env.add t new_el !orig;
+			env := Env.add t new_el !env;*)
+			added := (t, new_el)::!added;
+ 			new_el
+		      end 
+		  end 
 		| Elem(np, Var) ->
 		  let tt = Variable.subst sigma np
 		  in {value = VProc tt; typ = Smt.Type.type_proc} 
@@ -1274,8 +1392,7 @@ let upd_matrix sigma orig upd env =
 		  let pmt = Term.subst sigma pmt in
 		  to_interpret (ProcManip([pmt],addsub))
 		| _ -> to_interpret t
-	    in
-   
+	    in  
 	  let flag =
 	    SAtom.fold (fun atom sacc ->
 	      match atom with
@@ -1316,7 +1433,7 @@ let upd_matrix sigma orig upd env =
 				if Hstring.compare n1 (List.hd upd.up_arg) = 0
 				then proc1 else proc2
 			in
-			check_comp (Elem(g, Var)) t2 orig sigma op  && sacc
+			check_comp (Elem(g, Var)) t2 !orig sigma op  && sacc
 		      | _, Elem(n1,Var) ->
 			let g =
 			  try List.assoc n1 sigma with
@@ -1324,7 +1441,7 @@ let upd_matrix sigma orig upd env =
 				if Hstring.compare n1 (List.hd upd.up_arg) = 0
 				then proc1 else proc2
 			in
-			check_comp t1 (Elem(g, Var)) orig sigma op  && sacc
+			check_comp t1 (Elem(g, Var)) !orig sigma op  && sacc
 		      | Access(n1, [pn1]), _ ->
 			let g =
 			  try List.assoc pn1 sigma with
@@ -1332,7 +1449,7 @@ let upd_matrix sigma orig upd env =
 				if Hstring.compare n1 (List.hd upd.up_arg) = 0
 				then proc1 else proc2
 			in
-			check_comp (Access(n1,[g])) t2 orig sigma op  && sacc
+			check_comp (Access(n1,[g])) t2 !orig sigma op  && sacc
 
 		      |Access(n1, [pn1;pn2]), _ ->
 			let g =
@@ -1347,7 +1464,7 @@ let upd_matrix sigma orig upd env =
 				if Hstring.compare n1 (List.hd upd.up_arg) = 0
 				then proc1 else proc2
 			in 
-			check_comp (Access(n1,[g;g1])) t2 orig sigma op  && sacc
+			check_comp (Access(n1,[g;g1])) t2 !orig sigma op  && sacc
 
 
 		      | _, Access(n1, [pn1;pn2]) ->
@@ -1361,7 +1478,7 @@ let upd_matrix sigma orig upd env =
 			      Not_found -> if Hstring.compare n1 (List.hd upd.up_arg) = 0
 				then proc1 else proc2
 			
-			in check_comp t1 (Access(n1,[g;g1])) orig sigma op && sacc
+			in check_comp t1 (Access(n1,[g;g1])) !orig sigma op && sacc
 			
 
 		      | _, Access(n1, [pn1]) ->
@@ -1369,10 +1486,10 @@ let upd_matrix sigma orig upd env =
 			  try List.assoc pn1 sigma with
 			      Not_found -> if Hstring.compare n1 (List.hd upd.up_arg) = 0
 				then proc1 else proc2
-			in check_comp t1 (Access(n1,[g])) orig sigma op && sacc
+			in check_comp t1 (Access(n1,[g])) !orig sigma op && sacc
 			
 			  
-		      | _ -> check_comp t1 t2 orig sigma op && sacc
+		      | _ -> check_comp t1 t2 !orig sigma op && sacc
 		  (*other to elem*) (*TODO ADD OTHER COMPS*)			
 			
 		  end 		  
@@ -1382,33 +1499,46 @@ let upd_matrix sigma orig upd env =
 	    ) sa true
 
 	  in
-	  (*Format.eprintf "YOY: %a@." Term.print t;*)
 	  if flag && not f then
-	      let temp = Access(upd.up_arr, procs)
+	    begin
+	      let temp = Access(upd.up_arr, procs) in
+	      List.iter (fun (x,y) -> Format.eprintf "%a @." Term.print x) !added;
+	      orig := List.fold_left (fun a (el, v) -> Env.add el v a) !orig !added;
+	      env := List.fold_left (fun a (el, v) -> Env.add el v a) !env !added;   
+	      let acc2 =  List.fold_left (fun a (el, v) -> Env.add el v a) acc2 !added 
 	      in Env.add temp (*to_interpret*) t acc2, true
+	    end 
 	    else acc2, f
 	) (acc,false) upd.up_swts
 	in e  
-      )env all
+      ) !env all
 
       
       
       
     
 let update_arrs sigma orig acc upds =
+  let orig = ref orig in 
   List.fold_left (fun acc1 upd ->
     let name = upd.up_arr in
     (*List.iter (fun x -> Format.eprintf "arg %a@." Hstring.print x) upd.up_arg;*)
     if List.length upd.up_arg = 1 then
       let s = Hstring.view (List.hd upd.up_arg) in
       let s1 = String.sub s 0 1 in
-      if s1 = "_" then 
-      let t, v = upd_arr_direct sigma orig upd name in
-      Env.add t v acc1
+      if s1 = "_" then
+	begin
+	  let t, v, opt = upd_arr_direct sigma !orig upd name in
+	  match opt with
+	    | None -> Env.add t v acc1
+	    | Some (el,v1) ->
+	      orig := Env.add el v1 !orig;
+	      let ev = Env.add t v acc1 in
+	      Env.add el v1 ev  	  
+	end
       else
-	let e = (*upd_arr_case*) upd_array_case sigma orig upd name acc1 in
+	let e = (*upd_arr_case*) upd_array_case sigma !orig upd name acc1 in
 	(*Env.add t v acc1 *) e
-    else upd_matrix sigma orig upd acc1
+    else upd_matrix sigma !orig upd acc1
     
   ) acc upds
 
@@ -1853,7 +1983,7 @@ let check_ureqs ureqs env sigma trname =
       | hd::tl ->
 	begin
 	  try
-	    glob := check_reqs hd env sigma trname
+	    glob := check_reqs hd !glob sigma trname
 	  with
 	    | TopError (FalseReq _) -> aux tl 
 	end
@@ -1937,7 +2067,6 @@ let check_duplicates l =
       if b then raise (TopError DupProcs)
     with Not_found ->  Hashtbl.add h x true
   ) l
-
 
 let possible_for_proc (env,_,_,_) trans all_procs aproc =
   let glob = ref env in 

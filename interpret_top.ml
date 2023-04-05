@@ -923,8 +923,43 @@ let setup_env tsys sys =
     Format.eprintf "First initialized environment: @.";
     print_env fmt env
     end;
+
+
+  let env_final, original_init =
+      Env.fold (fun k x (env_acc,v_acc) ->
+	if Term.compare x throwaway = 0 then
+	  (*begin
+	    match k with 
+	      | Elem(n,_) | Access(n,_) -> 
+		let _, ty = Smt.Symbol.type_of n in
+		(Env.add k {value = random_value ty; typ = ty } env_acc, v_acc)
+		(*(env_acc, v_acc)*)
+	  |  _ -> assert false	
+	    end*)
+	  env_acc, v_acc
+      else
+	begin
+	  match k with
+	    | Elem(n, _) | Access(n, _) ->  
+	      let _, ty = Smt.Symbol.type_of n in
+	      if is_semaphore ty then
+		begin
+		  let temp = {value = semaphore_init x; typ = ty}
+		  in
+		  Env.add k temp env_acc, Env.add k temp v_acc
+		end 
+	      else 
+		  begin
+		    let temp = {value = cub_to_val x ; typ = ty }
+		    in Env.add k temp env_acc, Env.add k temp v_acc
+		  end
+	    | _ -> assert false
+
+	end
+      ) env (Env.empty, Env.empty) in
+ 
   
-    let env_final =
+    (*let env_final =
       Env.mapi (fun k x ->
 	if Term.compare x throwaway = 0 then
 	  begin
@@ -946,7 +981,7 @@ let setup_env tsys sys =
 		{value = cub_to_val x ; typ = ty }
 	    | _ -> assert false
 	end
-      ) env in
+      ) env in*)
    let env_final =
       Env.fold (fun k x acc ->
 	match x.value with
@@ -1426,6 +1461,6 @@ let setup_env tsys sys =
       | TopError e -> Format.printf "%a@." top_report e
       | End_of_file  -> interpret_bool := false
       | Stdlib.Sys.Break -> Format.printf "@."
-      | s ->  let e = Printexc.to_string s in Format.printf "%s %a@." e top_report (InputError)
-      
+      (*| s ->  let e = Printexc.to_string s in Format.printf "%s %a@." e top_report (InputError)
+      *)
   done  
