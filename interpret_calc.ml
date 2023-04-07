@@ -1251,13 +1251,13 @@ let upd_matrix sigma orig upd env =
   let flag =  s1 = "_" in
   (*if flag then normal else case construct*)
   match flag with
-    | true -> 
+    | true ->
+      let added = ref [] in
       let e, _ = List.fold_left (fun (facc,fflag) (sa,t) ->	
 	if not fflag then
 	  begin
 	    let p1,p2 =
 	      SAtom.fold (fun sa acc ->
-		(*Format.eprintf "new fold@.";*)
 		match sa with
 		  | Comp (t1,op,t2) ->
 		    begin
@@ -1278,15 +1278,57 @@ let upd_matrix sigma orig upd env =
 	    in
 	    match p1,p2 with
 	      | Some a, Some b ->
-		let elem = Term.subst sigma (Access(upd.up_arr, [a;b]))  in	    
-		Env.add elem (to_interpret t ) facc, true
+		let elem = Term.subst sigma (Access(upd.up_arr, [a;b]))  in
+		begin
+		  let v = 
+		    match t with
+		      | Elem (n,Glob) ->
+			begin
+			  try
+			    Env.find t !orig
+			  with Not_found ->
+			    begin
+			      let _,ty = Smt.Symbol.type_of n in
+			      let new_el = {value = random_value ty; typ = ty } in
+			      (*orig := Env.add t new_el !orig;
+				env := Env.add t new_el !env;*)
+			      added := (t, new_el)::!added;
+ 			      new_el
+			    end 
+			    
+			end
+		      | Access (n,_) ->
+			begin
+			  let upt = Term.subst sigma t in
+			  try
+			    Env.find upt !orig
+			  with
+			      Not_found ->
+				begin
+				  let _,ty = Smt.Symbol.type_of n in
+				  let new_el = {value = random_value ty; typ = ty } in
+				  (*orig := Env.add t new_el !orig;
+				    env := Env.add t new_el !env;*)
+				  added := (t, new_el)::!added;
+ 				  new_el
+				end 
+			
+			end
+		      | _ -> to_interpret t
+		  in
+		  orig :=  List.fold_left (fun a (el, v) -> Env.add el v a) !orig !added;
+		  env := List.fold_left (fun a (el, v) -> Env.add el v a) !env !added;
+		  Env.add elem v facc, true 
+		end 
+
+		
+		
 	      | Some _, None -> assert false
 	      | None, Some _ -> assert false
 	      | None, None -> assert false
 	  end
 	else facc,fflag
-	  
-      ) (!orig,false) upd.up_swts
+      ) (!env,false) upd.up_swts
       in e
       
     | false ->
@@ -1322,18 +1364,15 @@ let upd_matrix sigma orig upd env =
 		    let el_m = (Access(n,[pl'])) in
 		    (*Format.eprintf "el_m: %a@." Term.print el_m;*)
 		    try
-		      let gg = Env.find el_m !orig in
-		      Format.eprintf "found %a @." Term.print el_m; gg
+		      Env.find el_m !orig 
+		      
 		    with Not_found ->
 		      begin
 			let _,ty = Smt.Symbol.type_of n in
 			let new_el = {value = random_value ty; typ = ty } in
 			(*orig := Env.add el_m new_el !orig;
 			env := Env.add el_m new_el !env;*)
-			Format.eprintf "el_m %a@." Term.print el_m;
 			added := (el_m, new_el)::!added;
-			Format.eprintf "added length: %d@." (List.length !added);
-
  			new_el
 		      end
 			
@@ -1370,7 +1409,7 @@ let upd_matrix sigma orig upd env =
 			added := (el_m, new_el)::!added;
  			new_el
 		      end 
-		  end 
+		  end
 		| Elem(n, Glob) ->
 		  begin
 		    try 
@@ -1384,7 +1423,7 @@ let upd_matrix sigma orig upd env =
 			added := (t, new_el)::!added;
  			new_el
 		      end 
-		  end 
+		  end
 		| Elem(np, Var) ->
 		  let tt = Variable.subst sigma np
 		  in {value = VProc tt; typ = Smt.Type.type_proc} 
@@ -1538,8 +1577,7 @@ let update_arrs sigma orig acc upds =
       else
 	let e = (*upd_arr_case*) upd_array_case sigma !orig upd name acc1 in
 	(*Env.add t v acc1 *) e
-    else upd_matrix sigma !orig upd acc1
-    
+    else upd_matrix sigma !orig upd acc1    
   ) acc upds
 
       
@@ -2177,7 +2215,7 @@ let all_possible_transitions (env,_,_,_) trans all_procs flag=
 	    check_actor_suspension sigma env el.tr_process;
 	    let new_env = check_reqs el.tr_reqs env sigma name in
 	    let trargs = List.map (fun x -> Variable.subst sigma x) args in
-	    let ureqs = uguard  sigma all_procs trargs el.tr_ureq in
+	    let ureqs = uguard sigma all_procs trargs el.tr_ureq in
 	    (*List.iter (fun u -> check_reqs u env sigma name) ureqs;*)
 	    glob := check_ureqs ureqs new_env sigma name; 
 	    (el, procs)::acc_t
@@ -2187,7 +2225,7 @@ let all_possible_transitions (env,_,_,_) trans all_procs flag=
 	      if flag
 	      then
 		raise (TopError StopExecution)
-	      else  raise Exit
+	      else raise Exit
 	    | s -> let e = Printexc.to_string s in Format.printf "%s@." e; assert false      
 	) acc tr_procs
       end 
