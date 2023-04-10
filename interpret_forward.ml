@@ -55,9 +55,7 @@ let install_sigint () =
   Sys.set_signal Sys.sigint 
     (Sys.Signal_handle 
        (fun _ ->
-         Format.printf "\n\n@{<b>@{<fg_magenta>Stopping search@}@} \
-                  Received SIGINT@.";
-         Format.printf "Finalizing search.@.";
+         Format.printf "\n@{<b>@{<fg_magenta>Stopping search@}@}@.";
          raise Exit
        ))
 
@@ -115,6 +113,14 @@ let dead_preds = Hashtbl.create 10
 
 let fuzzy_visited = Hashtbl.create 200
 let fuzz_tr_count = Hashtbl.create 50
+
+let bfs_visited = Hashtbl.create 200
+let remaining_pool = Hashtbl.create 200
+let pool_size = ref 0 
+  
+let fresh = 
+  let cpt = ref 0 in
+  fun () -> incr cpt; !cpt
 
   
 let print_forward_trace fmt el =
@@ -513,6 +519,8 @@ let markov_init_run glob tsys all_procs trans steps matrix possibility_matrix =
 
 let markov_fuzz_run glob tsys all_procs trans steps orig_step all_unsafes =
   (*Random.self_init ();*)
+  let steps = Random.int steps in
+  Format.eprintf "making length %d@." steps;
   let seed = Array.make steps orig_step  in
   seed.(0) <- orig_step;
   let taken = ref 1 in
@@ -532,7 +540,6 @@ let markov_fuzz_run glob tsys all_procs trans steps orig_step all_unsafes =
       let (proposal,prop_procs) = !transitions.(rand) in
       let temp_env = apply_transition prop_procs proposal.tr_name trans !running_env in
       let w2 = entropy_env temp_env trans all_procs in
-
       let flag =
 	if w2 > !w1 then
 	  begin
@@ -1328,28 +1335,14 @@ let fuzzy_cubicle glob_env trans all_procs tsys all_unsafes=
   List.iter (fun x -> Hashtbl.add fuzz_tr_count x.tr_name 0) tsys;
   let length_tr = List.length all_transition_procs in 
   let all_transitions_procs_array = Array.of_list all_transition_procs in
-  let depth = 100 in
+  let depth = Options.depth_ib in
   let cands = Queue.create () in
   let transition_list = all_possible_transitions glob_env trans all_procs false in
-  (*let rand_seed =
-    Array.init depth (fun i ->
-    let el = Random.int length_tr in
-    all_transitions_procs_array.(el))
-  in
-  Queue.push rand_seed cands;*)
   let done_cand = Queue.create () in
   List.iter (fun (tran, pro) ->
-    (*Format.eprintf "tran: %a@." Hstring.print tran.tr_name;*)
     let env = apply_transition pro tran.tr_name trans glob_env in
     let seed = markov_fuzz_run env tsys all_procs trans depth (glob_env, (Array.of_list transition_list), (tran, pro)) all_unsafes in
-    (*Format.eprintf "Seed length: %d@." (Array.length seed);*)
     Queue.push seed cands) transition_list;
-
-  (*Queue.iter (fun el -> Format.eprintf "S1: %a, S2%a@." Hstring.print (fst el.(0)) Hstring.print (fst el.(1))) cands;*)
-
-  (*Queue.iter (fun el -> Format.eprintf "Seed:@.";
-    Array.iter (fun (x,y) -> Format.eprintf "%a(%a); " Hstring.print x Variable.print_vars y) el;
-    Format.eprintf "@.") cands;*)
  
   let running = ref true in
   while !running do
@@ -1374,9 +1367,134 @@ let fuzzy_cubicle glob_env trans all_procs tsys all_unsafes=
       Hashtbl.iter (fun key el -> Format.eprintf "%a ---- %d@." Hstring.print key el) fuzz_tr_count;
       Format.eprintf "-------------------------------------------@."
 
+
+	
+
+let finish_queue queue =
+  Queue.iter (fun (_,_, el) -> incr pool_size; Hashtbl.add remaining_pool (fresh ()) el) queue
+
+let reconstruct_trace parents me =
+  let trace = ref [] in
+  let bad = ref me in
+  let not_init = ref true in
+  while !not_init do
+    let am_init, tr, h, e = Hashtbl.find parents !bad in
+    if am_init then not_init := false
+    else
+      begin
+	match tr with
+	  | Some (t,tr_pr) -> trace := (t.tr_name,tr_pr)::!trace; bad := h
+	  | None -> assert false
+      end
+  done;
+  Format.printf "@{<fg_red>Error trace@}: ";
+  Format.printf "Init";
+  List.iter (fun (x,y) -> Format.printf " -> %a(%a)" Hstring.print x Variable.print_vars y) !trace;
+  Format.printf " -> @{<fg_magenta>unsafe@}@."
+
+exception ReachedUnsafe
+
+let further_bfs node transitions all_procs all_unsafes =
+  try
+    (*let parents = Hashtbl.create 200 in*)
+    let max_depth = Random.int 10 in
+    let curr_depth = ref 0 in
+    let curr = ref 0 in
+    let rem = ref 1 in
+    let time_limit = 5.0 in
+    let to_do = Queue.create () in
+    Queue.push (0,node) to_do;
+    let time = Unix.time () in
+    while (!curr_depth < max_depth) &&
+      (not (Queue.is_empty to_do)) &&
+      ((Unix.time () -. time) < time_limit) do
+      let env_d, env = Queue.pop to_do in
+      let possible = all_possible_transitions env transitions all_procs false in
+      decr rem;
+      List.iter (fun (at,at_p) ->
+	let e = apply_transition at_p at.tr_name transitions env in
+	let he = hash_full_env e in
+	try
+	  let _ = Hashtbl.find bfs_visited he in
+	  ()
+	with Not_found ->
+	  begin
+	    Hashtbl.add bfs_visited he e;
+	    let e_m = env_to_satom_map e in
+	    visited_states := e_m::!visited_states;
+	    incr curr;
+	    incr rem;
+	    Queue.push (env_d + 1, e) to_do
+	  end  ) possible;
+      if env_d > !curr_depth then incr curr_depth    
+    done;
+    Queue.iter (fun (_,x) -> incr pool_size; Hashtbl.add remaining_pool (fresh ()) x) to_do;
+    Format.printf "%d new states added to visited, %d added to remaining pool@." !curr !rem;
+  with
+    | Stdlib.Sys.Break | Exit -> ()
+    
+    
+    
+let interpret_bfs original_env transitions all_procs all_unsafes =
+  try
+    let parents = Hashtbl.create 200 in
+    let max_depth = 20 in
+    let curr_depth = ref 0 in
+    let node = ref 0 in
+    let rem = ref 1 in
+    let time_limit = 20.0 in
+    check_unsafe original_env all_unsafes;
+    let he = hash_full_env original_env in
+    Hashtbl.add bfs_visited he original_env;
+    let to_do = Queue.create () in
+    Queue.push (he, 0,original_env) to_do;
+    Hashtbl.add parents he (true, None, he, original_env);
+    Format.printf "[VISITED][REMAINING][DEPTH]@.";
+    let time = Unix.time () in
+    while (!curr_depth < max_depth) &&
+      (not (Queue.is_empty to_do)) &&
+      ((Unix.time () -. time) < time_limit) do
+      let ha, env_d, env = Queue.pop to_do in
+      decr rem;
+      let possible = all_possible_transitions env transitions all_procs false in
+      List.iter (fun (at,at_p) ->
+	let e = apply_transition at_p at.tr_name transitions env in
+	let he = hash_full_env e in
+	try
+	  let _ = Hashtbl.find bfs_visited he in
+	  ()
+	with Not_found ->
+	  begin
+
+	    Hashtbl.add bfs_visited he e;
+	    Hashtbl.add parents he (false, Some (at, at_p), ha, env);
+	    begin
+	      try
+		check_unsafe e all_unsafes;
+	      with
+		| TopError Unsafe ->
+		  Format.printf "\n@{<b>@{<bg_red>WARNING@}@}@.";
+		  Format.printf "@{<fg_red>Unsafe state reached during forward exploration@}@.";
+		  reconstruct_trace parents he;
+		  raise ReachedUnsafe
+	    end;
+	    let e_m = env_to_satom_map e in
+	    visited_states := e_m::!visited_states;
+	    incr node;
+	    incr rem;
+	    Format.printf "[%d][%d][%d]\r%!" !node !rem env_d;
+	    Queue.push (he, env_d + 1, e) to_do
+	  end ) possible;
+      if env_d > !curr_depth then incr curr_depth
+    done;
+    if not (Queue.is_empty to_do) then finish_queue to_do
+  with
+    | Stdlib.Sys.Break | Exit -> ()
+    | TopError Unsafe ->
+      Format.printf "\n@{<b>@{<bg_red>WARNING@}@}@.";
+      Format.printf "@{<b>@{<fg_red>Initial state is unsafe@}@}\n@.";
+      raise Exit
       
-      
-       
       
       
   (*visited_states := !fuzzy_visited @ !visited_states*)
@@ -1416,7 +1534,49 @@ let extract_procs sa =
   sorted
 
 
-
+let run_forward env all_procs trans unsafes =
+  let max_depth = Random.int !pool_size in
+  Format.printf "Chosen depth for random: %d@." max_depth;
+  let steps = ref 0 in
+  let new_seen = ref 0 in
+  let add_pool = ref 0 in
+  let running_env = ref env in 
+  let transitions =
+    ref (Array.of_list (all_possible_transitions env trans all_procs false)) in
+  while !steps < max_depth do
+    try
+      let l = Array.length !transitions in
+      if l = 0 then raise (TopError Deadlock);
+      let rand = Random.int l in
+      let (apply,apply_procs) = !transitions.(rand) in
+      let new_env = apply_transition apply_procs apply.tr_name trans !running_env in
+      let hash = hash_full_env !running_env in
+      begin
+	try
+	  let _ = Hashtbl.find bfs_visited hash in ()
+	with Not_found ->
+	  begin
+	    Hashtbl.add bfs_visited hash !running_env;
+	    incr new_seen;
+	    let e_m = env_to_satom_map new_env in
+	    visited_states := e_m::!visited_states;
+	    if l > 1 then
+	      begin
+		Hashtbl.add remaining_pool (fresh ()) !running_env;
+		incr pool_size;
+		incr add_pool
+	      end
+		
+	  end 
+      end ;
+      running_env := new_env;
+      incr steps;
+      transitions := Array.of_list (all_possible_transitions !running_env trans all_procs true);
+    with
+      | TopError Deadlock -> Format.printf "Deadlock reached."; steps := max_depth
+      | Stdlib.Sys.Break | Exit ->  steps := max_depth; raise Exit
+  done;
+  Format.printf "New states seen: %d. New added to pool: %d@." !new_seen !add_pool
     
     
 
@@ -1491,6 +1651,40 @@ let execute_random_forward glob_env trans all_procs unsafe depth curr_round=
   Format.eprintf "@." *)
 
 
+let continue_from_bfs all_procs transitions all_unsafes =
+  Format.printf "Current number of states: %d@." (List.length !visited_states);
+  try 
+  let running = ref true in
+  while !running do
+    let rand = Random.int (!pool_size+1) in
+    let node = Hashtbl.find remaining_pool rand in
+
+    (*choose one of four methods to explore further*)
+    (* 
+       - run random for X steps starting from node
+       - run Markov [i.e maximizing entropy] for X steps starting from node
+       - run smart for X steps starting from node
+       - run BFS for X steps starting from node
+    *)
+    let choice = Random.int 2 in
+    match choice with
+      | 0 -> run_forward node all_procs transitions all_unsafes 
+      | 1 -> further_bfs node transitions all_procs all_unsafes
+      | _ -> assert false   
+  done
+  with
+    | Exit -> ()
+  
+    
+
+let go_from_bfs original_env transitions all_procs all_unsafes =
+  interpret_bfs original_env transitions all_procs all_unsafes;
+  (*if BFS finished to_do queue, there's no need to keep exploring down*)
+  if !pool_size = 0 then ()
+  else continue_from_bfs all_procs transitions all_unsafes 
+    
+
+    
 
 let semaphore_init s =
   match s with
@@ -1861,10 +2055,10 @@ let init tsys =
       run original_env transitions procs unsafe Options.rounds Options.depth_ib
     else if Options.mrkv_brab = 3 then 
       smart_run original_env t_transitions transitions procs Options.depth_ib
-    else
-      fuzzy_cubicle original_env transitions procs t_transitions all_unsafes;
+    else if Options.mrkv_brab = 4 then 
+      fuzzy_cubicle original_env transitions procs t_transitions all_unsafes
+    else go_from_bfs original_env transitions procs all_unsafes;
 
-  
     Format.eprintf "VISITED STATES : %d@." (List.length !visited_states)
  
 

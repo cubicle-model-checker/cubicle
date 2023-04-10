@@ -28,7 +28,8 @@ let () =
     (Sys.Signal_handle 
        (fun _ ->
         eprintf "@{<n>@}@."; (* Remove colors *)
-        Stats.print_report ~safe:false [] [];
+         Stats.print_report ~safe:false [] [];
+    
         eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGINT@.";
         exit 1)) 
 
@@ -90,6 +91,7 @@ let _ =
          exit 1
     end
   with
+      
   | Lexer.Lexical_error s -> 
      Util.report_loc err_formatter (lexeme_start_p lb, lexeme_end_p lb);
      eprintf "lexical error: %s@." s;
@@ -112,6 +114,7 @@ let _ =
      eprintf "It is likely that the search diverges, increase \
               the limit to explore further.@.";
      exit 1
+  | Interpret_forward.ReachedUnsafe -> exit 2
 
   | Failure str ->
 
