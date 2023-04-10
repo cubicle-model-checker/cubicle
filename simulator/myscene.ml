@@ -5,7 +5,7 @@
 
 open Utils
 open Simulator
-open Scenelib
+open Petrilib
 
 let state_from_proc i = 
   match (get_vuv "Cache") with
@@ -78,7 +78,7 @@ let build_scene () =
 
   Petri.set_state_fun pmodel state_from_proc;
 
-  Scenelib.set_petri pmodel;
+  set_petri pmodel;
   
   let s : Scene.t = {pre_init; post_init=draw_for_state; on_model_change=draw_for_state; update; } in 
   set_scene(s)

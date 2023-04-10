@@ -1,14 +1,16 @@
 # TODO
 
+## Général
+
+Devrait-on passer sur dune pour un modèle de compilation plus efficace ?
+Devrait-on même garder le même répertoire git pour le simulateur que pour cubicle ?
+
 ## Model
 
-- Utiliser des structures plutôt que des n-uplets
 - Utiliser une structure de donnée non persistante
 
 ## Simulateur
 
-- Compiler variable table correctement
-- Mettre les unsafe dans le modèle : Donner l'option ou non de les tester
 - La trace devrait garder le nb_proc
 - Pour avoir un simulateur qui lit une trace : 
 		Set la trace
@@ -22,28 +24,6 @@ Implémenter la fonction "save trace", qui est une fonction avec la même signat
 (de façon a pouvoir être lu par les mêmes programme)
 Mais qui n'itère que sur un modèle.
 
-## MyModel
-
-- Créer un module pour le modèle.
-- Cacher le type du modèle dans celui ci pour seulement afficher un type "t".
-- Avoir un type de modèle qui n'est pas persistant
-- Avoir une fonction "create_model"
-
-## SceneLib
-
-- Grid Compositor
-- Get hovered proc
-- On veut peut être afficher a l'écran les variables 
-
-## Sample scene 
-
-- On veut afficher si la simulation est en pause
-- On veut afficher le current step
-- Scale le text pour le fit dans les carrés
-- Centrer le text
-- Afficher constantes & Mat
-- print_scene : Afficher les transitions prises avec les arguments
-
 ## Compilateur
 
 - Il faudrait un paramètre -o pour spécifier le path
@@ -52,34 +32,24 @@ Mais qui n'itère que sur un modèle.
 - Ajouter les unsafe au modèle : 
 	Nécéssite de créer une fonction pour créer le modèle correctement plutôt que de le créer dans les transitions
 
-## Model 
+## Scenes 
 
-- Avoir une implémentation impérative plutôt que fonctionnelle
-
-## Petri
-
-Réfléchire a la nécéssité d'avoir une librarie en plusieurs fichiers.
--> On peut avoir une grosse librairie globale au lieu d'avoir plein de scenelib divers et varié, ça serait sûrement plus cohérent
-
+- Casser les librairies (particulièrement petri) en plusieurs librairie pour pouvoir les utiliser a des endroits différents
 - Améliorer les boutons: Avoir des boutons permettant d'indiquer si un bouton est cliquable, 
 si la souris est sur un bouton changer sa couleur, ...
 -> Les boutons peuvent devenir complexe et on peut penser a l'ajout d'un module Button
 
+- Refresh l'écran lors d'une mise en pause pour afficher le texte
+
 Dans un monde idéal : 
 - Avoir des flèches qui sont des courbes et plus des droites pour permettre plus de flexibilité
 - Afficher si la simulation est en pause ainsi que le numéro du step courant
-- Ajouter la possibilité d'exporter une trace pour pouvoir la lire plus tard -> Nécéssite une fonctionalité "Save trace" d'un simulateur qui construit un modèle qui lirait cette trace
 - Ordonner proprement les procs pour qu'on comprenne bien qui est le nouveau proc
 
 - Pouvoir zoomer et dézoomer avec la caméra
 - Menu d'aide en appuyant sur h
 
-## Traces
-
-- Raise une erreur custom en cas de out of bounds
-
 ## TESTER PETRI
 
 - dekker_n
-
 - Hierarchical snoop
