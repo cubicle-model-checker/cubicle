@@ -593,19 +593,23 @@ let markov_fuzz_run glob tsys all_procs trans steps orig_step all_unsafes =
   if !running then seed else (Array.sub seed 0 (!taken-1)) 
 
 
-let markov_entropy glob all_procs trans =
+let markov_entropy code glob all_procs trans =
   Random.self_init ();
   let taken = ref 0 in
   let new_seen = ref 0 in
-  let transitions = ref (Array.of_list (all_possible_transitions glob trans all_procs false))
+  let transitions = ref (Array.of_list (all_possible_transitions glob.state trans all_procs false))
   in
   let steps = Random.int 1000 in
   Format.printf "Chose Markov for a depth of %d steps@." steps; 
   let pool = ref 0 in
-  let running_env = ref glob in
+  let rem_pool = ref 0 in 
+  let running_env = ref glob.state in
   let accept = ref 0  in
   let reject = ref 0 in
-  let w1 = ref (entropy_env glob trans all_procs) in 
+  let old_code = ref code in 
+  let old_hash = ref (hash_full_env glob.state) in
+  let old_pool = ref !pool_size in 
+  let w1 = ref (entropy_env glob.state trans all_procs) in 
   while !taken < steps do
     try
       let l = Array.length !transitions in
@@ -630,29 +634,84 @@ let markov_entropy glob all_procs trans =
 	begin
 	  incr overall;
 	  incr taken;
-	  let hash = hash_full_env temp_env in
+	  
 	  begin
 	    try
-	      let  _ = Hashtbl.find bfs_visited hash in
-	      ()
-	    with Not_found ->
-	      begin
-		Hashtbl.add bfs_visited hash temp_env;
-		let e_m = env_to_satom_map temp_env in
+	      let data = Hashtbl.find bfs_visited !old_hash in
+	      let new_map =
+		try
+		  ExitMap.find (proposal.tr_name, prop_procs) data.taken_transitions
+		with
+		    Not_found -> 0 
+	      in
+	      let rem = List.filter (fun x ->
+		not (compare_exits x (proposal.tr_name, prop_procs))
+	      ) data.exit_remaining in
+	      
+	      Hashtbl.replace bfs_visited !old_hash 
+		{ state = data.state;
+		  seen = data.seen;
+		  exit_number = data.exit_number;
+		  exit_transitions = data.exit_transitions;
+		  exit_remaining = rem;
+		  taken_transitions =
+		    ExitMap.add (proposal.tr_name, prop_procs) (new_map+1) data.taken_transitions;};
+	      if (List.length rem) = 0 && (!old_pool < !pool_size) then
+		begin
+		  Hashtbl.remove remaining_pool !old_code;
+		  decr pool_size;
+		  incr rem_pool;
+		end 
+	    with Not_found -> assert false 
+	  end;
+
+	  
+	  let exits = all_possible_transitions temp_env trans all_procs true in
+	  let hash = hash_full_env temp_env in
+
+	  begin
+	    try
+	      let ndata = Hashtbl.find bfs_visited hash in
+	      Hashtbl.replace bfs_visited hash
+		{ state = ndata.state;
+		  seen = ndata.seen + 1 ;
+		  exit_number = ndata.exit_number;
+		  exit_transitions = ndata.exit_transitions;
+		  exit_remaining = ndata.exit_remaining;
+		  taken_transitions = ndata.taken_transitions };
+	    with Not_found -> 
+	     begin
+		let mapped_exits = List.map (fun (x,y) -> (x.tr_name, y)) exits in
+		let nd =
+		  { state = temp_env;
+		    seen = 1;
+		    exit_number = List.length exits;
+		    exit_transitions = mapped_exits;
+		    exit_remaining = mapped_exits;
+		    taken_transitions = ExitMap.empty; } in
+		Hashtbl.add bfs_visited hash nd;
 		incr new_seen;
-		if l > 1 then
+		let e_m = env_to_satom_map temp_env in
+		visited_states := e_m::!visited_states;
+		if (List.length exits) > 1 then
 		  begin
-		    Hashtbl.add remaining_pool (fresh ()) temp_env;
+		    let f = fresh () in
+		    old_code := f; 
+		    Hashtbl.add remaining_pool f nd;
+		    old_pool := !pool_size; 
+		    incr pool_size;
 		    incr pool;
-		  end ;
-		visited_states := e_m::!visited_states
+		  end 
+		
 	      end  
 
 	  end;	  
-	  transitions := Array.of_list (all_possible_transitions temp_env trans all_procs true);
+	  transitions := Array.of_list (exits);
 	  incr accept;
 	  w1 := w2;
-	  running_env := temp_env;	  
+	  running_env := temp_env;
+	  incr taken; 
+	  old_hash := hash;
 	end
       else
 	begin
@@ -660,17 +719,15 @@ let markov_entropy glob all_procs trans =
 	end(*;
       incr taken*)
     with
-      | TopError Deadlock ->
-        let d,dl =  !deadlocks
-	in deadlocks := (d+1, (!taken,steps)::dl);	
+      | TopError Deadlock ->	
 	taken := steps
       | Stdlib.Sys.Break | Stdlib.Exit ->
 	if Options.int_brab_quiet then 
 	  Format.eprintf "Accepted: %d, Rejected: %d@." !accept !reject;
 	raise Exit	
   done;
-  Format.printf "Markov: new seen states: %d, added to pool: %d@." !new_seen !pool
-
+  Format.printf "Markov: new seen states: %d, added to pool: %d, Removed from pool %d@." !new_seen !pool !rem_pool
+  
 
 
 
@@ -1450,11 +1507,11 @@ let fuzzy_cubicle glob_env trans all_procs tsys all_unsafes=
       Format.eprintf "-------------------------------------------@."
 
 
-let finish_queue queue =
-  Queue.iter (fun (_,_, el) -> incr pool_size; Hashtbl.add remaining_pool (fresh ()) el) queue
+(*let finish_queue queue =
+  Queue.iter (fun (_,_, el) -> incr pool_size; Hashtbl.add remaining_pool (fresh ()) el) queue*)
 	
 
-(*let finish_queue_new queue trans all_procs=
+let finish_queue queue trans all_procs=
   Queue.iter (fun (_,_, el) -> incr pool_size;
     let poss = all_possible_transitions el trans all_procs false in
     let l = List.length poss in
@@ -1465,8 +1522,8 @@ let finish_queue queue =
 	     exit_transitions = mapped_exits;
 	     exit_remaining = mapped_exits;
 	     taken_transitions = ExitMap.empty }
-      in
-    Hashtbl.add remaining_pool (fresh ()) s) queue*)
+    in
+    Hashtbl.add remaining_pool (fresh ()) s) queue
 
 let reconstruct_trace parents me =
   let trace = ref [] in
@@ -1489,46 +1546,120 @@ let reconstruct_trace parents me =
 
 exception ReachedUnsafe
 
-let further_bfs node transitions all_procs all_unsafes =
+let further_bfs code node transitions all_procs all_unsafes =
   try
     (*let parents = Hashtbl.create 200 in*)
     let max_depth = Random.int 10 in
     let curr_depth = ref 0 in
     let curr = ref 0 in
     let rem = ref 1 in
+    let old_code = ref code in
+    let new_seen = ref 0 in
+    let new_pool = ref 0 in
+    let old_pool = ref !pool_size in
+    let rem_pool = ref 0 in 
     let time_limit = 5.0 in
     let to_do = Queue.create () in
-    Queue.push (0,node) to_do;
+    Queue.push ((hash_full_env node.state),0,node.state) to_do;
     let time = Unix.time () in
     while (!curr_depth < max_depth) &&
       (not (Queue.is_empty to_do)) &&
       ((Unix.time () -. time) < time_limit) do
-      let env_d, env = Queue.pop to_do in
+      let _, env_d, env = Queue.pop to_do in
+      let old_hash = hash_full_env env in
       let possible = all_possible_transitions env transitions all_procs false in
       decr rem;
       List.iter (fun (at,at_p) ->
 	let e = apply_transition at_p at.tr_name transitions env in
 	let he = hash_full_env e in
+
+	begin
+	  try
+	    let data = Hashtbl.find bfs_visited old_hash in
+	    let new_map =
+	      try
+		ExitMap.find (at.tr_name, at_p) data.taken_transitions
+	      with
+		  Not_found -> 0 
+	    in
+	    let rem = List.filter (fun x ->
+	      not (compare_exits x (at.tr_name, at_p))
+	    ) data.exit_remaining in
+	    
+	    Hashtbl.replace bfs_visited old_hash 
+	      { state = data.state;
+		seen = data.seen;
+		exit_number = data.exit_number;
+		exit_transitions = data.exit_transitions;
+		exit_remaining = rem;
+		taken_transitions =
+		  ExitMap.add (at.tr_name, at_p) (new_map+1) data.taken_transitions;};
+	    if (List.length rem) = 0 && (!old_pool < !pool_size) then
+	      begin
+		Hashtbl.remove remaining_pool !old_code;
+		decr pool_size;
+		incr rem_pool;
+	      end 
+	  with Not_found -> assert false 
+	end ;
+
+	let exits = all_possible_transitions e transitions all_procs true in
+	begin
 	try
-	  let _ = Hashtbl.find bfs_visited he in
-	  ()
+	  let ndata = Hashtbl.find bfs_visited he in
+	  Hashtbl.replace bfs_visited he
+	    { state = ndata.state;
+	      seen = ndata.seen + 1 ;
+	      exit_number = ndata.exit_number;
+	      exit_transitions = ndata.exit_transitions;
+	      exit_remaining = ndata.exit_remaining;
+	      taken_transitions = ndata.taken_transitions };
 	with Not_found ->
 	  begin
-	    Hashtbl.add bfs_visited he e;
+	    let mapped_exits = List.map (fun (x,y) -> (x.tr_name, y)) exits in
+	    let nd =
+	      { state = e;
+		seen = 1;
+		exit_number = List.length exits;
+		exit_transitions = mapped_exits;
+		exit_remaining = mapped_exits;
+		taken_transitions = ExitMap.empty; } in
+	    Hashtbl.add bfs_visited he nd;
+	    incr new_seen;
 	    let e_m = env_to_satom_map e in
 	    visited_states := e_m::!visited_states;
+	    if (List.length exits) > 1 then
+	      begin
+		let f = fresh () in
+		old_code := f; 
+		Hashtbl.add remaining_pool f nd;
+		old_pool := !pool_size; 
+		incr pool_size;
+		incr new_pool;		
+	      end;	
 	    incr curr;
 	    incr rem;
-	    Queue.push (env_d + 1, e) to_do
-	  end  ) possible;
+	    Queue.push (he,env_d + 1, e) to_do
+
+
+
+	      
+	  end
+
+	end 
+
+
+
+	) possible;
       if env_d > !curr_depth then incr curr_depth    
     done;
-    Queue.iter (fun (_,x) -> incr pool_size; Hashtbl.add remaining_pool (fresh ()) x) to_do;
+    (*Queue.iter (fun (_,x) -> incr pool_size; Hashtbl.add remaining_pool (fresh ()) x) to_do;*)
+    finish_queue to_do transitions all_procs;
     Format.printf "Further BFS: %d new states added to visited, %d added to remaining pool@." !curr !rem;
   with
     | Stdlib.Sys.Break | Exit -> raise Exit
     
-    
+
     
 let interpret_bfs original_env transitions all_procs all_unsafes =
   try
@@ -1537,10 +1668,19 @@ let interpret_bfs original_env transitions all_procs all_unsafes =
     let curr_depth = ref 0 in
     let node = ref 0 in
     let rem = ref 1 in
-    let time_limit = 20.0 in
+    let time_limit = 10.0 in
     check_unsafe original_env all_unsafes;
     let he = hash_full_env original_env in
-    Hashtbl.add bfs_visited he original_env;
+    let all_poss = all_possible_transitions original_env transitions all_procs false in
+    let exit_poss = List.map (fun (x,y) -> x.tr_name, y) all_poss in 
+    let hi =
+      { state = original_env;
+	seen = 1;
+	exit_number = List.length all_poss;
+	exit_transitions = exit_poss;
+	exit_remaining = exit_poss;
+	taken_transitions = ExitMap.empty } in 
+    Hashtbl.add bfs_visited he hi;
     let to_do = Queue.create () in
     Queue.push (he, 0,original_env) to_do;
     Hashtbl.add parents he (true, None, he, original_env);
@@ -1560,8 +1700,17 @@ let interpret_bfs original_env transitions all_procs all_unsafes =
 	  ()
 	with Not_found ->
 	  begin
-
-	    Hashtbl.add bfs_visited he e;
+	    let poss = all_possible_transitions e transitions all_procs false  in
+	    let exits = List.map (fun (x,y) -> x.tr_name, y) poss in
+	    let ev =
+	      { state = e;
+		seen = 1;
+		exit_number = List.length poss;
+		exit_transitions = exits;
+		exit_remaining = exits;
+		taken_transitions = ExitMap.empty}
+	    in 		
+	    Hashtbl.add bfs_visited he ev;
 	    Hashtbl.add parents he (false, Some (at, at_p), ha, env);
 	    begin
 	      try
@@ -1582,7 +1731,7 @@ let interpret_bfs original_env transitions all_procs all_unsafes =
 	  end ) possible;
       if env_d > !curr_depth then incr curr_depth
     done;
-    if not (Queue.is_empty to_do) then finish_queue to_do 
+    if not (Queue.is_empty to_do) then finish_queue to_do transitions all_procs
   with
     | Stdlib.Sys.Break | Exit -> ()
     | TopError Unsafe ->
@@ -1629,16 +1778,19 @@ let extract_procs sa =
   sorted
 
 
-let run_forward node all_procs trans unsafes =
+let run_forward code node all_procs trans unsafes =
   let max_depth = Random.int 1000 in
   Format.printf "Chosen depth for random: %d@." max_depth;
   let steps = ref 0 in
   let new_seen = ref 0 in
   let add_pool = ref 0 in
-  (*let old_hash = ref (hash_full_env node.state) in *)
-  let running_env = ref node in 
+  let rem_pool = ref 0 in 
+  let old_hash = ref (hash_full_env node.state) in 
+  let running_env = ref node.state in
+  let old_code = ref code in
+  let old_pool = ref !pool_size in
   let transitions =
-    ref (Array.of_list (all_possible_transitions node trans all_procs false)) in
+    ref (Array.of_list (all_possible_transitions node.state trans all_procs false)) in
   while !steps < max_depth do
     try
       let l = Array.length !transitions in
@@ -1646,44 +1798,84 @@ let run_forward node all_procs trans unsafes =
       let rand = Random.int l in
       let (apply,apply_procs) = !transitions.(rand) in
       let new_env = apply_transition apply_procs apply.tr_name trans !running_env in
-      let hash = hash_full_env !running_env in
+      let hash = hash_full_env new_env in
       begin
 	try
-	  let _ = Hashtbl.find bfs_visited hash in ()
-	  (*let new_map  =
+	  let data = Hashtbl.find bfs_visited !old_hash in
+	  let new_map =
 	    try
 	      ExitMap.find (apply.tr_name, apply_procs) data.taken_transitions
 	    with
-		Not_found -> 0
+		Not_found -> 0 
 	  in
-	  Hashtbl.replace bfs_visited !old_hash
-	    { state = data.state 
-	  *)
+	  let rem = List.filter (fun x ->
+	    not (compare_exits x (apply.tr_name, apply_procs))
+	  ) data.exit_remaining in
+	  
+	  Hashtbl.replace bfs_visited !old_hash 
+	    { state = data.state;
+	    seen = data.seen;
+	    exit_number = data.exit_number;
+	    exit_transitions = data.exit_transitions;
+	    exit_remaining = rem;
+	    taken_transitions =
+	      ExitMap.add (apply.tr_name, apply_procs) (new_map+1) data.taken_transitions;};
+	  if (List.length rem) = 0 && (!old_pool < !pool_size) then
+	    begin
+	      Hashtbl.remove remaining_pool !old_code;
+	      decr pool_size;
+	      incr rem_pool;
+	    end 
+	with Not_found -> assert false 
+      end;
 
+      let exits = all_possible_transitions new_env trans all_procs true in
 
-	      with Not_found ->
+      begin
+	try
+	  let ndata = Hashtbl.find bfs_visited hash in
+	  Hashtbl.replace bfs_visited hash
+	    { state = ndata.state;
+	      seen = ndata.seen + 1 ;
+	      exit_number = ndata.exit_number;
+	      exit_transitions = ndata.exit_transitions;
+	      exit_remaining = ndata.exit_remaining;
+	      taken_transitions = ndata.taken_transitions };
+	with Not_found ->
 	  begin
-	    Hashtbl.add bfs_visited hash !running_env;
+	    let mapped_exits = List.map (fun (x,y) -> (x.tr_name, y)) exits in
+	    let nd =
+	      { state = new_env;
+		seen = 1;
+		exit_number = List.length exits;
+		exit_transitions = mapped_exits;
+		exit_remaining = mapped_exits;
+		taken_transitions = ExitMap.empty; } in
+	    Hashtbl.add bfs_visited hash nd;
 	    incr new_seen;
 	    let e_m = env_to_satom_map new_env in
 	    visited_states := e_m::!visited_states;
-	    if l > 1 then
+	    if (List.length exits) > 1 then
 	      begin
-		Hashtbl.add remaining_pool (fresh ()) !running_env;
+		let f = fresh () in
+		old_code := f; 
+		Hashtbl.add remaining_pool f nd;
+		old_pool := !pool_size; 
 		incr pool_size;
-		incr add_pool
-	      end
+		incr add_pool;
 		
+	      end	
 	  end 
       end ;
+      old_hash := hash;
       running_env := new_env;
       incr steps;
-      transitions := Array.of_list (all_possible_transitions !running_env trans all_procs true);
+      transitions := Array.of_list (exits);
     with
       | TopError Deadlock -> Format.printf "Deadlock reached."; steps := max_depth
       | Stdlib.Sys.Break | Exit ->  steps := max_depth; raise Exit
   done;
-  Format.printf "Random forward: New states seen: %d. New added to pool: %d@." !new_seen !add_pool
+  Format.printf "New states seen: %d. New added to pool: %d Removed from pool %d@." !new_seen !add_pool !rem_pool
     
     
 
@@ -1757,26 +1949,46 @@ let execute_random_forward glob_env trans all_procs unsafe depth curr_round=
   Format.eprintf "%a" print_forward_trace !queue;
   Format.eprintf "@." *)
 
+    
+let recalibrate_states () =
+  Format.printf "Recalibrating remaining states...@.";
+  let h' = Hashtbl.copy remaining_pool in
+  let c = ref 0 in
+  Hashtbl.clear remaining_pool;
+  Hashtbl.iter (fun k el -> Hashtbl.add remaining_pool !c el; incr c) h'
+  
+    
+let choose_node rand =
+  try
+    Hashtbl.find remaining_pool rand
+  with Not_found ->
+    begin
+      recalibrate_states (); 
+      Hashtbl.find remaining_pool rand
+    end 
 
 let continue_from_bfs all_procs transitions all_unsafes =
   Format.printf "Current number of states: %d@." (List.length !visited_states);
   try 
   let running = ref true in
   while !running do
-    let rand = Random.int (!pool_size+1) in
-    let node = Hashtbl.find remaining_pool rand in
+    if !pool_size = 0 then begin Format.printf "No more states to explore@."; raise Exit end;
+    let rand = Random.int !pool_size in
+    let node = choose_node rand in
     (*choose one of four methods to explore further*)
     (* 
        - run random for X steps starting from node
        - run Markov [i.e maximizing entropy] for X steps starting from node
        - run smart for X steps starting from node
        - run BFS for X steps starting from node
+       - recalibrate remaining_pool occasionally 
     *)
-    let choice = Random.int 3 in
+    let choice = Random.int 4 in
     match choice with
-      | 0 -> run_forward node all_procs transitions all_unsafes 
-      | 1 -> further_bfs node transitions all_procs all_unsafes
-      | 2 -> markov_entropy node all_procs transitions 
+      | 0 -> run_forward rand node all_procs transitions all_unsafes 
+      | 1 -> markov_entropy rand node all_procs transitions
+      | 2 -> recalibrate_states ()
+      | 3 -> further_bfs rand node transitions all_procs all_unsafes
       | _ -> assert false   
   done
   with
