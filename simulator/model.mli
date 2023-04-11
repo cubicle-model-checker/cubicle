@@ -37,5 +37,6 @@ val set_state : t -> model_state -> unit
 val get_init  : t -> init
 val get_vars  : t -> variable_table
 val get_trans : t -> transitions 
+val get_unsafe : t -> unsafes
 
 val vuv_to_string : var_unit_value -> string

@@ -20,7 +20,7 @@ let on_model_change_callback () =
 
 (* -- Interaction variables -- *)
 
-(* Lock is similar to req but it is created at runtime *)
+(* Lock is similar to req but it is created at runtime and can be used in scene *)
 let runtime_lock : (string, (int list -> bool)) Hashtbl.t = Hashtbl.create 10
 let is_paused = ref false
 let sleep_time = ref 1.
@@ -52,22 +52,18 @@ let take_transition tname args =
     ac args;
     let ntr = ((tname, args), Utils.get_model_state ()) in
     Traces.add full_trace ntr;
-    on_model_change_callback ()
-  )
+    on_model_change_callback ();
+    true
+  ) else false
 
 let step () =
   if not !is_paused then
   (
   let possible_actions = 
     let returned_list = ref [] in 
-    (* NOTE:
-       /!\ : Si on a des fonctions avec plus d'argument que le nombre de proc, 
-       il y a de très fort risque d'avoir un comportement inatendu. 
-       Il faudrait peut être mettre un warning et crash. 
-    *)
     let (trans_map, trans_table) = Model.get_trans (get_model ()) in
     let test_transition arg_number trans_list =
-      if arg_number > get_nb_proc () then failwith (Format.sprintf "At least %d proc is required for this simulation." (get_nb_proc ()))
+      if arg_number > get_nb_proc () then failwith (Format.sprintf "More than %d proc is required for this simulation." (arg_number))
       else
       let arg_list = get_args arg_number in
       List.iter (fun arg -> returned_list := (get_possible_action_for_arg arg trans_list trans_map)@(!returned_list)) arg_list
@@ -77,8 +73,7 @@ let step () =
   in
   if List.length possible_actions > 0 then  
     let (arg, ac, name) = get_random_in_list possible_actions in
-    take_transition name arg
-      
+    ignore(take_transition name arg)
   )
 
 (* Interaction functions *)
@@ -107,6 +102,21 @@ let reset () = init ()
 
 let get_model_state () =
   let (_, ret) = Traces.get full_trace in ret
+
+let get_last_trace () = Traces.get full_trace
+
+let is_unsafe () = 
+  let res = ref false in
+  let test_unsafes arg_number unsafe_list =
+    if arg_number < get_nb_proc () then 
+      (
+      let arg_list = get_args arg_number in
+      let test_unsafe uns = List.exists (fun arg -> uns arg) arg_list in 
+      if (List.exists (fun uns -> test_unsafe uns) unsafe_list) then res := true
+    ) 
+  in
+  IntMap.iter test_unsafes (Model.get_unsafe (get_model ()));
+  !res
 
 (* Scene functions *)
 

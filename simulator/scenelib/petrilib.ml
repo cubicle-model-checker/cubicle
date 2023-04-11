@@ -26,6 +26,10 @@ let indic_text_space = 2
 let button_size = 50
 let button_text_size = 50
 let button_text_space = 2
+let button_color_success = green 
+let button_color_failure = red
+let button_color_off = black 
+let button_color_hover = rgb 50 50 50
 
 (* Point of the arrow settings *)
 let arrow_size    = 20  (* Length of the pointy bit *)
@@ -71,7 +75,7 @@ module Petri : sig
   val add_trans           : t -> string -> (string list * Vector.t) -> unit
   val add_arc             : t -> arc -> unit
   val add_indic           : t -> string -> (unit -> bool) -> Vector.t -> unit
-  val add_button          : t -> string -> (unit -> unit) -> Vector.t -> unit
+  val add_button          : t -> string -> (unit -> bool) -> Vector.t -> unit
 
   val set_state_fun       : t -> (int -> string) -> unit
 
@@ -84,7 +88,7 @@ module Petri : sig
   val get_state_for_proc  : t -> int -> string
   val get_arcs            : t -> arc list
   val get_indics          : t -> (string * (unit -> bool) * Vector.t) list
-  val get_buttons         : t -> (string * (unit -> unit) * Vector.t) list
+  val get_buttons         : t -> (string * (unit -> bool) * Vector.t) list
 end
 =
 struct
@@ -98,7 +102,7 @@ struct
       arcs    : arc list ref;
       sfp_fun : (int -> string) ref;
       indics  : (string * (unit -> bool) * Vector.t ) list ref;
-      buttons : (string * (unit -> unit) * Vector.t) list ref;
+      buttons : (string * (unit -> bool) * Vector.t) list ref;
     }
 
   exception Unknown_trans of string
@@ -140,6 +144,14 @@ let petrinstance = ref (Petri.empty ())
 let set_petri p  = petrinstance := p
 let get_petri () = !petrinstance
 
+(* Dynamic variable, dont touch *)
+let last_registered_pos = ref Vector.zero
+let mouse_down = ref false
+let button_last_result = ref false
+let button_clicked = ref false
+let mouse_speed = 1
+
+
 (* Camera globals *)
 let cam_pos = ref Vector.zero
 
@@ -167,7 +179,8 @@ let draw_for_state () =
   let pet = get_petri () in
   let sttable = Petri.get_state_map pet   in
   let trtable = Petri.get_trans_table pet in
-
+  let (mx, my) = mouse_pos () in 
+  
   (* Draw arcs *)
   set_color black;
   let draw_arc a =
@@ -295,8 +308,17 @@ let draw_for_state () =
 
   (* Draw buttons *)
   let bs = button_size / 2 in 
-  let draw_button ((name : string), (f : unit -> unit), (pos : Vector.t)) =
-    set_color black;
+  let draw_button ((name : string), (f : unit -> bool), (pos : Vector.t)) =
+    let rbpos = Vector.add pos (!cam_pos) in
+    let hovered = mx >= rbpos.x - bs && mx <= rbpos.x + bs && my >= rbpos.y - bs && my <= rbpos.y + bs in
+    let color = if hovered then 
+      (
+        if not !button_clicked then button_color_hover
+        else if !button_last_result then button_color_success 
+        else button_color_failure
+        ) 
+      else button_color_off in
+    set_color color;
     fill_rect (pos.x - bs + !cam_pos.x) (pos.y - bs + !cam_pos.y) button_size button_size;
     let (tsx, tsy) = text_size name in
     let nx = pos.x - (tsx / 2) in
@@ -312,25 +334,34 @@ let draw_for_state () =
       moveto 5 5;
       draw_string "Paused."
     );
+
+  if Simulator.is_unsafe () then 
+    (
+      set_color red;
+      moveto (size_x () / 2) (size_y () / 2);
+      draw_string "UNSAFE!"
+    );
   synchronize ()
 
-let last_registered_pos = ref Vector.zero
-let mouse_down = ref false
-let mouse_speed = 1
-
 let handle_mouse (dt : float) = 
-  if button_down () then begin
   let (mx, my) = mouse_pos () in 
 
   (* Button interaction *)
     let bs = button_size / 2 in 
-    let handle_button ((_ : string), (bfun : (unit -> unit)), (bpos : Vector.t)) =
+    let handle_button ((_ : string), (bfun : (unit -> bool)), (bpos : Vector.t)) =
       let rbpos = Vector.add bpos (!cam_pos) in
-      if mx >= rbpos.x - bs && mx <= rbpos.x + bs && my >= rbpos.y - bs && my <= rbpos.y + bs then
-        bfun();
+      if mx >= rbpos.x - bs && mx <= rbpos.x + bs && my >= rbpos.y - bs && my <= rbpos.y + bs then (
+        if button_down () && (not !button_clicked) then 
+          (
+            button_last_result := bfun ();
+            button_clicked := true
+          );
+        draw_for_state ();
+      )
     in 
     List.iter handle_button (Petri.get_buttons (get_petri ()));
 
+  if button_down () then (
     (* Camera *)
     let mvec = Vector.{x = mx; y = my} in
     if !mouse_down then begin
@@ -340,8 +371,11 @@ let handle_mouse (dt : float) =
     end;
     last_registered_pos := mvec;
     mouse_down := true 
-  end 
-    else mouse_down := false
+  )
+  else (
+      mouse_down := false;
+      button_clicked := false;
+  )
 
 let update dt  = (* Automatically manage pausing, navigating through the trace, buttons and Camera *)
   handle_input ();
