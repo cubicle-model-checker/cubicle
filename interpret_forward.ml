@@ -669,6 +669,15 @@ let markov_entropy code glob all_procs trans =
 
 	  
 	  let exits = all_possible_transitions temp_env trans all_procs true in
+
+	  begin
+	    try
+	      let c_t =
+		Hashtbl.find fuzz_tr_count proposal.tr_name in
+              Hashtbl.replace fuzz_tr_count proposal.tr_name (c_t+1)
+	    with Not_found -> Hashtbl.add fuzz_tr_count proposal.tr_name 1
+	  end ;
+	  
 	  let hash = hash_full_env temp_env in
 
 	  begin
@@ -868,7 +877,6 @@ let smart_run glob tsys trans procs depth=
 
   
   Format.eprintf "----------------Transitions----------------@.";
-
   Hashtbl.iter (fun key el -> Format.eprintf "%a ---- %d@." Hstring.print key el) initial_tr_count;
   Format.eprintf "-------------------------------------------@.";
 
@@ -1597,7 +1605,6 @@ let choose_random_of_equal l =
 
 let run_smart code node all_procs trans unsafes =
   let max_depth = Random.int 100 in
-  let never = ref false in 
   Format.printf "Chosen depth for smart run: %d@." max_depth;
   let steps = ref 0 in
   let new_seen = ref 0 in
@@ -1674,6 +1681,16 @@ let run_smart code node all_procs trans unsafes =
 	    end 
 	with Not_found -> assert false 
       end ;
+    
+    begin
+      try
+	let c_t =
+	  Hashtbl.find fuzz_tr_count apply.tr_name in
+        Hashtbl.replace fuzz_tr_count apply.tr_name (c_t+1)
+      with Not_found -> Hashtbl.add fuzz_tr_count apply.tr_name 1
+    end ;
+
+      
 
     let exits = all_possible_transitions temp_env trans all_procs true in
 
@@ -1781,6 +1798,14 @@ let further_bfs code node transitions all_procs all_unsafes =
 		incr rem_pool;
 	      end 
 	  with Not_found -> assert false 
+	end ;
+
+	begin
+	  try
+	    let c_t =
+	      Hashtbl.find fuzz_tr_count at.tr_name in
+            Hashtbl.replace fuzz_tr_count at.tr_name (c_t+1)
+	  with Not_found -> Hashtbl.add fuzz_tr_count at.tr_name 1
 	end ;
 
 	let exits = all_possible_transitions e transitions all_procs true in
@@ -2000,6 +2025,14 @@ let run_forward code node all_procs trans unsafes =
 	    end 
 	with Not_found -> assert false 
       end;
+
+      begin
+	try
+	  let c_t =
+	    Hashtbl.find fuzz_tr_count apply.tr_name in
+          Hashtbl.replace fuzz_tr_count apply.tr_name (c_t+1)
+	with Not_found -> Hashtbl.add fuzz_tr_count apply.tr_name 1
+      end ;
 
       let exits = all_possible_transitions new_env trans all_procs true in
 
@@ -2534,7 +2567,7 @@ let init tsys =
   let transitions =
     List.fold_left ( fun acc t ->    
       Trans.add t.tr_name t acc ) Trans.empty t_transitions in
-  List.iter (fun x -> Hashtbl.add tr_count x.tr_name (0, -1) )t_transitions;
+  List.iter (fun x -> Hashtbl.add fuzz_tr_count x.tr_name 0 )t_transitions;
   let original_env = env_final, lock_queue, cond_sets, semaphores in 
   let unsafe = List.map (fun x -> 0,x.cube.vars ,x.cube.litterals) tsys.t_unsafe in
   let unsafe = init_unsafe procs unsafe in
@@ -2549,6 +2582,11 @@ let init tsys =
       fuzzy_cubicle original_env transitions procs t_transitions all_unsafes
     else go_from_bfs original_env transitions procs all_unsafes t_transitions;
 
+
+    Format.eprintf "----------------Transitions----------------@.";
+    Hashtbl.iter (fun key el -> Format.eprintf "%a ---- %d@." Hstring.print key el) fuzz_tr_count;
+    Format.eprintf "-------------------------------------------@.";
+    
     Format.eprintf "VISITED STATES : %d@." (List.length !visited_states)
  
 
