@@ -23,6 +23,8 @@ let system_sigma_en = ref []
 let system_sigma_de = ref []
 let tr_count = Hashtbl.create 10
 let deadlocks = ref (0, [])
+
+  
 module STMap = Map.Make (Types.Term)
 
 module ExitMap = Map.Make (struct type t =  Hstring.t * Variable.t list
@@ -112,9 +114,9 @@ let dead_preds = Hashtbl.create 10
 
 
 let fuzzy_visited = Hashtbl.create 200
-let fuzz_tr_count = Hashtbl.create 50
 
 let bfs_visited = Hashtbl.create 200
+let fuzz_tr_count = Hashtbl.create 50
 let remaining_pool = Hashtbl.create 200
 let pool_size = ref 0 
   
@@ -1545,7 +1547,185 @@ let reconstruct_trace parents me =
   Format.printf " -> @{<fg_magenta>unsafe@}@."
 
 exception ReachedUnsafe
+exception NeverSeen of Interpret_types.global * (Ast.transition_info * Variable.t list) * int
 
+
+let grade_exits s tr tr_p =
+  let rem = List.length s.exit_remaining in
+  if rem = 0 then -100 
+  else
+    begin
+      try
+	let n =
+	  ExitMap.find (tr.tr_name, tr_p) s.taken_transitions
+	in
+	let (sm,(mt,mp)) =
+	  ExitMap.fold (fun k el (acc,t) -> if el < acc
+	    then (el, k) else (acc, t)) s.taken_transitions (n, (tr.tr_name, tr_p))
+	in
+	if Hstring.equal mt tr.tr_name && (Hstring.compare_list mp tr_p = 0) then 50
+	else 25 
+      with Not_found -> 100 
+    end 
+
+    
+(*let grade_state state tr tr_p =
+  let exit_g = grade_exits state tr tr_p in*)
+  
+      
+    
+
+let grade_seen state_hash =
+  try
+    let _ = Hashtbl.find bfs_visited state_hash in
+    false
+  with Not_found -> true 
+
+
+
+let choose_random_of_equal l =
+  let c = List.length l in
+  if c = 1 then List.hd l
+  else
+    begin
+      let l = Array.of_list l in
+      Random.self_init ();
+      let i = Random.int c in
+      l.(i)
+    end  
+    
+
+let run_smart code node all_procs trans unsafes =
+  let max_depth = Random.int 100 in
+  let never = ref false in 
+  Format.printf "Chosen depth for smart run: %d@." max_depth;
+  let steps = ref 0 in
+  let new_seen = ref 0 in
+  let add_pool = ref 0 in
+  let rem_pool = ref 0 in 
+  let old_hash = ref (hash_full_env node.state) in 
+  let running_env = ref node.state in
+  let old_code = ref code in
+  let old_pool = ref !pool_size in
+  let transitions =
+    ref (Array.of_list (all_possible_transitions node.state trans all_procs false)) in
+  while !steps < max_depth do
+    try
+    let l = Array.length !transitions in
+    if l = 0 then raise (TopError Deadlock);
+    let _,most_interesting =
+      try 
+	Array.fold_left (fun (curr_max, acc) (tr, trp) ->
+	  let temp = apply_transition trp tr.tr_name trans !running_env in
+	  let hash = hash_full_env temp in
+	  let s =
+	    try
+	      Hashtbl.find bfs_visited hash
+	    with Not_found ->  raise (NeverSeen (temp, (tr,trp), hash))
+	  in
+	  let g = grade_exits s tr trp in
+	  if g > curr_max then (g, [(tr,trp, temp,hash)])
+	  else if g = curr_max then (g, (tr, trp,temp,hash)::acc)
+	  else (curr_max, acc)
+	) (0,[]) !transitions;
+      with
+	| NeverSeen(state, (tr,trp), h) -> 0, [(tr, trp, state, h)]
+    in
+    let apply, apply_procs, temp_env, hash = 
+      if most_interesting = []
+      then
+      (*apply random transition*)
+	begin
+	  let r = Random.int l in
+	  let a, ap = !transitions.(r) in
+          let e = apply_transition ap a.tr_name trans !running_env
+	  in a, ap, e, (hash_full_env e)
+	end 
+      else
+	choose_random_of_equal most_interesting
+    in
+
+      begin
+	try
+	  let data = Hashtbl.find bfs_visited !old_hash in
+	  let new_map =
+	    try
+	      ExitMap.find (apply.tr_name, apply_procs) data.taken_transitions
+	    with
+		Not_found -> 0 
+	  in
+	  let rem = List.filter (fun x ->
+	    not (compare_exits x (apply.tr_name, apply_procs))
+	  ) data.exit_remaining in
+	  
+	  Hashtbl.replace bfs_visited !old_hash 
+	    { state = data.state;
+	      seen = data.seen;
+	      exit_number = data.exit_number;
+	      exit_transitions = data.exit_transitions;
+	      exit_remaining = rem;
+	      taken_transitions =
+		ExitMap.add (apply.tr_name, apply_procs) (new_map+1) data.taken_transitions;};
+	  if (List.length rem) = 0 && (!old_pool < !pool_size) then
+	    begin
+	      Hashtbl.remove remaining_pool !old_code;
+	      decr pool_size;
+	      incr rem_pool;
+	    end 
+	with Not_found -> assert false 
+      end ;
+
+    let exits = all_possible_transitions temp_env trans all_procs true in
+
+    begin
+	try
+	  let ndata = Hashtbl.find bfs_visited hash in
+	  Hashtbl.replace bfs_visited hash
+	    { state = ndata.state;
+	      seen = ndata.seen + 1 ;
+	      exit_number = ndata.exit_number;
+	      exit_transitions = ndata.exit_transitions;
+	      exit_remaining = ndata.exit_remaining;
+	      taken_transitions = ndata.taken_transitions };
+	with Not_found ->
+	  begin
+	    let mapped_exits = List.map (fun (x,y) -> (x.tr_name, y)) exits in
+	    let nd =
+	      { state = temp_env;
+		seen = 1;
+		exit_number = List.length exits;
+		exit_transitions = mapped_exits;
+		exit_remaining = mapped_exits;
+		taken_transitions = ExitMap.empty; } in
+	    Hashtbl.add bfs_visited hash nd;
+	    incr new_seen;
+	    let e_m = env_to_satom_map temp_env in
+	    visited_states := e_m::!visited_states;
+	    if (List.length exits) > 1 then
+	      begin
+		let f = fresh () in
+		old_code := f; 
+		Hashtbl.add remaining_pool f nd;
+		old_pool := !pool_size; 
+		incr pool_size;
+		incr add_pool;
+		
+	      end	
+	  end 
+    end ;
+
+    old_hash := hash;
+    running_env := temp_env;
+    incr steps;
+    transitions := Array.of_list exits;
+    with
+      | TopError Deadlock -> Format.printf "Deadlock reached."; steps := max_depth
+      | Stdlib.Sys.Break | Exit ->  steps := max_depth; raise Exit
+  done ;
+  Format.printf "Smart states seen: %d. New added to pool: %d Removed from pool %d@." !new_seen !add_pool !rem_pool
+
+
+  
 let further_bfs code node transitions all_procs all_unsafes =
   try
     (*let parents = Hashtbl.create 200 in*)
@@ -1640,16 +1820,8 @@ let further_bfs code node transitions all_procs all_unsafes =
 	    incr curr;
 	    incr rem;
 	    Queue.push (he,env_d + 1, e) to_do
-
-
-
-	      
 	  end
-
 	end 
-
-
-
 	) possible;
       if env_d > !curr_depth then incr curr_depth    
     done;
@@ -1979,16 +2151,17 @@ let continue_from_bfs all_procs transitions all_unsafes =
     (* 
        - run random for X steps starting from node
        - run Markov [i.e maximizing entropy] for X steps starting from node
+       - run BFS for X steps starting from node       
        - run smart for X steps starting from node
-       - run BFS for X steps starting from node
        - recalibrate remaining_pool occasionally 
     *)
-    let choice = Random.int 4 in
+    let choice = Random.int 5 in
     match choice with
       | 0 -> run_forward rand node all_procs transitions all_unsafes 
       | 1 -> markov_entropy rand node all_procs transitions
       | 2 -> recalibrate_states ()
       | 3 -> further_bfs rand node transitions all_procs all_unsafes
+      | 4 -> run_smart rand node all_procs transitions all_unsafes
       | _ -> assert false   
   done
   with
@@ -1996,14 +2169,13 @@ let continue_from_bfs all_procs transitions all_unsafes =
   
     
 
-let go_from_bfs original_env transitions all_procs all_unsafes =
+let go_from_bfs original_env transitions all_procs all_unsafes tsys =
+  List.iter (fun x -> Hashtbl.add initial_tr_count x.tr_name 0) tsys;
   interpret_bfs original_env transitions all_procs all_unsafes;
   (*if BFS finished to_do queue, there's no need to keep exploring down*)
   if !pool_size = 0 then ()
   else continue_from_bfs all_procs transitions all_unsafes 
-    
-
-    
+      
 
 let semaphore_init s =
   match s with
@@ -2375,7 +2547,7 @@ let init tsys =
       smart_run original_env t_transitions transitions procs Options.depth_ib
     else if Options.mrkv_brab = 4 then 
       fuzzy_cubicle original_env transitions procs t_transitions all_unsafes
-    else go_from_bfs original_env transitions procs all_unsafes;
+    else go_from_bfs original_env transitions procs all_unsafes t_transitions;
 
     Format.eprintf "VISITED STATES : %d@." (List.length !visited_states)
  
@@ -2414,7 +2586,7 @@ let test_cands cands =
 			    | Access _, Elem (_, Glob)
 			    | Access _, Access _ 
 			      ->
-			      
+	
 			      let v1 = STMap.find t1 env_map in
 			      let v2 = STMap.find t2 env_map in
 			      (*Format.eprintf "t1 %a v1 is %a\nt2 %av2 is %a@."
@@ -2423,7 +2595,7 @@ let test_cands cands =
 
 			      Format.eprintf "My candidate: %a@." Node.print node;*)
 			      
-			      test_vals op v1 v2
+			       test_vals op v1 v2 
 			    | Elem (_, Glob), _ ->
 
 			      let v1 = STMap.find t1 env_map in
@@ -2542,8 +2714,7 @@ let first_good_candidate3 n =
 
 let first_good_candidate n =
   (*Format.eprintf "candidates: @.";
-  List.iter (fun x -> Format.eprintf  "%a@." Node.print x ) n;*)
-  
+  List.iter (fun x -> Format.eprintf  "%a@." Node.print x ) n;*)  
   let num_procs = Options.int_brab in
   let procs = Variable.give_procs num_procs in
   try

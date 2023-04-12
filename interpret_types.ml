@@ -400,7 +400,14 @@ let val_to_cub cv =
     | VConstr el -> Elem(el, Constr)
     | VAccess(el,vl) -> Access(el, vl)
     | _ -> assert false
-  
+
+
+let choose_random_according_to_op op el1 e2 =
+  match op with
+    | Eq -> assert false
+    | Neq -> assert false
+    | Le -> assert false
+    | Lt -> assert false
 
 let random_value h =
   (*Random.self_init ();*)

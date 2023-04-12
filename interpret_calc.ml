@@ -548,7 +548,7 @@ let check_comp_req t1 t2 env sigma op =
       in
       begin
 	match ev1, ev2 with
-	  | None, None -> assert false
+	  | None, None ->Format.eprintf "%a -- %a@." Term.print t1 Term.print t2; assert false
 	  | Some ev1, Some ev2 -> interpret_comp (compare_interp_val ev1 ev2) op, env
 	  | None, Some ev2 -> true, Env.add t1 (to_interpret t2) env
 	  | Some ev1, None -> true, Env.add t (to_interpret t1) env 
@@ -2028,6 +2028,29 @@ let check_ureqs ureqs env sigma trname =
   in aux ureqs;
   !glob
 
+
+let apply_transition_forward args trname trans (env,lock_queue,cond_sets, semaphores) =
+  let tr = Trans.find trname trans in
+  let arg_length = List.length tr.tr_args in
+  if List.length args <> arg_length then
+    raise (TopError (WrongArgs (trname,arg_length)));
+  let sigma = Variable.build_subst tr.tr_args args in 
+  check_actor_suspension sigma env tr.tr_process;
+  let new_env = check_reqs tr.tr_reqs env sigma trname in
+  let procs = Variable.give_procs (Options.get_interpret_procs ()) in
+  let trargs = List.map (fun x -> Variable.subst sigma x) tr.tr_args in
+  let ureqs = uguard sigma procs trargs tr.tr_ureq in
+  (*List.iter (fun u -> Format.eprintf "checkingg : %a@." SAtom.print u) ureqs;*)
+  (*Ureqs that have ORs are lists with multiple elements : no or means 1 el in list
+    so instead of iter, it has to be a function because one of the elements has to satisfy 
+  *)
+  (*let () = List.iter (fun u -> check_reqs u env sigma trname) ureqs in*)
+  let new_env = check_ureqs ureqs new_env sigma trname in 
+  let nv = update_vals new_env tr.tr_assigns sigma in
+  let nv = update_arrs sigma new_env nv tr.tr_upds in
+  let nv, lockq,cond_sets, semaphores = update_locks_unlocks sigma new_env nv tr lock_queue cond_sets semaphores in 
+  upd_non_dets nv tr.tr_nondets,lockq,cond_sets, semaphores
+    
     
 let apply_transition args trname trans (env,lock_queue,cond_sets, semaphores) =
   let tr = Trans.find trname trans in
@@ -2193,14 +2216,15 @@ let all_possible_transitions (env,_,_,_) trans all_procs flag=
 	  check_actor_suspension sigma env el.tr_process;
 	  let new_env = check_reqs el.tr_reqs env sigma name in
 	  let trargs = List.map (fun x -> Variable.subst sigma x) args in
+
 	  let ureqs = uguard sigma all_procs trargs el.tr_ureq in
 	  (*List.iter (fun u -> check_reqs u env sigma name) ureqs;*)
 	  glob := check_ureqs ureqs new_env sigma name; 
 	  (el,[])::acc
 	with
 	  | TopError _ -> acc
-	  | Stdlib.Sys.Break ->
-	    if flag
+	  | Stdlib.Sys.Break | Exit ->
+	    if flag && (Options.int_brab = -1)
 	    then
 	      raise (TopError StopExecution)
 	    else raise Exit
@@ -2214,19 +2238,21 @@ let all_possible_transitions (env,_,_,_) trans all_procs flag=
 	  try
 	    check_actor_suspension sigma env el.tr_process;
 	    let new_env = check_reqs el.tr_reqs env sigma name in
+
 	    let trargs = List.map (fun x -> Variable.subst sigma x) args in
+
 	    let ureqs = uguard sigma all_procs trargs el.tr_ureq in
 	    (*List.iter (fun u -> check_reqs u env sigma name) ureqs;*)
-	    glob := check_ureqs ureqs new_env sigma name; 
+	    glob := check_ureqs ureqs new_env sigma name;
 	    (el, procs)::acc_t
 	  with
 	    | TopError _ -> acc_t
-	    | Sys.Break -> 
+	    | Sys.Break | Exit-> 
 	      if flag
 	      then
 		raise (TopError StopExecution)
 	      else raise Exit
-	    | s -> let e = Printexc.to_string s in Format.printf "%s@." e; assert false      
+	    | s ->(* let e = Printexc.to_string s in Format.printf "%s@." e; *)raise Exit    
 	) acc tr_procs
       end 
   ) trans []
