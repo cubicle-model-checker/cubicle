@@ -11,8 +11,12 @@ array PC2[proc] : pc
 var C : t
 var P : proc
 
-init (i) { C = None && Cmd[i] = None && Data[i] = Z && PC1[i] = Empty && PC2[i] = Empty}
-unsafe(i) { Cmd[i] = None && Data[i] <> Z }
+var Sync : bool
+
+init (i) { C = None && Cmd[i] = None && Data[i] = Z && PC1[i] = Empty && PC2[i] = Empty && Sync = False}
+(*unsafe(i) { Cmd[i] = None && Data[i] <> Z }*)
+
+unsafe() { Sync = True }
 
 transition choix1(i)
 requires { Cmd[i] = None }
@@ -110,7 +114,7 @@ transition seq2_1(i)
 requires { PC1[i] = L2_1 }
 { PC1[i] := L2_1_1; }
 
-transition seq2_1(i)
+transition seq2_11(i)
 requires { PC1[i] = L2_1_1 }
 { PC1[i] := L2_2; }
 
@@ -150,3 +154,8 @@ transition seq4_3(i)
 requires { PC2[i] = L4_3 }
 { PC2[i] := Empty; }
 *)
+
+transition sync(i j m)
+requires { PC2[i] = L3_3 && PC1[j] = L3_1 && PC2[m] = L2_3 && forall_other k. PC2[k] = L3_3}
+{ PC2[l] := case | _ : Empty;
+  Sync := True } 
