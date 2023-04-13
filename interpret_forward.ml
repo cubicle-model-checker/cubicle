@@ -2252,9 +2252,7 @@ let recalibrate_states () =
   let h' = Hashtbl.copy remaining_pool in
   let c = ref 0 in
   Hashtbl.clear remaining_pool;
-  Hashtbl.iter (fun k el -> Hashtbl.add remaining_pool !c el; incr c) h';
-  Format.eprintf "c is %d@." !c
-  
+  Hashtbl.iter (fun k el -> Hashtbl.add remaining_pool !c el; incr c) h'  
     
 let choose_node rand =
   try
@@ -2262,7 +2260,6 @@ let choose_node rand =
   with Not_found ->
     begin
       recalibrate_states ();
-      Format.eprintf "rand is %d@." rand;
       Hashtbl.find remaining_pool rand
     end 
 
