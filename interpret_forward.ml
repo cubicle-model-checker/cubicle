@@ -1556,6 +1556,7 @@ let reconstruct_trace parents me =
 
 exception ReachedUnsafe
 exception NeverSeen of Interpret_types.global * (Ast.transition_info * Variable.t list) * int
+exception StopExit
 
 
 let grade_exits s tr tr_p =
@@ -1718,7 +1719,7 @@ let run_smart code node all_procs trans unsafes =
 	    incr new_seen;
 	    let e_m = env_to_satom_map temp_env in
 	    visited_states := e_m::!visited_states;
-	    if (List.length exits) > 1 then
+	    if (List.length exits) > 1 && (!steps < max_depth - 2)  then
 	      begin
 		let f = fresh () in
 		old_code := f; 
@@ -1833,7 +1834,7 @@ let further_bfs code node transitions all_procs all_unsafes =
 	    incr new_seen;
 	    let e_m = env_to_satom_map e in
 	    visited_states := e_m::!visited_states;
-	    if (List.length exits) > 1 then
+	    if (List.length exits) > 1 && (!curr_depth < max_depth - 2) then
 	      begin
 		let f = fresh () in
 		old_code := f; 
@@ -1861,7 +1862,7 @@ let further_bfs code node transitions all_procs all_unsafes =
 let interpret_bfs original_env transitions all_procs all_unsafes =
   try
     let parents = Hashtbl.create 200 in
-    let max_depth = 20 in
+    let max_depth = 30 in
     let curr_depth = ref 0 in
     let node = ref 0 in
     let rem = ref 1 in
@@ -1891,6 +1892,15 @@ let interpret_bfs original_env transitions all_procs all_unsafes =
       let possible = all_possible_transitions env transitions all_procs false in
       List.iter (fun (at,at_p) ->
 	let e = apply_transition at_p at.tr_name transitions env in
+
+	begin
+	    try 
+	      let ht_count = Hashtbl.find fuzz_tr_count at.tr_name in
+	      Hashtbl.replace fuzz_tr_count at.tr_name (ht_count+1)
+	    with Not_found ->  Hashtbl.add fuzz_tr_count at.tr_name 1
+	  end;
+
+	
 	let he = hash_full_env e in
 	try
 	  let _ = Hashtbl.find bfs_visited he in
@@ -2060,7 +2070,7 @@ let run_forward code node all_procs trans unsafes =
 	    incr new_seen;
 	    let e_m = env_to_satom_map new_env in
 	    visited_states := e_m::!visited_states;
-	    if (List.length exits) > 1 then
+	    if (List.length exits) > 1 && (!steps < max_depth - 2) then
 	      begin
 		let f = fresh () in
 		old_code := f; 
@@ -2082,6 +2092,88 @@ let run_forward code node all_procs trans unsafes =
   done;
   Format.printf "New states seen: %d. New added to pool: %d Removed from pool %d@." !new_seen !add_pool !rem_pool
     
+
+let do_new_exit code node all_procs trans unsafes =
+  let env = node.state in
+  let hash = hash_full_env env in
+  let removed = ref 0 in
+  let added = ref 0 in
+  
+  try
+    let ee = Hashtbl.find bfs_visited hash in
+    let (apply,apply_procs),lr =
+      try List.hd ee.exit_remaining, List.tl ee.exit_remaining
+      with Failure _ ->
+	begin
+	  Hashtbl.remove remaining_pool code;
+	  decr pool_size;
+	  Format.printf "Removed state from pool.@.";
+	  raise StopExit
+	end 
+    in
+
+    if lr = [] then
+      begin
+	Hashtbl.remove remaining_pool code;
+	removed := 1;
+	decr pool_size
+      end
+    else
+      begin
+	let new_map =
+	  try
+	    ExitMap.find (apply, apply_procs) node.taken_transitions
+	  with
+	      Not_found -> 0 
+	in
+	let ns = { state = env;
+	    seen = node.seen;
+	    exit_number = node.exit_number;
+	    exit_transitions = node.exit_transitions;
+	    exit_remaining = lr;
+	    taken_transitions = ExitMap.add (apply, apply_procs) (new_map+1) node.taken_transitions; }
+	in 
+	Hashtbl.replace bfs_visited hash ns;
+      end ;
+    let new_env = apply_transition apply_procs apply trans env in
+    let new_hash = hash_full_env new_env in 
+    try
+      let s = Hashtbl.find bfs_visited new_hash in
+      let sn = 
+	{ state = s.state;
+	  seen = s.seen + 1;
+	  exit_number =  s.exit_number;
+	  exit_transitions = s.exit_transitions;
+	  exit_remaining = s.exit_remaining;
+	  taken_transitions = s.taken_transitions } 
+      in Hashtbl.replace bfs_visited new_hash sn;
+    with Not_found ->
+      begin
+	added := 1;
+	let exits = all_possible_transitions new_env trans all_procs true in
+	let mapped_exits = List.map (fun (x,y) -> (x.tr_name, y)) exits in
+	let nd =
+	  { state = new_env;
+	    seen = 1;
+	    exit_number = List.length exits;
+	    exit_transitions = mapped_exits;
+	    exit_remaining = mapped_exits;
+	    taken_transitions = ExitMap.empty; }
+	in
+	Hashtbl.add bfs_visited new_hash nd;
+	let e_m = env_to_satom_map new_env in
+	visited_states := e_m::!visited_states;
+	let f = fresh () in
+	Hashtbl.add remaining_pool f nd;
+	incr pool_size
+      end;
+      Format.printf "Unused Exit: Added %d state(s). Removed %d state(s) from pool@." !added !removed
+  with
+    | StopExit -> () 
+    | Exit -> raise Exit 
+      
+      
+
     
 
 let execute_random_forward glob_env trans all_procs unsafe depth curr_round=
@@ -2160,7 +2252,8 @@ let recalibrate_states () =
   let h' = Hashtbl.copy remaining_pool in
   let c = ref 0 in
   Hashtbl.clear remaining_pool;
-  Hashtbl.iter (fun k el -> Hashtbl.add remaining_pool !c el; incr c) h'
+  Hashtbl.iter (fun k el -> Hashtbl.add remaining_pool !c el; incr c) h';
+  Format.eprintf "c is %d@." !c
   
     
 let choose_node rand =
@@ -2168,7 +2261,8 @@ let choose_node rand =
     Hashtbl.find remaining_pool rand
   with Not_found ->
     begin
-      recalibrate_states (); 
+      recalibrate_states ();
+      Format.eprintf "rand is %d@." rand;
       Hashtbl.find remaining_pool rand
     end 
 
@@ -2188,13 +2282,15 @@ let continue_from_bfs all_procs transitions all_unsafes =
        - run smart for X steps starting from node
        - recalibrate remaining_pool occasionally 
     *)
-    let choice = Random.int 5 in
+    let choice = Random.int 7 in
     match choice with
-      | 0 -> run_forward rand node all_procs transitions all_unsafes 
+      | 0 -> run_forward rand node all_procs transitions all_unsafes
+      | 5 -> run_forward rand node all_procs transitions all_unsafes 
       | 1 -> markov_entropy rand node all_procs transitions
       | 2 -> recalibrate_states ()
       | 3 -> further_bfs rand node transitions all_procs all_unsafes
       | 4 -> run_smart rand node all_procs transitions all_unsafes
+      | 6 -> do_new_exit rand node all_procs transitions all_unsafes 
       | _ -> assert false   
   done
   with
