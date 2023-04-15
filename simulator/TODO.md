@@ -49,6 +49,9 @@ Dans un monde idéal :
 
 Problème actuellement : SI on fait un step forward en étant en pause, le simulateur n'affiche pas la pause
 
+On devrait pouvoir tuer un proc comme dans cubicle 
+Regarder algo résistants aux pannes 
+
 Pouvoir déplacer transition et état dans l'espace
 
 ## TESTER PETRI
