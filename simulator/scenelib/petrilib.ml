@@ -2,38 +2,35 @@
 (* see https://en.wikipedia.org/wiki/Petri_net *)
 (*                                             *)
 
-open Graphics
+open Bgraphics
 open Maps
+open Input
 
 (* Graphical Settings *)
 let window_size = 600
 
-let state_size  = 50
+let state_size        = 50
 let state_text_size   = 50
 let state_text_space  = 2
 
-let proc_perc   = 80 (* How much percentage of the available space should proc take *)
+let proc_perc       = 80 (* How much percentage of the available space should procs take *)
 let proc_space_perc = 50
 
-let trans_size  = 50  
-let trans_text_size = 50
-let trans_text_space = 2
+let trans_size        = 50  
+let trans_text_size   = 50
+let trans_text_space  = 2
 
-let indic_size = 50
-let indic_text_size = 50
-let indic_text_space = 2
+let indic_size        = 50
+let indic_text_size   = 50
+let indic_text_space  = 2
 
-let button_size = 50
-let button_text_size = 50
-let button_text_space = 2
-let button_color_success = green 
-let button_color_failure = red
-let button_color_off = black 
-let button_color_hover = rgb 50 50 50
-
-(* Point of the arrow settings *)
-let arrow_size    = 20  (* Length of the pointy bit *)
-let arrow_pointy  = 30  (* How pointy is it ?       *)
+let button_size         = 50
+let button_text_size    = 50
+let button_text_space   = 2
+let button_color_success  = Graphics.green 
+let button_color_failure  = Graphics.red
+let button_color_off      = Graphics.black 
+let button_color_hover    = Graphics.rgb 50 50 50
 
 module Petri : sig
 
@@ -127,27 +124,10 @@ let button_last_result = ref false
 let button_clicked = ref false
 let mouse_speed = 1
 
-
-(* Camera globals *)
-let cam_pos = ref Vector.zero
-
 let pre_init () = 
     let ws = string_of_int window_size in
     open_graph (" "^ws^"x"^ws);
     auto_synchronize false
-
-let get_pressed_key () = if key_pressed () then Some(read_key ()) else None
-let handle_input    () = 
-  match get_pressed_key () with
-  | Some(c) -> 
-      begin match c with
-      | ' ' -> Format.printf "Toggled pause. \n%!"; Simulator.toggle_pause ()
-      | 'a' -> Format.printf "Taking step back...\n%!"; Simulator.take_step_back ()
-      | 'z' -> Format.printf "Taking step forward...\n%!"; Simulator.take_step_forward ()
-      | 'r' -> Format.printf "Resetting simulation...\n%!"; Simulator.reset ()
-      | c   -> Format.printf "Pressed unbound key : '%c'\n%!" c 
-      end
-  | _ -> ()
 
 let draw_for_state () =
   clear_graph ();
@@ -160,21 +140,6 @@ let draw_for_state () =
   (* Draw arcs *)
   set_color black;
   let draw_arc a =
-    let draw_arrow (from : Vector.t) (toward : Vector.t) = 
-      let a = Vector.setsize arrow_pointy (Vector.sub from toward) in
-      let draw_pointy pointy = 
-          let o = Vector.add toward (Vector.setsize arrow_size pointy) in
-          let o = Vector.add a o in
-          moveto (toward.x + !cam_pos.x) (toward.y + !cam_pos.y);
-          lineto (o.x + !cam_pos.x) (o.y + !cam_pos.y);
-        in
-        moveto (from.x + !cam_pos.x) (from.y + !cam_pos.y);
-        lineto (toward.x + !cam_pos.x) (toward.y + !cam_pos.y);
-        let ort = Vector.orth (Vector.sub toward from) in
-        draw_pointy (ort.(0));
-        draw_pointy (ort.(1));
-      in
-
     let fst, scnd = match a with
     | Petri.StateToTrans(st,tr) -> 
         let (f,s) = (Petri.get_state_pos pet st, Petri.get_trans_pos pet tr)  in
@@ -200,7 +165,7 @@ let draw_for_state () =
   set_text_size state_text_size; 
   let draw_state state_id ({x; y} : Vector.t) = 
     set_color black;
-    draw_circle (x + !cam_pos.x) (y + !cam_pos.y) state_size;
+    draw_circle x y state_size;
     let proc_in_state = ref [] in
     for i=0 to (Utils.get_nb_proc ()-1) do
       let ps = Petri.get_state_for_proc (get_petri ()) i in
@@ -210,7 +175,7 @@ let draw_for_state () =
     let (tsx, tsy) = text_size state_id in
     let nx = x - (tsx / 2) in
     let ny = y - tsy - state_size - state_text_space in
-    moveto (nx + !cam_pos.x) (ny + !cam_pos.y);
+    moveto nx ny;
     draw_string state_id;
 
     let nb_proc = List.length (!proc_in_state) in
@@ -237,7 +202,7 @@ let draw_for_state () =
           let ry  = ytopleft + (yingrid*psize) in
           let col = if List.mem p procs then red else black in
           set_color col;
-          fill_circle (rx + !cam_pos.x) (ry + !cam_pos.y) rpsize;
+          fill_circle rx ry rpsize;
         in
         List.iteri draw_proc (!proc_in_state);
       )
@@ -255,11 +220,11 @@ let draw_for_state () =
       with Failure(_) -> (black)
     in
     set_color col;
-    fill_rect (x - ts + !cam_pos.x) (y - ts + !cam_pos.y) trans_size trans_size;
+    fill_rect (x - ts) (y - ts) trans_size trans_size;
     let (tsx, tsy) = text_size trans_name in
     let nx = x - (tsx / 2) in
     let ny = y + tsy - trans_size - trans_text_space in
-    moveto (nx + !cam_pos.x) (ny + !cam_pos.y);
+    moveto nx ny;
     draw_string trans_name
   in
   
@@ -272,11 +237,11 @@ let draw_for_state () =
     let status = f () in
     let color  = if status then red else black in
     set_color color;
-    fill_rect (pos.x - hs + !cam_pos.x) (pos.y - hs + !cam_pos.y) indic_size indic_size;
+    fill_rect (pos.x - hs) (pos.y - hs) indic_size indic_size;
     let (tsx, tsy) = text_size name in
     let nx = pos.x - (tsx / 2) in
     let ny = pos.y - tsy - indic_size - button_text_space in
-    moveto (nx + !cam_pos.x) (ny + !cam_pos.y);
+    moveto nx ny;
     draw_string name;
   in
 
@@ -295,11 +260,11 @@ let draw_for_state () =
         ) 
       else button_color_off in
     set_color color;
-    fill_rect (pos.x - bs + !cam_pos.x) (pos.y - bs + !cam_pos.y) button_size button_size;
+    fill_rect (pos.x - bs) (pos.y - bs) button_size button_size;
     let (tsx, tsy) = text_size name in
     let nx = pos.x - (tsx / 2) in
     let ny = pos.y - tsy - button_size - button_text_space in
-    moveto (nx + !cam_pos.x) (ny + !cam_pos.y);
+    moveto nx ny;
     draw_string name;
     ()
   in 
@@ -337,22 +302,8 @@ let handle_mouse (dt : float) =
     in 
     List.iter handle_button (Petri.get_buttons (get_petri ()));
 
-  if button_down () then (
-    (* Camera *)
-    let mvec = Vector.{x = mx; y = my} in
-    if !mouse_down then begin
-      let vecdiff = Vector.mult mouse_speed (Vector.sub mvec !last_registered_pos) in
-      cam_pos := Vector.add !cam_pos vecdiff;
-      draw_for_state ()
-    end;
-    last_registered_pos := mvec;
-    mouse_down := true 
-  )
-  else (
-      mouse_down := false;
-      button_clicked := false;
-  )
+  if not (button_down ()) then button_clicked := false
 
 let update dt  = (* Automatically manage pausing, navigating through the trace, buttons and Camera *)
-  handle_input ();
+  Input.update draw_for_state dt;
   handle_mouse dt

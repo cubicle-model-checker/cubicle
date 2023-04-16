@@ -7,10 +7,8 @@ let button_last_result = ref false
 let button_clicked = ref false
 let mouse_speed = 1
 
-
 (* Camera globals *)
 let cam_pos = ref Vector.zero
-
 
 let get_pressed_key () = if key_pressed () then Some(read_key ()) else None
 let handle_input    () = 
@@ -25,10 +23,10 @@ let handle_input    () =
       end
   | _ -> ()
 
-let handle_mouse (dt : float) = (* TODO : Prendre en paramètre une liste de boutons. Nécéssite création d'un fichier pour les boutons *)  
+let handle_mouse draw_for_state (dt : float) = (* TODO : Prendre en paramètre une liste de boutons. Nécéssite création d'un fichier pour les boutons *)  
   let (mx, my) = mouse_pos () in 
 
-  (* Button interaction *)
+  (*
     let bs = button_size / 2 in 
     let handle_button ((_ : string), (bfun : (unit -> bool)), (bpos : Vector.t)) =
       let rbpos = Vector.add bpos (!cam_pos) in
@@ -42,6 +40,7 @@ let handle_mouse (dt : float) = (* TODO : Prendre en paramètre une liste de bou
       )
     in 
     List.iter handle_button (Petri.get_buttons (get_petri ()));
+  *)
 
   if button_down () then (
     (* Camera *)
@@ -59,6 +58,6 @@ let handle_mouse (dt : float) = (* TODO : Prendre en paramètre une liste de bou
       button_clicked := false;
   )
 
-let update dt  = (* Automatically manage pausing, navigating through the trace, buttons and Camera *)
+let update draw_for_state dt  = (* Automatically manage pausing, navigating through the trace, buttons and Camera *)
   handle_input ();
-  handle_mouse dt
+  handle_mouse draw_for_state dt

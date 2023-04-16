@@ -33,9 +33,6 @@ Mais qui n'itère que sur un modèle.
 
 ## Scenes 
 
-- Casser les librairies (particulièrement petri) en plusieurs librairie pour pouvoir les utiliser a des endroits différents
--> Les boutons peuvent devenir complexe et on peut penser a l'ajout d'un module Button
-
 - Refresh l'écran lors d'une mise en pause pour afficher le texte
 - Vérifier état unsafe 
 - Afficher numéro du step courant quelque part
@@ -50,9 +47,18 @@ Dans un monde idéal :
 Problème actuellement : SI on fait un step forward en étant en pause, le simulateur n'affiche pas la pause
 
 On devrait pouvoir tuer un proc comme dans cubicle 
-Regarder algo résistants aux pannes 
+-> Regarder algo résistants aux pannes 
 
 Pouvoir déplacer transition et état dans l'espace
+Buttons dans leurs propre classe
+
+Faire ascenceur:
+Nécéssite d'avoir des boutons, ...
+
+- Camera speed
+- Camera on/off .. With mouse/without...
+
+Mettre les boutons dans une classe a part pour les inputs
 
 ## TESTER PETRI
 

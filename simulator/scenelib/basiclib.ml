@@ -3,7 +3,6 @@ open Graphics
 
 (* A Scene library using Graphics. *)
 
-
 (* Function for drawing procs *)
 let draw_square_proc get_proc_text get_proc_color r i x y = 
   set_color (get_proc_color i);
@@ -21,7 +20,6 @@ let draw_square_proc get_proc_text get_proc_color r i x y =
   List.iter write_text txt_list
 
 (* Functions for compositions *)
-
 let proc_size_rayon border_size space_perc =
   let proc_size = ((Graphics.size_x ()) - (border_size*2)) / (get_nb_proc ()) in
   let rayon = (proc_size*space_perc) / 200 in
