@@ -60,6 +60,12 @@ Nécéssite d'avoir des boutons, ...
 
 Mettre les boutons dans une classe a part pour les inputs
 
+Un bouton c'est: 
+- Un nom 
+- Une position 
+- Une fonction associée
+- Une taille 
+
 ## TESTER PETRI
 
 - dekker_n

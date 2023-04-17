@@ -23,7 +23,7 @@ let handle_input    () =
       end
   | _ -> ()
 
-let handle_mouse draw_for_state (dt : float) = (* TODO : Prendre en paramètre une liste de boutons. Nécéssite création d'un fichier pour les boutons *)  
+let handle_mouse on_model_change (dt : float) = (* TODO : Prendre en paramètre une liste de boutons. Nécéssite création d'un fichier pour les boutons *)  
   let (mx, my) = mouse_pos () in 
 
   (*
@@ -48,7 +48,7 @@ let handle_mouse draw_for_state (dt : float) = (* TODO : Prendre en paramètre u
     if !mouse_down then begin
       let vecdiff = Vector.mult mouse_speed (Vector.sub mvec !last_registered_pos) in
       cam_pos := Vector.add !cam_pos vecdiff;
-      draw_for_state ()
+      on_model_change ()
     end;
     last_registered_pos := mvec;
     mouse_down := true 
@@ -58,6 +58,6 @@ let handle_mouse draw_for_state (dt : float) = (* TODO : Prendre en paramètre u
       button_clicked := false;
   )
 
-let update draw_for_state dt  = (* Automatically manage pausing, navigating through the trace, buttons and Camera *)
+let update on_model_change dt  = (* Automatically manage pausing, navigating through the trace, buttons and Camera *)
   handle_input ();
-  handle_mouse draw_for_state dt
+  handle_mouse on_model_change dt
