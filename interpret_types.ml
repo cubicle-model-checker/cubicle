@@ -145,32 +145,32 @@ type global = term_map * lockq * conds * semaphs
 
 let print_val fmt v =
   match v with
-    | VInt i -> Format.printf "%d" i
-    | VReal r -> Format.printf "%f" r
-    | VBool b -> Format.printf "%b" b
-    | VConstr el | VGlob el  -> Format.printf "%a" Hstring.print el
-    | VProc i -> Format.printf "%a" Hstring.print i
+    | VInt i -> Format.fprintf fmt "%d" i
+    | VReal r -> Format.fprintf fmt "%f" r
+    | VBool b -> Format.fprintf fmt "%b" b
+    | VConstr el | VGlob el  -> Format.fprintf fmt "%a" Hstring.print el
+    | VProc i -> Format.fprintf fmt "%a" Hstring.print i
     | VLock(b, vo) ->
       if b then
 	match vo with
 	  | None -> assert false
-	  | Some p -> Format.printf "locked by process %a" Term.print p
+	  | Some p -> Format.fprintf fmt "locked by process %a" Term.print p
       else
-	Format.printf "unlocked"
-    | VAlive -> Format.printf "process active"
-    | VSuspended -> Format.printf "process suspended"
-    | VSleep _ -> Format.printf "process asleep"
+	Format.fprintf fmt "unlocked"
+    | VAlive -> Format.fprintf fmt "process active"
+    | VSuspended -> Format.fprintf fmt "process suspended"
+    | VSleep _ -> Format.fprintf fmt "process asleep"
     | VRLock (b,po,i) ->
       if b then
 	 match po with
 	   | None -> assert false
-	   | Some p -> Format.printf "locked by process %a %d time(s)" Term.print p i
+	   | Some p -> Format.fprintf fmt "locked by process %a %d time(s)" Term.print p i
       else
-	Format.printf "unlocked"
-    | VSemaphore i -> Format.printf "%d" i
-    | UNDEF -> Format.printf "%s" "UNDEF"
-    | VAccess(l,t) -> Format.printf "%a[%a]" Hstring.print l (Hstring.print_list ", ") t
-    | VArith _ -> Format.printf "FORMAT"
+	Format.fprintf fmt "unlocked"
+    | VSemaphore i -> Format.fprintf fmt "%d" i
+    | UNDEF -> Format.fprintf fmt "%s" "UNDEF"
+    | VAccess(l,t) -> Format.fprintf fmt "%a[%a]" Hstring.print l (Hstring.print_list ", ") t
+    | VArith _ -> Format.fprintf fmt "FORMAT"
     | VAbstract _ -> ()
 
 

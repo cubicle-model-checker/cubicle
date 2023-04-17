@@ -116,6 +116,7 @@ let _ =
               the limit to explore further.@.";
      exit 1
   | Interpret_forward.ReachedUnsafe -> exit 2
+  | Interpret_fuzzer.Done -> exit 1
 
   | Failure str ->
 

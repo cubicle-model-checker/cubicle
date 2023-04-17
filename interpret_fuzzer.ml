@@ -3,6 +3,7 @@ open Interpret_types
 open Interpret_errors
 open Ast
 open Types
+open Util
 
 
 (*  val init : Ast.t_system -> unit
@@ -23,6 +24,9 @@ let system_sigma_en = ref []
 let system_sigma_de = ref []
 let tr_count = Hashtbl.create 10
 let deadlocks = ref (0, [])
+
+let unsafe_states = ref []
+let dead_states = ref []
 
 let parents = Hashtbl.create 200
 
@@ -55,6 +59,25 @@ type deadlock_state = {
   dead_steps : int
 }
 
+
+let print_interpret_env fmt (env,locks, cond, sem)=
+  Env.iter(fun k {value = v} ->
+    Format.fprintf fmt "%a : %a\n" Term.print k print_val v
+  ) env;
+  Format.fprintf fmt "----------------------\n";
+  Format.fprintf fmt "Lock Queues:\n";
+  LockQueues.iter (fun k el ->
+    Format.fprintf fmt "%a : { %a }\n" Term.print k print_queue el) locks;
+  Format.fprintf  fmt "----------------------\n";
+    Format.fprintf fmt "Condition wait pools:\n";
+  Conditions.iter (fun k el ->
+    Format.fprintf fmt "%a : { %a }\n" Term.print k print_wait el) cond;
+  Format.fprintf fmt "----------------------\n";
+  Format.fprintf fmt "Semaphore wait lists:\n";
+  Semaphores.iter (fun k el ->
+    Format.fprintf fmt "%a : { %a }\n" Term.print k print_wait el) sem
+
+    
 
 let install_sigint () =
   Sys.set_signal Sys.sigint 
@@ -154,6 +177,8 @@ let print_forward_trace fmt el =
 exception ReachedUnsafe
 exception NeverSeen of Interpret_types.global * (Ast.transition_info * Variable.t list) * int
 exception StopExit
+exception Dead of int
+exception Done
   
 
 let reconstruct_trace parents me =
@@ -174,6 +199,32 @@ let reconstruct_trace parents me =
   Format.printf "Init";
   List.iter (fun (x,y) -> Format.printf " -> %a(%a)" Hstring.print x Variable.print_vars y) !trace;
   Format.printf " -> @{<fg_magenta>unsafe@}@."
+
+
+let reconstruct_trace_file fmt parents me =
+  let trace = ref [] in
+  let bad = ref me in
+  let init_hash = ref 0 in
+  let not_init = ref true in
+  while !not_init do
+    let am_init, tr, h= Hashtbl.find parents !bad in
+    if am_init then
+      begin
+	not_init := false;
+	init_hash := h
+      end 
+    else
+      begin
+	match tr with
+	  | Some (t,tr_pr) -> trace := (t.tr_name,tr_pr, h)::!trace; bad := h
+	  | None -> assert false
+      end
+  done;
+  Format.fprintf fmt "Trace:\n";
+  Format.fprintf fmt "Init[%d]" !init_hash;
+  List.iter (fun (x,y,hsh) -> Format.fprintf fmt " -> %a(%a)[%d]" Hstring.print x Variable.print_vars y hsh)  !trace;
+  Format.fprintf fmt "\n"
+    
   
 
 let least_taken_exit s =
@@ -181,43 +232,7 @@ let least_taken_exit s =
   let first = ExitMap.choose exits in 
   ExitMap.fold (fun key el (k,acc) ->
     if el < acc then (key,el) else (k,acc)) exits first
-  
 
-let env_to_satom_map (env,_,_,_) =
-  Env.fold (fun key {value = el} acc ->
-    match el with
-      | VGlob el -> (*assert false*) STMap.add key (Elem(el, Glob)) acc
-      | VProc el -> STMap.add key (Elem(el, Var)) acc 
-      | VConstr el -> STMap.add key (Elem(el, Constr)) acc
-      | VAccess(el,vl) -> Format.eprintf "wtf: %a, %a@." Hstring.print el Variable.print_vars vl;assert false
-      | VInt i -> let i = ConstInt (Num.num_of_int i) in
-		  let m = MConst.add i 1 MConst.empty in
-		  STMap.add key (Const(m)) acc
-      | VReal r -> let r = ConstReal (Num.num_of_int (int_of_float r)) in
-		   let m = MConst.add r 1 MConst.empty in
-		   STMap.add key (Const(m)) acc
-      | VBool _ -> assert false
-      | VArith _ -> assert false
-      | _-> acc   
-  ) env STMap.empty
-    
-let env_to_satom (env,_,_,_) =
-  Env.fold (fun key {value = el} acc ->
-    match el with
-      | VGlob el -> SAtom.add (Comp(key, Eq, Elem(el, Glob))) acc 
-      | VProc el -> SAtom.add (Comp(key, Eq, Elem(el, Var))) acc
-      | VConstr el -> SAtom.add (Comp(key, Eq, Elem(el, Constr))) acc
-      | VAccess(el,vl) -> SAtom.add (Comp(key, Eq, Access(el, vl))) acc
-      | VInt i -> let i = ConstInt (Num.num_of_int i) in
-		  let m = MConst.add i 1 MConst.empty in
-		   SAtom.add (Comp(key, Eq, Const(m))) acc
-      | VReal r -> let r = ConstReal (Num.num_of_int (int_of_float r)) in
-		   let m = MConst.add r 1 MConst.empty in
-		   SAtom.add (Comp(key, Eq, Const(m))) acc
-      | VBool _ -> assert false
-      | VArith _ -> assert false
-      | _-> acc   
-  ) env SAtom.empty
 
 
 
@@ -327,9 +342,8 @@ let force_procs_forward glob_env trans all_procs  depth p_proc  =
 	  Hashtbl.replace initial_count hash ((he+1),ee)
 	with Not_found ->
 	  Hashtbl.add initial_count hash (1,new_env);
-	  let ee = env_to_satom_map new_env in
-	  initial_runs := ee::!initial_runs;
-	  incr initial_visited;
+
+	  incr visit_count;
 	  let mapped_exits = List.map (fun (x,y) -> (x.tr_name, y)) exits in
 	  Hashtbl.add initial_data hash
 	    { state = new_env;
@@ -492,6 +506,7 @@ let markov_entropy code glob all_procs trans all_unsafes=
 		    exit_remaining = mapped_exits;
 		    taken_transitions = ExitMap.empty; } in
 		Hashtbl.add bfs_visited hash nd;
+		incr visit_count;
 		Hashtbl.add parents hash (false, Some (proposal, prop_procs), !old_hash);
 		begin
 		  try
@@ -499,13 +514,12 @@ let markov_entropy code glob all_procs trans all_unsafes=
 		  with
 		| TopError Unsafe ->
 		  Format.printf "\n@{<b>@{<bg_red>WARNING@}@}@.";
+		  unsafe_states := hash :: !unsafe_states;
 		  Format.printf "@{<fg_red>Unsafe state reached during forward exploration@}@.";
-		  reconstruct_trace parents hash;
-		  raise ReachedUnsafe
+		  (*reconstruct_trace parents hash;
+		  raise ReachedUnsafe*)
 		end;
 		incr new_seen;
-		let e_m = env_to_satom_map temp_env in
-		visited_states := e_m::!visited_states;
 		if (List.length exits) > 1 then
 		  begin
 		    let f = fresh () in
@@ -533,7 +547,8 @@ let markov_entropy code glob all_procs trans all_unsafes=
       incr taken*)
     with
       | TopError Deadlock ->	
-	taken := steps
+	taken := steps;
+	
       | Stdlib.Sys.Break | Stdlib.Exit ->
 	if Options.int_brab_quiet then 
 	  Format.eprintf "Accepted: %d, Rejected: %d@." !accept !reject;
@@ -751,6 +766,7 @@ let run_smart code node all_procs trans all_unsafes =
 		exit_remaining = mapped_exits;
 		taken_transitions = ExitMap.empty; } in
 	    Hashtbl.add bfs_visited hash nd;
+	    incr visit_count;
 	    Hashtbl.add parents hash (false, Some (apply, apply_procs), !old_hash);
 	    begin
 	      try
@@ -759,12 +775,11 @@ let run_smart code node all_procs trans all_unsafes =
 		| TopError Unsafe ->
 		  Format.printf "\n@{<b>@{<bg_red>WARNING@}@}@.";
 		  Format.printf "@{<fg_red>Unsafe state reached during forward exploration@}@.";
-		  reconstruct_trace parents hash;
-		  raise ReachedUnsafe
+		  unsafe_states := hash :: !unsafe_states
+	    (*reconstruct_trace parents hash;
+	      raise ReachedUnsafe*)
 	    end;
 	    incr new_seen;
-	    let e_m = env_to_satom_map temp_env in
-	    visited_states := e_m::!visited_states;
 	    if (List.length exits) > 1 && (!steps < max_depth - 2)  then
 	      begin
 		let f = fresh () in
@@ -877,6 +892,7 @@ let further_bfs code node transitions all_procs all_unsafes =
 		exit_remaining = mapped_exits;
 		taken_transitions = ExitMap.empty; } in
 	    Hashtbl.add bfs_visited he nd;
+	    incr visit_count;
 	    Hashtbl.add parents he (false, Some (at, at_p), ha);
 	    begin
 	      try
@@ -885,12 +901,12 @@ let further_bfs code node transitions all_procs all_unsafes =
 		| TopError Unsafe ->
 		  Format.printf "\n@{<b>@{<bg_red>WARNING@}@}@.";
 		  Format.printf "@{<fg_red>Unsafe state reached during forward exploration@}@.";
-		  reconstruct_trace parents he;
-		  raise ReachedUnsafe
+		  unsafe_states := he :: !unsafe_states
+		  (*reconstruct_trace parents he;
+		  raise ReachedUnsafe*)
 	    end;
 	    incr new_seen;
-	    let e_m = env_to_satom_map e in
-	    visited_states := e_m::!visited_states;
+
 	    if (List.length exits) > 1 && (!curr_depth < max_depth - 2) then
 	      begin
 		let f = fresh () in
@@ -935,6 +951,7 @@ let interpret_bfs original_env transitions all_procs all_unsafes =
 	exit_remaining = exit_poss;
 	taken_transitions = ExitMap.empty } in 
     Hashtbl.add bfs_visited he hi;
+    incr visit_count;
     let to_do = Queue.create () in
     Queue.push (he, 0,original_env) to_do;
     Hashtbl.add parents he (true, None, he);
@@ -974,6 +991,7 @@ let interpret_bfs original_env transitions all_procs all_unsafes =
 		taken_transitions = ExitMap.empty}
 	    in 		
 	    Hashtbl.add bfs_visited he ev;
+	    incr visit_count;
 	    Hashtbl.add parents he (false, Some (at, at_p), ha);
 	    begin
 	      try
@@ -982,11 +1000,10 @@ let interpret_bfs original_env transitions all_procs all_unsafes =
 		| TopError Unsafe ->
 		  Format.printf "\n@{<b>@{<bg_red>WARNING@}@}@.";
 		  Format.printf "@{<fg_red>Unsafe state reached during forward exploration@}@.";
-		  reconstruct_trace parents he;
-		  raise ReachedUnsafe
+		  unsafe_states := he :: !unsafe_states
+		  (*reconstruct_trace parents he;
+		  raise ReachedUnsafe*)
 	    end;
-	    let e_m = env_to_satom_map e in
-	    visited_states := e_m::!visited_states;
 	    incr node;
 	    incr rem;
 	    Format.printf "[%d][%d][%d]\r%!" !node !rem env_d;
@@ -1088,6 +1105,7 @@ let run_forward code node all_procs trans all_unsafes =
 		exit_remaining = mapped_exits;
 		taken_transitions = ExitMap.empty; } in
 	    Hashtbl.add bfs_visited hash nd;
+	    incr visit_count;
 	    Hashtbl.add parents hash (false, Some (apply, apply_procs), !old_hash);
 	    begin
 	      try
@@ -1096,12 +1114,11 @@ let run_forward code node all_procs trans all_unsafes =
 		| TopError Unsafe ->
 		  Format.printf "\n@{<b>@{<bg_red>WARNING@}@}@.";
 		  Format.printf "@{<fg_red>Unsafe state reached during forward exploration@}@.";
-		  reconstruct_trace parents hash;
-		  raise ReachedUnsafe
+		  unsafe_states := hash :: !unsafe_states;
+		  (*reconstruct_trace parents hash;
+		  raise ReachedUnsafe*)
 	    end;
 	    incr new_seen;
-	    let e_m = env_to_satom_map new_env in
-	    visited_states := e_m::!visited_states;
 	    if (List.length exits) > 1 && (!steps < max_depth - 2) then
 	      begin
 		let f = fresh () in
@@ -1194,6 +1211,7 @@ let do_new_exit code node all_procs trans all_unsafes =
 	    taken_transitions = ExitMap.empty; }
 	in
 	Hashtbl.add bfs_visited new_hash nd;
+	incr visit_count;
 	Hashtbl.add parents new_hash (false, Some (tr, apply_procs), hash);
 	begin
 	  try
@@ -1202,11 +1220,11 @@ let do_new_exit code node all_procs trans all_unsafes =
 	    | TopError Unsafe ->
 	      Format.printf "\n@{<b>@{<bg_red>WARNING@}@}@.";
 	      Format.printf "@{<fg_red>Unsafe state reached during forward exploration@}@.";
-	      reconstruct_trace parents new_hash;
-	      raise ReachedUnsafe
+	      unsafe_states := new_hash :: !unsafe_states;
+	      (*reconstruct_trace parents new_hash;
+	      raise ReachedUnsafe*)
 	end;
-	let e_m = env_to_satom_map new_env in
-	visited_states := e_m::!visited_states;
+
 	let f = fresh () in
 	Hashtbl.add remaining_pool f nd;
 	incr pool_size
@@ -1215,78 +1233,6 @@ let do_new_exit code node all_procs trans all_unsafes =
   with
     | StopExit -> () 
     | Exit -> raise Exit 
-      
-      
-
-    
-
-let execute_random_forward glob_env trans all_procs unsafe depth curr_round=
-  let steps = ref 0 in
-  (*Random.self_init ();*)
-  let running_env = ref glob_env in
-  let transitions = ref (Array.of_list (all_possible_transitions glob_env trans all_procs false)) in 
-  let queue = ref PersistentQueue.empty in 
-  while !steps < depth do
-    incr overall;
-    
-    let hash = hash_full_env !running_env in
-    begin
-      try
-	let he,ee = Hashtbl.find hCount hash in
-	Hashtbl.replace hCount hash ((he+1),ee)
-      with Not_found ->
-	begin
-	  Hashtbl.add hCount hash (1,!running_env);
-	  let ee = env_to_satom_map !running_env in
-	  visited_states := ee::!visited_states;
-	  incr visit_count;
-	end
-    end;
-        
-    try
-      let l = Array.length !transitions in
-      if l = 0 then raise (TopError Deadlock);
-      let rand = Random.int l in
-      let (apply,apply_procs) = !transitions.(rand) in
-      let new_env = apply_transition apply_procs apply.tr_name trans !running_env in
-      begin
-	try 
-	  let ht_count, seen = Hashtbl.find tr_count apply.tr_name in
-	  let seen = if seen = -1 then curr_round else seen in  
-	  Hashtbl.replace tr_count apply.tr_name (ht_count+1,seen )
-	with Not_found ->  Hashtbl.add tr_count apply.tr_name (1, curr_round)
-      end;
-      queue := PersistentQueue.push (apply.tr_name, apply_procs) !queue;
-      (*check_unsafe new_env unsafe;*)
-      running_env := new_env;
-      incr steps;
-      transitions := Array.of_list (all_possible_transitions !running_env trans all_procs true);
-      (*count seen states*)
-      
-    with
-      | TopError Deadlock ->
-	let d,dl =  !deadlocks
-	in deadlocks := (d+1, (!steps,depth)::dl);
-	if Options.int_brab_quiet then
-	  begin
-	    Format.printf 
-	      "@{<b>@{<fg_red>WARNING@}@}: Deadlock reached in %d steps@." !steps;
-	    Format.eprintf "%a@." print_forward_trace !queue;
-	    Format.eprintf "----@.";
-	  end ;
-	steps := depth
-      | TopError Unsafe -> steps := depth;
-      	Format.printf 
-	"@{<b>@{<fg_red>WARNING@}@}: Unsafe state reached. Stopping exploration.";
-	Format.printf "%a@." print_forward_trace !queue
-      | Stdlib.Sys.Break | Exit ->  steps := depth; raise Exit
-      | TopError StopExecution ->
-	steps := depth
-      | s -> 
-	let e = Printexc.to_string s in Format.printf "%s %a@." e top_report (InputError);
-	steps := depth
-  done
-
     
 let recalibrate_states () =
   Format.printf "Recalibrating remaining states...@.";
@@ -1426,21 +1372,94 @@ let init_vals env init =
 
 
 
+module TimerFuzz = Timer.Make (struct let profiling = true end)
 
 
 let print_fuzz fmt =
   Format.printf "@{<b>@{<u>@{<fg_magenta_b>Cubicle Fuzzer:@}@}@}@."
-                 
 
+
+let print_time fmt sec =
+  let minu = floor (sec /. 60.) in
+  let extrasec = sec -. (minu *. 60.) in
+  Format.printf  "%dm%2.3fs" (int_of_float minu) extrasec
+    
+
+let print_time fmt sec =
+  let minu = floor (sec /. 60.) in
+  let extrasec = sec -. (minu *. 60.) in
+  Format.fprintf fmt "%dm%2.3fs" (int_of_float minu) extrasec
+
+let print_transitions fmt () = 
+  Format.fprintf fmt "----------------Transitions----------------\n";
+  Hashtbl.iter (fun key el -> Format.fprintf fmt "%a:%d\n" Hstring.print key el) fuzz_tr_count;
+  Format.fprintf fmt "-------------------------------------------\n"
+
+
+let print_unsafes fmt () =
+  Format.fprintf fmt "Unsafe states:\n";
+  List.iter (fun un ->
+    reconstruct_trace_file fmt parents un ) !unsafe_states
+
+let print_deadlocks fmt () =
+  Format.fprintf fmt "Deadlock states:\n";
+  List.iter (fun dead ->
+    reconstruct_trace_file fmt parents dead ) !dead_states    
+
+    
+let write_file name fn = 
+  let f = Format.formatter_of_out_channel fn in
+  Format.fprintf f "File: %s\n\
+                  Time elapsed: %a\n\
+                  Procs: %d\n\
+                  Visited states: %d\n\
+                  Remaining pool: %d\n\
+                  %a\n\
+                  %a\n\
+                  %a@."
+    name
+    print_time (TimerFuzz.get ())
+    (Options.get_interpret_procs ())
+    !visit_count
+    !pool_size
+    print_transitions ()
+    print_unsafes ()
+    print_deadlocks ()
+
+let write_states_to_file name =
+  let open_file = open_out (name^".states") in
+  let f = Format.formatter_of_out_channel open_file in
+  Hashtbl.iter (fun key el ->
+    Format.fprintf f "[%d]\n\
+                      %a@."
+      key
+      print_interpret_env el.state ) bfs_visited;
+  close_out open_file 
+  
+    
+
+
+        
 let fuzz original_env transitions procs all_unsafes t_transitions =
+  TimerFuzz.start ();
   let s1 = String.make Pretty.vt_width '*' in
   let s2 = String.make ((Pretty.vt_width-14)/2) ' ' in
   ignore (Sys.command "clear");
   Format.printf "@{<b>@{<fg_cyan>%s@}@}" s1;
   Format.printf "%sCubicle Fuzzer%s@." s2 s2;
   Format.printf "@{<b>@{<fg_cyan>%s@}@}@." s1;
+
+  let dfile = Filename.basename Options.file in
+  let open_file = open_out (dfile^".stats") in
+  
   go_from_bfs original_env transitions procs all_unsafes t_transitions;
-  assert false
+  TimerFuzz.pause ();
+  Format.printf "├─Time elapsed       : %a@." print_time (TimerFuzz.get ());
+  write_file dfile open_file;
+  close_out open_file;
+  write_states_to_file dfile;
+  raise Done
+  
 
 let throwaway = Elem(Hstring.make "UNDEF", Glob)
 
@@ -1601,7 +1620,6 @@ let init tsys =
 
     ) original_init in
 
-  visited_states := (env_to_satom_map (orig_init,0,0,0)) :: !visited_states;
   
   let env_final =
     List.fold_left (fun acc x ->
