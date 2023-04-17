@@ -65,6 +65,7 @@ let _ =
     let system = Typing.system s in
     if type_only then exit 0;
     if interpreter then Interpret_top.setup_env system s;
+    if fuzz then Interpret_fuzzer.init system;
     if refine_universal then
       printf "@{<b>@{<fg_yellow>Warning@} !@}\nUniversal guards refinement \
               is an experimental feature. Use at your own risks.\n@.";

@@ -50,6 +50,7 @@ let rounds = ref (-1)
 let mrkv_brab = ref 0
 let int_brab_quiet = ref false
 let int_deadlock = ref false
+let fuzz = ref false
   
 let incr_verbose () = incr verbose
 
@@ -226,6 +227,8 @@ let specs =
     "-undepth", Arg.Set_int unDepth, " depth of unsafe";
     "-interpret-proc", Arg.Set_int interpretProcs, " how many procs for interpreter";
     "-interpreter", Arg.Set interpreter, " start interpreter";
+    "-fuzz", Arg.Tuple [ Arg.Set fuzz;
+			 Arg.Set_int int_brab], " fuzz the model";
     "-debug-interpret", Arg.Set debug_interpreter, " debug interpreter";
   ]
 
@@ -307,6 +310,7 @@ let cores = !cores
 
 let unDepth = !unDepth
 let interpreter = !interpreter
+let fuzz = !fuzz
 let debug_interpreter = !debug_interpreter
 let int_deadlock = !int_deadlock
 

@@ -690,6 +690,8 @@ let check_comp_req t1 t2 env sigma op =
       interpret_comp (compare_interp_val (to_interpret t1) pt) op, env
 	
     | Access _, Access _ ->
+      let t1 = Term.subst sigma t1 in
+      let t2 = Term.subst sigma t2 in
       (*let ev1 = Env.find t1 env in
       let ev2 = Env.find t2 env in
 	interpret_comp (compare_interp_val ev1 ev2) op*)
@@ -2211,7 +2213,7 @@ let all_possible_transitions (env,_,_,_) trans all_procs flag=
     let tr_procs = all_arrange num_args all_procs in
     if tr_procs = [] then
       begin
-	try 
+	try
 	  let sigma = Variable.build_subst args [] in
 	  check_actor_suspension sigma env el.tr_process;
 	  let new_env = check_reqs el.tr_reqs env sigma name in
@@ -2224,7 +2226,9 @@ let all_possible_transitions (env,_,_,_) trans all_procs flag=
 	with
 	  | TopError _ -> acc
 	  | Stdlib.Sys.Break | Exit ->
-	    if flag && (Options.int_brab = -1)
+	    if (Options.int_brab <> -1) then raise Exit
+	    else 
+	    if flag 
 	    then
 	      raise (TopError StopExecution)
 	    else raise Exit
@@ -2242,13 +2246,15 @@ let all_possible_transitions (env,_,_,_) trans all_procs flag=
 	    let trargs = List.map (fun x -> Variable.subst sigma x) args in
 
 	    let ureqs = uguard sigma all_procs trargs el.tr_ureq in
+
 	    (*List.iter (fun u -> check_reqs u env sigma name) ureqs;*)
 	    glob := check_ureqs ureqs new_env sigma name;
 	    (el, procs)::acc_t
 	  with
 	    | TopError _ -> acc_t
-	    | Sys.Break | Exit-> 
-	      if flag
+	    | Sys.Break | Exit->
+	      if (Options.int_brab <> -1) then raise Exit else 
+	      if flag 
 	      then
 		raise (TopError StopExecution)
 	      else raise Exit

@@ -94,6 +94,7 @@ val out_trace : string
 
 val unDepth : int
 val interpreter : bool
+val fuzz : bool
 val debug_interpreter : bool
 val int_brab : int
 val depth_ib : int
