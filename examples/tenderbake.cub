@@ -1,0 +1,230 @@
+(*
+TODO
+Replace the CHECK_PROPOSER by something
+*)
+
+type baker (*disguised proc?*)
+
+type state_type = NP | CP | CE
+type msg_tag = Preendorse | Endorse | Propose
+
+type block_hd = { l : int; r : int; p : int } 
+
+type vote_type = { vtyp : msg_tag; from: baker; vote_block : block_hd }
+
+
+type pqc_type = { pqc_p : int; pqc_r: int; pqc_q : vote_type set }
+
+type block_type = { level : int;
+     		    round : int;
+		    tick: int;
+		    payload: int;
+		    eqc : vote_type set;
+		    pqc : pqc_type option }
+
+type elect_type = { elect_b : block_type; elect_q : vote_type set } 
+
+type preendorsement = { pre_bl: block_hd; pre_certif : baker set }
+
+type ch_type : { fst : block_type; snd : block_type }
+
+type proposal_type = { ptyp : msg_tag; pfrom : baker; pch : ch_type } 
+
+
+type baker_type = { bstate : state_type;
+     		    brnd : int;
+		    btick : int;
+		    bpqc : pqc option;
+		    ch_B : block_type;
+		    ch_P : block_type;
+		    locked : block_type option;
+		    elect : elect_type option;
+		    timeout : bool }
+
+type message_type : | Vote of vote_type
+                    | Proposal of proposal_type
+
+type mempool_type = { nodech_H : block_type;
+     		      nodech_PRE : block_type;
+		      m : vote_type set;
+		      p : message_type option;
+		      e : vote_type option;
+		      pe : vote_type option;
+		       }
+
+var Epsilon : int
+array Mempool[baker] : msg_type 
+
+array Baker[baker] : baker_type 
+array Network[baker] : mempool_type
+
+const Delta 
+
+var ContinueTimeout : bool
+var TimeoutBaker : baker 
+
+
+init(i) { Baker[i] = { bstate = NP;
+	  	       brnd = 0;
+		       btick = 1;
+		       bpqc = { pqc_p = 0; pqc_r = 0; pqc_q = None };
+		       ch_B = { level = 0; round = 0; tick = 1; payload = 0; eqc = {}; pqc = None };
+		       ch_P = { level = 0; round = 0; tick = 1; payload = 0; eqc = {}; pqc = None };
+		       locked = { level = 0; round = 0; tick = 1; payload = 0; eqc = {}; pqc = None };
+		       elect = { elect_b = { level = 0; round = 0; tick = 1; payload = 0; eqc = {}; pqc = None };
+			    	 elect_q = {} };
+		       timeout = True }
+
+          &&
+	  Mempool =  { nodech_H = { level = 0; round = 0; tick = 1; patload = 0; eqc = {}; pqc = None };
+	    	       nodech_PRE = { level = 0; round = 0; tick = 1; patload = 0; eqc = {}; pqc = None };
+		       m = {};
+		       p = None;
+		       e = None;
+		       pe = None }; 
+	  &&
+	  Epsilon = 0
+	  &&
+	  Network[i] = {} &&
+	  Delta = 1 &&
+	  ContinueTimeout = False}
+
+
+function proposer(x,y)
+{ return (((x+y) mod SYS_PROCS) + 1) }
+
+(*  ==== Trigger Timeout ==== *)
+transition timeout_step(i:baker)
+requires { Baker[i].timeout = False &&
+	   forall_other j:baker,k:baker. (j <> k && abs(Baker[j].tick = Baker[k].tick) <= Delta) }
+{ ContinueTimeout := True;
+  TimeoutBaker := i}
+
+transition timeout(i:baker)
+requires { ContinueTimeout = True && i = TimeoutBaker }
+{ ContinueTimeout = False;
+  Baker[i] =  { Baker[i] with timeout = True; btick = Baker[i].btick + 1 }
+  }
+
+(*  ==== Timeout transitions ==== *)
+(*
+transition timeout_not_proposer_opt_one_no_pqc(i:baker)
+requires { Baker[i].timeout = True && CHECK_PROPOSER && Baker[i].elect = None}
+{
+  Baker[i] =  { Baker[i] with timeout = False;
+                              state = NP;
+			      rnd = Baker[i].rnd + 1 }
+
+}
+
+
+transition timeout_not_proposer_opt_two_no_pqc(i:baker)
+requires { Baker[i].timeout = True && CHECK_PROPOSER && Baker[i].elect <> None && CHECK_PROPOSER }
+{
+  Baker[i] =  { Baker[i] with timeout = False;
+                              state = NP;
+			      rnd = Baker[i].rnd + 1 }
+}
+
+transition timeout_new_round_opt_one_no_pqc(i:baker)
+requires { Baker[i].timeout = True && CHECK_PROPOSER && Baker[i].elect = None && Baker[i].bpqc = None }
+{
+  Baker[i] :=  { Baker[i] with timeout = False;
+                              state = NP;
+			      rnd = Baker[i].rnd + 1;
+			      ch_B = { Baker[i].ch_B with tick = Baker[i].btick; round = Baker[i].rnd +1; payload = Epsilon + 1; pqc = None };
+  Epsilon := Epsilon + 1;
+  
+  Mempool[i] := { Mempool[i] with p = Some (Proposal { ptyp = Propose; pfrom = i; pch = { fst = 
+
+}
+
+
+transition timeout_new_round_opt_one_yes_pqc(i:baker)
+requires { Baker[i].timeout = True && CHECK_PROPOSER && Baker[i].elect = None && Baker[i].bpqc <> None  }
+{}
+
+
+transition timeout_new_round_opt_two_no_pqc(i:baker)
+requires { Baker[i].timeout = True && CHECK_PROPOSER && Baker[i].elect <> None && CHECK_PROPOSER && Baker[i].bpqc = None  }
+{}
+
+transition timeout_new_round_opt_two_yes_pqc(i:baker)
+requires { Baker[i].timeout = True && CHECK_PROPOSER && Baker[i].elect <> None && CHECK_PROPOSER && Baker[i].bpqc <> None  }
+{}*)
+
+(*  ==== Timeout transitions ==== *)
+
+transition timeout_not_proposer_opt_one(i:baker)
+requires { Baker[i].timeout = True && CHECK_PROPOSER && Baker[i].elect = None}
+{
+  Baker[i] =  { Baker[i] with timeout = False;
+                              state = NP;
+			      rnd = Baker[i].rnd + 1 }
+
+}
+
+transition timeout_not_proposer_opt_two(i:baker)
+requires { Baker[i].timeout = True && CHECK_PROPOSER && Baker[i].elect <> None && CHECK_PROPOSER }
+{
+  Baker[i] =  { Baker[i] with timeout = False;
+                              state = NP;
+			      rnd = Baker[i].rnd + 1 }
+}
+
+transition timeout_new_round_opt_one(i:baker)
+requires { Baker[i].timeout = True && CHECK_PROPOSER && Baker[i].elect = None }
+{ let b = if Baker[i].pqc = None then
+      	  { Baker[i].ch_B with tick = Baker[i].tick;
+	    		       round = Baker[i].rnd + 1;
+			       payload = Epsilon + 1;
+			       pqc = None }
+          else
+	  { Baker[i].ch_B with tick = Baker[i].tick;
+	    		       round = Baker[i].rnd + 1;
+			       payload = Baker[i].bpqc.pqc_p;
+			       pqc = Baker[i].bpqc }
+          in
+	  Mempool[i] := { Mempool[i] with p = Some (Proposal { ptyp = Propose; pfrom = i; pch = {fst = b; snd = Baker[i].ch_P }}) };
+	  Baker[i] := { Baker[i] with state = NP; timeout = False; rnd = Baker[i].rnd + 1 };
+	  Epsilon := if Baker[i].pqc = None then Epsilon + 1 else Epsilon
+}
+
+transition timeout_new_round_opt_two(i:baker)
+requires { Baker[i].timeout = True && CHECK_PROPOSER && Baker[i].elect <> None && CHECK_PROPOSER }
+{ let b = if Baker[i].pqc = None then
+      	  { Baker[i].ch_B with tick = Baker[i].tick;
+	    		       round = Baker[i].rnd + 1;
+			       payload = Epsilon + 1;
+			       pqc = None }
+          else
+	  { Baker[i].ch_B with tick = Baker[i].tick;
+	    		       round = Baker[i].rnd + 1;
+			       payload = Baker[i].bpqc.pqc_p;
+			       pqc = Baker[i].bpqc }
+          in
+	  Mempool[i] := { Mempool[i] with p = Proposal { ptyp = Propose; pfrom = i; pch = {fst = b; snd = Baker[i].ch_P }} };
+	  Baker[i] := { Baker[i] with state = NP; timeout = False; rnd = Baker[i].rnd + 1 };
+	  Epsilon := if Baker[i].pqc = None then Epsilon + 1 else Epsilon
+}
+
+transition timeout_new_level(i:baker)
+requires { Baker[i].timeout = False && Baker[i].elect <> None && CHECK_PROPOSER }
+{ let b = { level = Baker[i].ch_B.level + 1;
+      	    round = Baker[i].rnd - Baker[i].elect.elect_b.round;
+	    tick = Baker[i].btick;
+	    payload = Epsilon + 1;
+	    eqc = Baker[i].elect.elect_q;
+	    pqc = None }
+	 in
+	 Mempool[i] := { Mempool[i] with p = Proposal { ptyp = Propose; pfrom = i; pch = {fst = b; snd = Baker[i].elect.elect_b }} };
+	 Baker[i] := { Baker[i] with timeout = False; rnd = Baker[i].rnd + 1; state = NP };
+	 Epsilon := Epsilon + 1
+}
+
+
+(* ==== Proposal transition ==== *)
+
+transition proposal_level_behind(i:baker)
+requires { Baker[i].ch_B.length < Mempool[i].nodech_H.level }
+{ let r = { 
