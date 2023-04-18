@@ -3,6 +3,8 @@ TODO
 Replace the CHECK_PROPOSER by something
 *)
 
+(*TLA version: https://www.lri.fr/~conchon/tenderbake/Tenderbake.tla *)
+
 type baker (*disguised proc?*)
 
 type state_type = NP | CP | CE
@@ -56,7 +58,7 @@ var Epsilon : int
 array Mempool[baker] : msg_type 
 
 array Baker[baker] : baker_type 
-array Network[baker] : mempool_type
+array Network[baker] : message_type set
 
 const Delta 
 
@@ -89,69 +91,37 @@ init(i) { Baker[i] = { bstate = NP;
 	  Delta = 1 &&
 	  ContinueTimeout = False}
 
+(*QUESTIONABLE -- don't want to divulge that procs are ints*)
+function proposer(x,y) 
+{ (((x+y) mod SYS_PROCS) + 1) }
+(*QUESTIONABLE -- don't want to divulge that procs are ints*)
+function prec(a,b)
+{ (a = None && b <> None) || (a <> None && b <> None && a.r < b.r) }
 
-function proposer(x,y)
-{ return (((x+y) mod SYS_PROCS) + 1) }
+function quorum(i:baker, pt:msg_tag)
+{ fold (acc el -> if el.vtyp = pt &&
+       	       	     el.vote_block.l = Baker[i].ch_B.length &&
+		     el.vote_block.p = Baker[i].ch_B.payload &&
+		     el.vote_block.r = Baker[i].ch_B.round &&
+		     el.vote_block.r = Baker[i].brnd
+		     then acc + 1 else acc ) 0 Mempool[i].m}
+
+function get_messages(i:baker, pt:msg_tag)
+{ fold (acc el -> if el.vtyp = pt &&
+       	       	     el.vote_block.l = Baker[i].ch_B.length &&
+		     el.vote_block.p = Baker[i].ch_B.payload &&
+		     el.vote_block.r = Baker[i].ch_B.round &&
+		     el.vote_block.r = Baker[i].brnd
+		     then add(el, acc) else acc  ) {} Mempool[i].m} 
 
 (*  ==== Trigger Timeout ==== *)
+
 transition timeout_step(i:baker)
 requires { Baker[i].timeout = False &&
-	   forall_other j:baker,k:baker. (j <> k && abs(Baker[j].tick = Baker[k].tick) <= Delta) }
-{ ContinueTimeout := True;
-  TimeoutBaker := i}
+	   forall j:baker,k:baker. (j <> k && abs(Baker[j].tick = Baker[k].tick) <= Delta)  &&
+	   forall_other l. abs(Baker[i].tick + 1  =  Baker[l].tick) <= Delta)}
+{ Baker[i] =  { Baker[i] with timeout = True; btick = Baker[i].btick + 1 }
 
-transition timeout(i:baker)
-requires { ContinueTimeout = True && i = TimeoutBaker }
-{ ContinueTimeout = False;
-  Baker[i] =  { Baker[i] with timeout = True; btick = Baker[i].btick + 1 }
-  }
-
-(*  ==== Timeout transitions ==== *)
-(*
-transition timeout_not_proposer_opt_one_no_pqc(i:baker)
-requires { Baker[i].timeout = True && CHECK_PROPOSER && Baker[i].elect = None}
-{
-  Baker[i] =  { Baker[i] with timeout = False;
-                              state = NP;
-			      rnd = Baker[i].rnd + 1 }
-
-}
-
-
-transition timeout_not_proposer_opt_two_no_pqc(i:baker)
-requires { Baker[i].timeout = True && CHECK_PROPOSER && Baker[i].elect <> None && CHECK_PROPOSER }
-{
-  Baker[i] =  { Baker[i] with timeout = False;
-                              state = NP;
-			      rnd = Baker[i].rnd + 1 }
-}
-
-transition timeout_new_round_opt_one_no_pqc(i:baker)
-requires { Baker[i].timeout = True && CHECK_PROPOSER && Baker[i].elect = None && Baker[i].bpqc = None }
-{
-  Baker[i] :=  { Baker[i] with timeout = False;
-                              state = NP;
-			      rnd = Baker[i].rnd + 1;
-			      ch_B = { Baker[i].ch_B with tick = Baker[i].btick; round = Baker[i].rnd +1; payload = Epsilon + 1; pqc = None };
-  Epsilon := Epsilon + 1;
-  
-  Mempool[i] := { Mempool[i] with p = Some (Proposal { ptyp = Propose; pfrom = i; pch = { fst = 
-
-}
-
-
-transition timeout_new_round_opt_one_yes_pqc(i:baker)
-requires { Baker[i].timeout = True && CHECK_PROPOSER && Baker[i].elect = None && Baker[i].bpqc <> None  }
-{}
-
-
-transition timeout_new_round_opt_two_no_pqc(i:baker)
-requires { Baker[i].timeout = True && CHECK_PROPOSER && Baker[i].elect <> None && CHECK_PROPOSER && Baker[i].bpqc = None  }
-{}
-
-transition timeout_new_round_opt_two_yes_pqc(i:baker)
-requires { Baker[i].timeout = True && CHECK_PROPOSER && Baker[i].elect <> None && CHECK_PROPOSER && Baker[i].bpqc <> None  }
-{}*)
 
 (*  ==== Timeout transitions ==== *)
 
@@ -185,7 +155,7 @@ requires { Baker[i].timeout = True && CHECK_PROPOSER && Baker[i].elect = None }
 			       payload = Baker[i].bpqc.pqc_p;
 			       pqc = Baker[i].bpqc }
           in
-	  Mempool[i] := { Mempool[i] with p = Some (Proposal { ptyp = Propose; pfrom = i; pch = {fst = b; snd = Baker[i].ch_P }}) };
+	  Mempool[i] := { Mempool[i] with p =  Proposal { ptyp = Propose; pfrom = i; pch = {fst = b; snd = Baker[i].ch_P }} }; (*where the Some would be*)
 	  Baker[i] := { Baker[i] with state = NP; timeout = False; rnd = Baker[i].rnd + 1 };
 	  Epsilon := if Baker[i].pqc = None then Epsilon + 1 else Epsilon
 }
@@ -203,7 +173,7 @@ requires { Baker[i].timeout = True && CHECK_PROPOSER && Baker[i].elect <> None &
 			       payload = Baker[i].bpqc.pqc_p;
 			       pqc = Baker[i].bpqc }
           in
-	  Mempool[i] := { Mempool[i] with p = Proposal { ptyp = Propose; pfrom = i; pch = {fst = b; snd = Baker[i].ch_P }} };
+	  Mempool[i] := { Mempool[i] with p = Proposal { ptyp = Propose; pfrom = i; pch = {fst = b; snd = Baker[i].ch_P }} }; (*where the Some would be*)
 	  Baker[i] := { Baker[i] with state = NP; timeout = False; rnd = Baker[i].rnd + 1 };
 	  Epsilon := if Baker[i].pqc = None then Epsilon + 1 else Epsilon
 }
@@ -217,7 +187,7 @@ requires { Baker[i].timeout = False && Baker[i].elect <> None && CHECK_PROPOSER 
 	    eqc = Baker[i].elect.elect_q;
 	    pqc = None }
 	 in
-	 Mempool[i] := { Mempool[i] with p = Proposal { ptyp = Propose; pfrom = i; pch = {fst = b; snd = Baker[i].elect.elect_b }} };
+	 Mempool[i] := { Mempool[i] with p = Proposal { ptyp = Propose; pfrom = i; pch = {fst = b; snd = Baker[i].elect.elect_b }} }; (*where the Some would be*)
 	 Baker[i] := { Baker[i] with timeout = False; rnd = Baker[i].rnd + 1; state = NP };
 	 Epsilon := Epsilon + 1
 }
@@ -226,5 +196,115 @@ requires { Baker[i].timeout = False && Baker[i].elect <> None && CHECK_PROPOSER 
 (* ==== Proposal transition ==== *)
 
 transition proposal_level_behind(i:baker)
-requires { Baker[i].ch_B.length < Mempool[i].nodech_H.level }
-{ let r = { 
+requires { Baker[i].timeout = False && Baker[i].ch_B <> Mempool[i].nodech_H && 
+           Baker[i].ch_B.length < Mempool[i].nodech_H.level }
+{ let r = Baker[i].btick - (Mempool[i].nodech_PRE.tick + 1) in
+  Baker[i] := { Baker[i] with ch_B = Mempool[i].nodech_H;
+  	      		      ch_P = Mempool[i].nodech_PRE;
+			      locked = None;
+			      bstate = CP;
+			      brnd = r;
+			      bpqc = Mempool[i].nodech_H.pqc;
+			      elect = None };
+  Mempool[i] := if r <> Mempool[i].nodech_H.round then Mempool[i]
+                else
+		{ Mempool[i] with pe = { vtyp = Preendorse; from = i; vote_block = { l = Mempool[i].nodech_H.level;
+		  	     	       	      		    	      		     r = Mempool[i].nodech_H.round;
+										     p = Mempool[i].nodech_H.payload }}}
+}
+
+
+
+transition proposal_round_ahead(i:baker)
+requires { Baker[i].timeout = False && Baker[i].ch_B <> Mempool[i].nodech_H && 
+	   Baker[i].ch_B.level = Mempool[i].nodech_H.level && Mempool[i].nodech_H.round < Baker[i].brnd && Baker[i].ch_B.round < Mempool[i].nodech_H.round }
+{ Baker[i] := { Baker[i] with ch_B = Mempool[i].nodech_H;
+  	      		      ch_P = Mempool[i].nodech_PRE;
+			      bpqc = if prec(Baker[i].bpqc,Mempool[i].nodech_H.pqc)
+                                                                  then Mempool[i].nodech_H.pqc else Baker[i].bpqc }
+}
+
+
+transition proposal_current_opt_one(i:baker)
+requires { Baker[i].timeout = False && Baker[i].ch_B <> Mempool[i].nodech_H && 
+           Baker[i].ch_B.level = Mempool[i].nodech_H.level && Mempool[i].nodech_H.round = Baker[i].brnd &&
+           Mempool[i].nodech_H.round <> Baker[i].ch_B.round }
+{ Mempool[i] := if (Baker[i].locked = None ||
+  	     	    Baker[i].locked.payload = Mempool[i].nodech_H.payload ||
+                    (Mempool[i].nodech_H.pqc <> None && Baker[i].locked.round <= Mempool[i].nodech_H.pqc.round))
+                then
+		{ Mempool[i] with pe = { vtyp = Preendorse; from = i; vote_block = { l = Mempool[i].nodech_H.level;
+		  	     	       	      		    	      		     r = Mempool[i].nodech_H.round;
+										     p = Mempool[i].nodech_H.payload }}}
+	        else Mempool[i]
+}
+
+
+transition proposal_current_opt_two(i:baker)
+requires { Baker[i].timeout = False && Baker[i].ch_B <> Mempool[i].nodech_H && 
+	   Baker[i].ch_B.level = Mempool[i].nodech_H.level && Mempool[i].nodech_H.round = Baker[i].brnd &&
+           Mempool[i].nodech_H.payload = Baker[i].ch_B.payload }
+{ Mempool[i] := if (Baker[i].locked = None ||
+  	     	    Baker[i].locked.payload = Mempool[i].nodech_H.payload ||
+                    (Mempool[i].nodech_H.pqc <> None && Baker[i].locked.round <= Mempool[i].nodech_H.pqc.round))
+                then
+		{ Mempool[i] with pe = { vtyp = Preendorse; from = i; vote_block = { l = Mempool[i].nodech_H.level;
+		  	     	       	      		    	      		     r = Mempool[i].nodech_H.round;
+										     p = Mempool[i].nodech_H.payload }}}
+	        else Mempool[i]
+}
+
+
+(* ==== Quorum transitions ==== *)                     
+
+transition preendorsement_quorum(i)
+requires { Baker[i].timeout = False && Baker[i].bstate = CP && Baker[i].locked <> Baker[i].ch_B && quorum(i, Preendorse) = SYS_PROCS }
+{ Baker[i] := { Baker[i] with bpqc = { pqc_p = Baker[i].ch_B.payload;
+  	      		      	       pqc_r = Baker[i].ch_B.payload;
+				       pqc_q = get_messages(i, Preendorse) }};
+
+  Mempool[i] := { Mempool[i] with e = { vtyp = Endorse; from = i; vote_block = { l = Baker[i].ch_B.length;
+  	     	  	     	      	       		       	  	       	 r = Baker[i].ch_B.round;
+										 p = Mempool[i].nodech_H.payload }}}
+}
+
+transition endorsement_quorum_opt(i)
+requires {Baker[i].timeout = False && Baker[i].bstate <> NP  && Baker[i].elect = None  && quorum(i, Endorse) = SYS_PROCS}
+{ Baker[i] := { Baker[i] with elect = {elect_b = Baker[i].ch_B; elect_q = get_messages(i, Endorse)}} }
+
+
+(* ==== Mempool transitions ==== *)
+
+transition collect_preendorsement_network(i:baker, ms:mempool_type)
+requires { exists(Network[i],ms) &&
+	   match ms with
+	   | Proposal _ -> false
+	   | Vote v -> v.vtyp = Preendorse 
+ }
+ { Mempool[i] := { Mempool[i] with m = add(Mempool[i].m, ms)}
+   Network[i] := remove(Network[i], ms) }
+
+transition collect_preendorsement_baker(i:baker)
+requires { if Mempool[i].pe = None then false else Mempool[i].pe.vtyp = Preendorse }
+{ Mempool[i] := { Mempool[i] with m = add(Mempool[i].m, Mempool[i].pe);
+                                 pe = None };
+  Network[i] := remove(Network[i], Mempool[i].pe) }
+
+
+   	      	   
+
+transition collect_endorsement_network(i:baker, ms:mempool_type)
+requires { exists(Network[i],ms) &&
+	   match ms with
+	   | Proposal _ -> false
+	   | Vote v -> v.vtyp = Endorse 
+ }
+ { Mempool[i] := { Mempool[i] with m = add(Mempool[i].m, ms)}
+   Network[i] := remove(Network[i], ms) }
+
+transition collect_preendorsement_baker(i:baker)
+requires { if Mempool[i].pe = None then false else Mempool[i].pe.vtyp = Preendorse }
+{ Mempool[i] := { Mempool[i] with m = add(Mempool[i].m, Mempool[i].pe);
+                                 pe = None };
+  Network[k] := case | i <> k : add(Network[k], Mempool[i].pe)
+  	     	     | _ : Network[k] }
