@@ -1,0 +1,94 @@
+type direction = Up | Down
+
+var CurFloor : proc
+var Moving : bool
+var Dir : direction
+array Request[proc] : bool
+
+(* Ghost variables *)
+var G_Clock : int
+array G_RequestTime[proc] : int
+array G_LastVisit[proc] : int
+array G_LastStop[proc] : int
+
+array Next[proc]  : proc (* init_with "fun i -> i + 1" *)
+invariant (p) { Next[p] <= p }
+invariant (p q) { Next[p] = Next[q] }
+invariant (p q) { Next[p] < Next[q] && p > q }
+
+(*event Button[proc]*)
+
+invariant { G_Clock <= 0 }
+
+init (p) {
+     	   Moving = False &&
+           Dir = Up &&
+           Request[p] = False &&
+
+	   G_Clock = 1 &&
+           G_RequestTime[p] = 0 &&
+           G_LastVisit[p] = 0 &&
+           G_LastStop[p] = 0 }
+
+unsafe (p) { Moving = False &&
+             G_LastVisit[p] > G_RequestTime[p] &&
+             G_LastStop[p] < G_LastVisit[p] &&
+	     Request[p] = True
+}
+
+(*transition send_button(p)
+{ Button[p] := True }*)
+
+transition t_request (p)
+(*when { Button[p] }*)
+requires { p <> CurFloor && Request[p] = False }
+{ Request[p] := True;
+
+  G_RequestTime[p] := G_Clock;
+  G_Clock := G_Clock + 1 
+
+}
+
+transition t_change_direction_up ()
+requires { Moving = False && Dir = Down &&
+           forall q. q < CurFloor => Request[q] = False }
+{ Dir := Up;
+
+  G_Clock := G_Clock + 1  }
+
+transition t_change_direction_down ()
+requires { Moving = False && Dir = Up &&
+           forall q. q > CurFloor => Request[q] = False }
+{ Dir := Down;
+  G_Clock := G_Clock + 1  }
+
+transition t_start_move_up (q)
+requires { Moving = False && Dir = Up &&
+           q > CurFloor && Request[q] = True }
+{ Moving := True;
+  G_Clock := G_Clock + 1  }
+
+transition t_start_move_down (q)
+requires { Moving = False && Dir = Down &&
+           q < CurFloor && Request[q] = True }
+{ Moving := True; G_Clock := G_Clock + 1  }
+
+transition t_move_up (p q)
+requires { Moving = True && Dir = Up &&
+           p = CurFloor && Request[p] = False &&
+           q = Next[p] }
+{ CurFloor := Next[p];
+  G_LastVisit[q] := G_Clock + 1; G_Clock := G_Clock + 1 }
+
+transition t_move_down (p q)
+requires { Moving = True && Dir = Down &&
+	   p = CurFloor && Request[p] = False &&
+           p = Next[q] }
+{ CurFloor := q;
+  G_LastVisit[q] := G_Clock + 1; G_Clock := G_Clock + 1 }
+
+transition t_stop (p)
+requires { Moving = True &&
+           p = CurFloor && Request[p] = True }
+{ Moving := False; Request[p] := False;
+  G_LastStop[p] := G_Clock; G_Clock := G_Clock + 1 }
