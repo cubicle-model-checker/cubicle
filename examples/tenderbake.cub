@@ -112,7 +112,11 @@ function get_messages(i:baker, pt:msg_tag)
 		     el.vote_block.p = Baker[i].ch_B.payload &&
 		     el.vote_block.r = Baker[i].ch_B.round &&
 		     el.vote_block.r = Baker[i].brnd
-		     then add(el, acc) else acc  ) {} Mempool[i].m} 
+		     then add(el, acc) else acc  ) {} Mempool[i].m}
+
+function LESS_pqc(PQC,pqc) == (PQC = NONE /\ pqc <> NONE) \/ (PQC <> NONE /\ pqc <> NONE /\ PQC.r < pqc.r)
+
+
 
 (*  ==== Trigger Timeout ==== *)
 
@@ -276,7 +280,8 @@ requires {Baker[i].timeout = False && Baker[i].bstate <> NP  && Baker[i].elect =
 (* ==== Mempool transitions ==== *)
 
 transition collect_preendorsement_network(i:baker, ms:mempool_type)
-requires { exists(Network[i],ms) &&
+requires { Mempool[i].pe = None &&
+           exists(Network[i],ms) &&
 	   match ms with
 	   | Proposal _ -> false
 	   | Vote v -> v.vtyp = Preendorse 
@@ -285,7 +290,8 @@ requires { exists(Network[i],ms) &&
    Network[i] := remove(Network[i], ms) }
 
 transition collect_preendorsement_baker(i:baker)
-requires { if Mempool[i].pe = None then false else Mempool[i].pe.vtyp = Preendorse }
+requires { Mempool[i].pe <> None &&
+           if Mempool[i].pe = None then false else Mempool[i].pe.vtyp = Preendorse }
 { Mempool[i] := { Mempool[i] with m = add(Mempool[i].m, Mempool[i].pe);
                                  pe = None };
   Network[i] := remove(Network[i], Mempool[i].pe) }
@@ -294,7 +300,8 @@ requires { if Mempool[i].pe = None then false else Mempool[i].pe.vtyp = Preendor
    	      	   
 
 transition collect_endorsement_network(i:baker, ms:mempool_type)
-requires { exists(Network[i],ms) &&
+requires { Mempool[i].e = None &&
+	   exists(Network[i],ms) &&
 	   match ms with
 	   | Proposal _ -> false
 	   | Vote v -> v.vtyp = Endorse 
@@ -303,8 +310,59 @@ requires { exists(Network[i],ms) &&
    Network[i] := remove(Network[i], ms) }
 
 transition collect_preendorsement_baker(i:baker)
-requires { if Mempool[i].pe = None then false else Mempool[i].pe.vtyp = Preendorse }
+requires { Mempool[i].e <> None  &&
+	   if Mempool[i].pe = None then false else Mempool[i].pe.vtyp = Preendorse }
 { Mempool[i] := { Mempool[i] with m = add(Mempool[i].m, Mempool[i].pe);
                                  pe = None };
   Network[k] := case | i <> k : add(Network[k], Mempool[i].pe)
+  	     	     | _ : Network[k] }
+
+
+
+(*Collect proposals*)
+
+transition collect_proposal_network(i:baker, ms:mempool_type)
+requires { Mempool[i].p = None &&
+	   exists(Network[i],ms) &&
+	   match ms with
+	   | Vote _ -> false
+	   | Proposal pr -> 
+	     begin
+		pr.ptyp = Propose &&
+		pr.from = CHECK_PROPOSER &&
+		better_chain(Mempool[i].nodech_H, Mempool[i].nodech_PRE, pr.pch.fst, pr.pch.snd) &&
+		valid_eqc(pr.pch.fst.eqc, pr.pch.snd) &&
+		(pr.pch.fst.pqc = None || valid_pqc(pr.pch.fst)
+	     end }
+{ let v = match ms with
+  | Vote _ -> error
+  | Proposal pr -> pr
+  in 	
+  Mempool[i] := { Mempool[i] with nodech_H = v.pch.fst;
+  	     	  	     	  nodech_PRE = v.pch.snd };
+  Network[i] := remove(Network[i], ms) }
+
+
+
+
+transition collect_proposal_baker(i:baker)
+requires { Mempool[i].p <> None &&
+	   match Mempool[i].p with
+	   | Vote _ -> false
+	   | Proposal pr -> 
+	     begin
+		pr.ptyp = Propose &&
+		pr.from = CHECK_PROPOSER &&
+		better_chain(Mempool[i].nodech_H, Mempool[i].nodech_PRE, pr.pch.fst, pr.pch.snd) &&
+		valid_eqc(pr.pch.fst.eqc, pr.pch.snd) &&
+		(pr.pch.fst.pqc = None || valid_pqc(pr.pch.fst)
+	     end }
+{ let v = match Mempool[i].p with
+  | Vote _ -> error
+  | Proposal pr -> pr
+  in 	
+  Mempool[i] := { Mempool[i] with nodech_H = v.pch.fst;
+  	     	  	     	  nodech_PRE = v.pch.snd;
+				  p = None };
+  Network[k] := case | k <> i : add(Network[k], v)
   	     	     | _ : Network[k] }
