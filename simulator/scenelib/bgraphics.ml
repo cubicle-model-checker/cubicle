@@ -48,6 +48,7 @@ let mouse_pos = Graphics.mouse_pos
 let button_down = Graphics.button_down
 let synchronize = Graphics.synchronize
 
+(* TODO : Add drawing function centered ? *)
 
 (* Text drawing *)
 let draw_string = Graphics.draw_string 

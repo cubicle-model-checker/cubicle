@@ -262,19 +262,19 @@ let write_transitions trans_list ty_defs g_vars =
         print_atom t2;
         pfile ")"
     and print_atom_and atom = print_atom atom; pfile " && " in
+    let print_atom_or atom  = print_atom atom; pfile " || " in 
     pfile "\t";
     SAtom.iter print_atom_and trans_info.tr_reqs;
     pfile "\n";
     (* Type tr_ureq : Variable.t * Ast.dnf *)
     let print_ureq (v, dnf) = 
       pfile "\t(forall_other (fun %s -> " (Hstring.view v);
-      List.iter (SAtom.iter print_atom_and) dnf;
-      pfile "true) ";
+      List.iter (SAtom.iter print_atom_or) dnf;
+      pfile "false) ";
       pfile "args) && \n"; 
     in
     List.iter print_ureq trans_info.tr_ureq;
     pfile "\ttrue\nin\n\n";
-    
 
     pfile "let ac_%s args = \n" trans_name;
     write_args ();
@@ -422,6 +422,7 @@ let write_model_create trans_list unsafe_list =
   pfile "set_model (!mymodel)\n"
 
 let run ts s =
+  printf "Starting compilation... \n%!";
   pfile "open Utils\n";
   pfile "open Maps\n";
   pfile "open Model\n";
@@ -437,4 +438,5 @@ let run ts s =
   write_transitions ts.t_trans g_types g_vars;
   write_model_create ts.t_trans s.unsafe;
   close_out out_file;
+  printf "Compilation completed.\n%!";
   exit 0

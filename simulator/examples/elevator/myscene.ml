@@ -6,7 +6,6 @@
 open Utils
 open Simulator
 open Bgraphics
-open Traces
 
 let window_size = 600
 
@@ -25,7 +24,7 @@ let get_asc_level () =
 let build_scene dt =
 
   let buttons : Button.t list ref = ref [] in
-  let cell_size = 150 in
+  let cell_size = 100 in
   let actual_size = 75 in
   let cell_count = Utils.get_nb_proc () in
 
@@ -47,24 +46,16 @@ let build_scene dt =
     auto_synchronize false
   in
 
-  let post_init () = 
-    let tmp = ref [] in
-    for i = cell_count-1 downto 0 do 
-      tmp := (VInt(i+1))::!tmp
-    done;
-    set_var "Next" (Arr !tmp)
-  in
-
   let on_model_change () = 
     clear_graph ();
+    Utils.dumper ();
     List.iter Renderer.draw_button !buttons;
     (* -- Draw elevator -- *)
     set_color red;
-    let asc_center : Vector.t = { x = - cell_size ; y = 0 } in
+    let asc_center : Vector.t = { x = - cell_size * 2; y = 0 } in
     let asc_pos = Composition.col asc_center (cell_size) cell_count (get_asc_level ()) in
-    let center_pos = Vector.sub asc_pos { x = actual_size / 2; y = actual_size / 2 } in 
+    let center_pos = Vector.sub asc_pos { x = cell_size / 2; y = cell_size / 2 } in 
     fill_rect center_pos.x center_pos.y actual_size actual_size;
-
     synchronize ()
   in
 
@@ -72,5 +63,5 @@ let build_scene dt =
     Input.update on_model_change !buttons dt;
   in
 
-  let s : Scene.t = {pre_init; post_init; on_model_change; update; } in 
+  let s : Scene.t = {pre_init; post_init=on_model_change; on_model_change; update; } in 
   set_scene(s)

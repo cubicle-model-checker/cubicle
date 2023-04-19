@@ -35,7 +35,6 @@ let build_scene () =
   Petri.add_state pmodel "TURN" {x=800; y=500};
   Petri.add_state pmodel "CS" {x=700; y=100};
 
-  
   (* Create trans *)
   Petri.add_trans pmodel "start"    (["start"], {x=150; y=300});
   Petri.add_trans pmodel "wait"     (["wait"], {x=275; y=650});

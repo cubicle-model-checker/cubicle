@@ -23,24 +23,23 @@ let handle_input    () =
       end
   | _ -> ()
 
-let handle_mouse on_model_change (dt : float) = (* TODO : Prendre en paramètre une liste de boutons. Nécéssite création d'un fichier pour les boutons *)  
+let handle_mouse (on_model_change: unit -> unit) (button_list : Button.t list) (dt : float) = (* TODO : Prendre en paramètre une liste de boutons. Nécéssite création d'un fichier pour les boutons *)  
   let (mx, my) = mouse_pos () in 
 
-  (*
-    let bs = button_size / 2 in 
-    let handle_button ((_ : string), (bfun : (unit -> bool)), (bpos : Vector.t)) =
-      let rbpos = Vector.add bpos (!cam_pos) in
+  (* Button interaction *)
+    let handle_button (button : Button.t) =
+    let bs = button.size / 2 in 
+      let rbpos = Vector.add button.pos (!cam_pos) in
       if mx >= rbpos.x - bs && mx <= rbpos.x + bs && my >= rbpos.y - bs && my <= rbpos.y + bs then (
         if button_down () && (not !button_clicked) then 
           (
-            button_last_result := bfun ();
+            button_last_result := button.f ();
             button_clicked := true
           );
-        draw_for_state (); (* TODO : Transformer en Scene.on_model_change *)
+        on_model_change ();
       )
     in 
-    List.iter handle_button (Petri.get_buttons (get_petri ()));
-  *)
+    List.iter handle_button button_list;
 
   if button_down () then (
     (* Camera *)
@@ -58,6 +57,6 @@ let handle_mouse on_model_change (dt : float) = (* TODO : Prendre en paramètre 
       button_clicked := false;
   )
 
-let update on_model_change dt  = (* Automatically manage pausing, navigating through the trace, buttons and Camera *)
+let update on_model_change button_list dt  = (* Automatically manage pausing, navigating through the trace, buttons and Camera *)
   handle_input ();
-  handle_mouse on_model_change dt
+  handle_mouse on_model_change button_list dt

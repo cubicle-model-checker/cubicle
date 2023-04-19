@@ -40,34 +40,31 @@ Mais qui n'itère que sur un modèle.
 Dans un monde idéal : 
 - Avoir des flèches qui sont des courbes et plus des droites pour permettre plus de flexibilité
 - Ordonner proprement les procs pour qu'on comprenne bien qui est le nouveau proc
-
 - Pouvoir zoomer et dézoomer avec la caméra
 - Menu d'aide en appuyant sur h
 
-Problème actuellement : SI on fait un step forward en étant en pause, le simulateur n'affiche pas la pause
-
-On devrait pouvoir tuer un proc comme dans cubicle 
+On devrait pouvoir tuer un proc : 
 -> Regarder algo résistants aux pannes 
 
 Pouvoir déplacer transition et état dans l'espace
-Buttons dans leurs propre classe
-
-Faire ascenceur:
-Nécéssite d'avoir des boutons, ...
 
 - Camera speed
 - Camera on/off .. With mouse/without...
 
-Mettre les boutons dans une classe a part pour les inputs
-
-Un bouton c'est: 
-- Un nom 
-- Une position 
-- Une fonction associée
-- Une taille 
+Composition.ml : Grid_composition
 
 ## TESTER PETRI
 
-- dekker_n
 - Hierarchical snoop
 
+## NOTES : 
+
+Quand on met un tiret dans le nom d'une variable, l'ast retire le tirer apparament
+
+## BUGS : /!\
+
+init(p) {
+
+	proc[p] = p ne marche pas car considère p comme un vconstr
+
+}

@@ -26,11 +26,6 @@ let indic_text_space  = 2
 
 let button_size         = 50
 let button_text_size    = 50
-let button_text_space   = 2
-let button_color_success  = Graphics.green 
-let button_color_failure  = Graphics.red
-let button_color_off      = Graphics.black 
-let button_color_hover    = Graphics.rgb 50 50 50
 
 module Petri : sig
 
@@ -61,7 +56,7 @@ module Petri : sig
   val get_state_for_proc  : t -> int -> string
   val get_arcs            : t -> arc list
   val get_indics          : t -> (string * (unit -> bool) * Vector.t) list
-  val get_buttons         : t -> (string * (unit -> bool) * Vector.t) list
+  val get_buttons         : t -> Button.t list
 end
 =
 struct
@@ -75,7 +70,7 @@ struct
       arcs    : arc list ref;
       sfp_fun : (int -> string) ref;
       indics  : (string * (unit -> bool) * Vector.t ) list ref;
-      buttons : (string * (unit -> bool) * Vector.t) list ref;
+      buttons : Button.t list ref;
     }
 
   exception Unknown_trans of string
@@ -95,7 +90,15 @@ struct
   let add_trans pet tname tval  = Hashtbl.add pet.trans tname tval
   let add_arc   pet arc         = pet.arcs := arc::!(pet.arcs)
   let add_indic pet iname ifun ival   = pet.indics := (iname, ifun, ival)::!(pet.indics)
-  let add_button pet bname bfun bpos  = pet.buttons := (bname, bfun, bpos)::!(pet.buttons)
+  let add_button pet name f pos  = 
+    let nb : Button.t = 
+      {
+        name;
+        f;
+        pos;
+        size=button_size;
+      } in 
+    pet.buttons := nb::!(pet.buttons)
 
   let set_state_fun pet g = pet.sfp_fun := g
   
@@ -240,35 +243,13 @@ let draw_for_state () =
     fill_rect (pos.x - hs) (pos.y - hs) indic_size indic_size;
     let (tsx, tsy) = text_size name in
     let nx = pos.x - (tsx / 2) in
-    let ny = pos.y - tsy - indic_size - button_text_space in
+    let ny = pos.y - tsy - indic_size - indic_text_space in
     moveto nx ny;
     draw_string name;
   in
 
   List.iter draw_indicator (Petri.get_indics pet);
-
-  (* Draw buttons *)
-  let bs = button_size / 2 in 
-  let draw_button ((name : string), (f : unit -> bool), (pos : Vector.t)) =
-    let rbpos = Vector.add pos (!cam_pos) in
-    let hovered = mx >= rbpos.x - bs && mx <= rbpos.x + bs && my >= rbpos.y - bs && my <= rbpos.y + bs in
-    let color = if hovered then 
-      (
-        if not !button_clicked then button_color_hover
-        else if !button_last_result then button_color_success 
-        else button_color_failure
-        ) 
-      else button_color_off in
-    set_color color;
-    fill_rect (pos.x - bs) (pos.y - bs) button_size button_size;
-    let (tsx, tsy) = text_size name in
-    let nx = pos.x - (tsx / 2) in
-    let ny = pos.y - tsy - button_size - button_text_space in
-    moveto nx ny;
-    draw_string name;
-    ()
-  in 
-  List.iter draw_button (Petri.get_buttons pet);
+  List.iter Renderer.draw_button (Petri.get_buttons pet);
 
   if !Simulator.is_paused then
     (
@@ -284,26 +265,5 @@ let draw_for_state () =
     );
   synchronize ()
 
-let handle_mouse (dt : float) = 
-  let (mx, my) = mouse_pos () in 
-
-  (* Button interaction *)
-    let bs = button_size / 2 in 
-    let handle_button ((_ : string), (bfun : (unit -> bool)), (bpos : Vector.t)) =
-      let rbpos = Vector.add bpos (!cam_pos) in
-      if mx >= rbpos.x - bs && mx <= rbpos.x + bs && my >= rbpos.y - bs && my <= rbpos.y + bs then (
-        if button_down () && (not !button_clicked) then 
-          (
-            button_last_result := bfun ();
-            button_clicked := true
-          );
-        draw_for_state ();
-      )
-    in 
-    List.iter handle_button (Petri.get_buttons (get_petri ()));
-
-  if not (button_down ()) then button_clicked := false
-
 let update dt  = (* Automatically manage pausing, navigating through the trace, buttons and Camera *)
-  Input.update draw_for_state dt;
-  handle_mouse dt
+  Input.update draw_for_state (Petri.get_buttons (get_petri ())) dt

@@ -60,26 +60,21 @@ let get_random_proc () =
 (* Renvoie toutes les combinaisons possible de n éléments parmi nb_proc(), ne contenant pas deux fois le même élément *)
 let computed_args = Hashtbl.create 124 
 
-let rec get_args n =
+let rec get_args n = 
   try Hashtbl.find computed_args n with Not_found ->
-    (
-      if n < 0 then assert false else 
-        let rec sub_get_args cur prec returned = 
-        let tmp_returned' = (List.map (fun l_part -> if cur > List.hd l_part then l_part@[cur] else []) prec) in
-        let tmp_tmp_returned' = List.filter (fun l -> List.length l > 0) tmp_returned' in
-        let returned' = tmp_tmp_returned'@returned in
-        if cur < (get_nb_proc () - 1) then sub_get_args (cur+1) prec returned' else returned'
-      in
-
-      match n with
-      | 0 -> [[]]
-      | 1 -> let rec nul c l = if c < get_nb_proc () then nul (c+1) ([c]::l) else l in nul 0 []
-      | _ -> 
-          let prec = get_args (n-1) in 
-          let result = sub_get_args 0 prec [] in 
-          Hashtbl.add computed_args n result;
-          result
-    )
+  if n <= 0 then [[]] else 
+  let prev = (get_args (n-1)) in 
+  let sub l = 
+    let res = ref [] in 
+    for i = 0 to get_nb_proc () - 1 do 
+      res := (i::l) :: !res
+    done;
+    !res 
+  in
+  let res = List.map (fun l -> sub l) prev in
+  let res_flat = List.flatten res in 
+  Hashtbl.add computed_args n res_flat; 
+  res_flat
 
 let forall_other f i = 
   let rec forall_sub n =

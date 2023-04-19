@@ -34,7 +34,7 @@ let init () =
   Random.init (int_of_float (Unix.time ()));
   let minit = Model.get_init (get_model ()) in
   minit ();
-  Traces.add full_trace (("init", []),Utils.get_model_state ());
+  Traces.add full_trace (("init", []), Utils.get_model_state ());
   post_init_callback ()
 
 let get_possible_action_for_arg arg trans_list trans_map = 
@@ -84,7 +84,7 @@ let lock_trans trans_name =
 let unlock_trans trans_name =
   Hashtbl.remove runtime_lock trans_name
 
-let toggle_pause () = is_paused := not (!is_paused)
+let toggle_pause () = is_paused := not (!is_paused); on_model_change_callback ()
 
 let take_step_back () =
   Traces.prev full_trace;
@@ -119,6 +119,14 @@ let is_unsafe () =
   !res
 
 (* Scene functions *)
+
+(* Need to be carefull with this one *)
+let set_var var_name var_val = 
+  let mstate = StringMap.add var_name var_val (get_model_state ()) in 
+  Traces.add full_trace ((Format.sprintf "Manually set %s " var_name, []), mstate);
+  let (_, ms) = Traces.get full_trace in
+  Model.set_state (get_model ()) ms;
+  on_model_change_callback ()
 
 let get_vuv_for_const () =
   let mstate = get_model_state () in
