@@ -28,3 +28,19 @@ let draw_button (button : Button.t) =
   let ny = button.pos.y - tsy - button.size - button_text_space in
   moveto nx ny;
   draw_string button.name
+
+(* -- Indicators -- *)
+
+let indic_text_space = 2
+
+let draw_indicator on_color off_color (ind : Indicator.t) =
+  let hs = ind.size / 2 in
+  let status = ind.f () in
+  let color  = if status then on_color else off_color in
+  set_color color;
+  fill_rect (ind.pos.x - hs) (ind.pos.y - hs) ind.size ind.size;
+  let (tsx, tsy) = text_size ind.name in
+  let nx = ind.pos.x - (tsx / 2) in
+  let ny = ind.pos.y - tsy - ind.size - indic_text_space in
+  moveto nx ny;
+  draw_string ind.name

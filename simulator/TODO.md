@@ -53,6 +53,8 @@ Pouvoir déplacer transition et état dans l'espace
 
 Composition.ml : Grid_composition
 
+Mettre beaucoup de commentaire dans les examples (notament ascenceur)
+
 ## TESTER PETRI
 
 - Hierarchical snoop

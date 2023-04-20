@@ -55,7 +55,7 @@ module Petri : sig
   val get_trans_repr      : t -> string -> string list
   val get_state_for_proc  : t -> int -> string
   val get_arcs            : t -> arc list
-  val get_indics          : t -> (string * (unit -> bool) * Vector.t) list
+  val get_indics          : t -> Indicator.t list
   val get_buttons         : t -> Button.t list
 end
 =
@@ -69,7 +69,7 @@ struct
       trans   : (string, string list * Vector.t) Hashtbl.t;
       arcs    : arc list ref;
       sfp_fun : (int -> string) ref;
-      indics  : (string * (unit -> bool) * Vector.t ) list ref;
+      indics  : Indicator.t list ref;
       buttons : Button.t list ref;
     }
 
@@ -89,7 +89,15 @@ struct
   let add_state pet sname sp    = Hashtbl.add pet.states sname sp
   let add_trans pet tname tval  = Hashtbl.add pet.trans tname tval
   let add_arc   pet arc         = pet.arcs := arc::!(pet.arcs)
-  let add_indic pet iname ifun ival   = pet.indics := (iname, ifun, ival)::!(pet.indics)
+  let add_indic pet name f pos   = 
+    let ni : Indicator.t = 
+      { name; 
+      f; 
+      pos;
+      size=indic_size;
+      }
+    in
+    pet.indics := ni::!(pet.indics)
   let add_button pet name f pos  = 
     let nb : Button.t = 
       {
@@ -235,20 +243,8 @@ let draw_for_state () =
   set_color black;
 
   (* Draw indicators *)
-  let hs = indic_size / 2 in
-  let draw_indicator ((name : string), (f : unit -> bool), (pos : Vector.t)) =
-    let status = f () in
-    let color  = if status then red else black in
-    set_color color;
-    fill_rect (pos.x - hs) (pos.y - hs) indic_size indic_size;
-    let (tsx, tsy) = text_size name in
-    let nx = pos.x - (tsx / 2) in
-    let ny = pos.y - tsy - indic_size - indic_text_space in
-    moveto nx ny;
-    draw_string name;
-  in
 
-  List.iter draw_indicator (Petri.get_indics pet);
+  List.iter (Renderer.draw_indicator red black) (Petri.get_indics pet);
   List.iter Renderer.draw_button (Petri.get_buttons pet);
 
   if !Simulator.is_paused then
