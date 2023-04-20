@@ -114,8 +114,21 @@ function get_messages(i:baker, pt:msg_tag)
 		     el.vote_block.r = Baker[i].brnd
 		     then add(el, acc) else acc  ) {} Mempool[i].m}
 
-function LESS_pqc(PQC,pqc) == (PQC = NONE /\ pqc <> NONE) \/ (PQC <> NONE /\ pqc <> NONE /\ PQC.r < pqc.r)
+function less_pqc(PQC:pqc_type, pqc:pqc_typ){ (PQC = None && pqc <> None) || (PQC <> None && pqc <> None && PQC.pqc_r < pqc.pqc_r)}
 
+function eq_pqc(PQC:pqc_type, pqc:pqc_type){ ((PQC = None && pqc = None) || (PQC <> None && pqc <> None && PQC.pqc_r = pqc.pqc_r))}
+
+function better_Chain(H:block_type, PRE:block_type, h:block_type, pre:block_type){
+    (H.level < h.level) || 
+      (H.level = h.level && (less_pqc(H.pqc, h.pqc) || 
+                          (eq_pqc(H.pqc, h.pqc) && (-PRE.round < -pre.round || (PRE.round = pre.round && H.round < h.round)))))
+}
+function valid_EQC(eqc:vote_type set, pre:block_type){
+         || pre.level = 0
+         || (quorum(eqc) && ((fold(acc m -> if m.vtyp = Endorse then ((m.vote_block.p = pre.payload && m.vote_block.l = pre.level && m.vote_block.r = pre.round) && acc) else acc) true eqc)
+}
+
+function valid_PQC(b:block_type) { b.pqc <> None /\ quorum(b.pqc.pqc_q) && (fold (acc m -> if m.vtyp = Preendorse then (m.vote_block.p = b.payload && m.vote_block.l = b.level && m.vote_block.r = b.round) && acc else acc) true b.pqc.pqc_q) }
 
 
 (*  ==== Trigger Timeout ==== *)
