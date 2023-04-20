@@ -1,7 +1,7 @@
-(*                                     *)
-(*  An example scene for "germanish"   *) 
-(*  using the petri net scene library. *)
-(*                                     *)
+(*                                      *)
+(*  An example scene for "evelator"     *) 
+(*  using the scenelib fully.           *)
+(*                                      *)
 
 open Utils
 open Simulator
@@ -48,9 +48,15 @@ let build_scene dt =
   let actual_size = 75 in
   let indicator_size = 50 in 
   let cell_count = Utils.get_nb_proc () in
+  let center : Vector.t = { x = 250; y = 0 } in 
 
+  (*  
+    For each process, create a floor. 
+    A floor is composed of a button to call the elevator,
+    and an indicator showing if the elevator is called on the floor. 
+  *)
   for i=0 to cell_count - 1 do
-    let pos = Composition.col Vector.zero (cell_size) cell_count i in 
+    let pos = Composition.expand_col center (cell_size) cell_count i in 
     let new_button : Button.t = 
       {
         name  = Format.sprintf "Request floor %d" i;
@@ -79,13 +85,18 @@ let build_scene dt =
   in
 
   let post_init () = 
+    (* 
+       The only simulation that is interesting 
+       on this model is the one where Next[i] = i+1, 
+        so we force the value of this variable. 
+    *)
     let tmp = ref [] in
     for i = cell_count-1 downto 0 do 
       tmp := (VInt(i+1))::!tmp
     done;
-    set_var "Next" (Arr !tmp);
-    Simulator.lock_trans "t_request"
-  in
+    set_var "Next" (Arr !tmp); 
+    Simulator.lock_trans "t_request"; (* Lock transition for request, allowing only the user to call the elevator. *)
+    in
 
   let on_model_change () = 
     clear_graph ();
@@ -93,8 +104,8 @@ let build_scene dt =
     List.iter (Renderer.draw_indicator green black) !indicators;
     (* -- Draw elevator -- *)
     set_color red;
-    let asc_center : Vector.t = { x = - cell_size ; y = 0 } in
-    let asc_pos = Composition.col asc_center (cell_size) cell_count (get_asc_level ()) in
+    let asc_center : Vector.t = Vector.sub center { x = cell_size ; y = 0 } in
+    let asc_pos = Composition.expand_col asc_center (cell_size) cell_count (get_asc_level ()) in
     let center_pos = Vector.sub asc_pos { x = actual_size / 2; y = actual_size / 2 } in 
     fill_rect center_pos.x center_pos.y actual_size actual_size;
     set_color black;
@@ -102,6 +113,9 @@ let build_scene dt =
     let (w, _) = text_size  dir_str in
     moveto (asc_pos.x - (w / 2)) asc_pos.y;
     draw_string dir_str; 
+
+    Renderer.draw_ui_all ();
+
     synchronize ()
   in
 

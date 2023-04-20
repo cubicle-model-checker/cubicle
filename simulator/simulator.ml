@@ -96,7 +96,8 @@ let take_step_forward () =
   let pre_paused = !is_paused in
   is_paused := false;
   step ();
-  is_paused := pre_paused
+  is_paused := pre_paused;
+  on_model_change_callback ()
 
 let reset () = init ()
 

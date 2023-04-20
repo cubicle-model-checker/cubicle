@@ -34,7 +34,7 @@ Mais qui n'itère que sur un modèle.
 ## Scenes 
 
 - Refresh l'écran lors d'une mise en pause pour afficher le texte
-- Vérifier état unsafe 
+
 - Afficher numéro du step courant quelque part
 
 Dans un monde idéal : 
@@ -51,9 +51,23 @@ Pouvoir déplacer transition et état dans l'espace
 - Camera speed
 - Camera on/off .. With mouse/without...
 
-Composition.ml : Grid_composition
+Composition.ml : Grid_composition.
+La grid_composition doit être retirée de la PetriLib pour être générécisée dans la scenelib.
 
-Mettre beaucoup de commentaire dans les examples (notament ascenceur)
+Meilleure librairie : 
+Mettre couleur des boutons dans une structure, pareil pour indicateur 
+Idéallement même une shape dans leurs structure (Cercle, Rectangle, filled ?)
+Inconvéniant : On a une dépendance a Graphics... sauf si on stocke la couleur par un triplet rgb ... 
+-> La couleur semble faisable après reflexion
+
+## Composition 
+
+Il faudrait séparer les fonctions en deux:
+fit_row; fit_col, fit_grid :
+Scale les contenu pour les mettre dans le contenant 
+
+expand_row_expand_col expand_grid:
+Etant le contenant pour fit le contenu
 
 ## TESTER PETRI
 
@@ -61,7 +75,7 @@ Mettre beaucoup de commentaire dans les examples (notament ascenceur)
 
 ## NOTES : 
 
-Quand on met un tiret dans le nom d'une variable, l'ast retire le tirer apparament
+Quand on met un tiret dans le nom d'une variable, l'ast retire le tiret apparament
 
 ## BUGS : /!\
 

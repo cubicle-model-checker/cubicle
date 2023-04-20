@@ -2,9 +2,10 @@ open Graphics
 
 (* Dynamic variable, dont touch *)
 let last_registered_pos = ref Vector.zero
-let mouse_down = ref false
-let button_last_result = ref false
-let button_clicked = ref false
+let mouse_down          = ref false
+let button_last_result  = ref false
+let button_clicked      = ref false
+let hovering            = ref false
 let mouse_speed = 1
 
 (* Camera globals *)
@@ -25,7 +26,7 @@ let handle_input    () =
 
 let handle_mouse (on_model_change: unit -> unit) (button_list : Button.t list) (dt : float) = (* TODO : Prendre en paramètre une liste de boutons. Nécéssite création d'un fichier pour les boutons *)  
   let (mx, my) = mouse_pos () in 
-
+  let hovering_local = ref false in 
   (* Button interaction *)
     let handle_button (button : Button.t) =
     let bs = button.size / 2 in 
@@ -36,12 +37,16 @@ let handle_mouse (on_model_change: unit -> unit) (button_list : Button.t list) (
             button_last_result := button.f ();
             button_clicked := true
           );
-        on_model_change ();
+        hovering_local := true;
       )
     in 
     List.iter handle_button button_list;
+    if !hovering <> !hovering_local then (
+        hovering := !hovering_local;
+        on_model_change ();
+    );
 
-  if button_down () then (
+    if button_down () then (
     (* Camera *)
     let mvec = Vector.{x = mx; y = my} in
     if !mouse_down then begin

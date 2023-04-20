@@ -7,7 +7,7 @@ let button_text_space = 0
 let button_color_success  = green 
 let button_color_failure  = red
 let button_color_off      = black 
-let button_color_hover    = rgb 50 50 50
+let button_color_hover    = rgb 25 25 25 
 
 let draw_button (button : Button.t) =
   let (mx, my) = mouse_pos () in 
@@ -16,9 +16,9 @@ let draw_button (button : Button.t) =
   let hovered = mx >= rbpos.x - bs && mx <= rbpos.x + bs && my >= rbpos.y - bs && my <= rbpos.y + bs in
   let color = if hovered then 
     (
-      if not !button_clicked then button_color_hover
-      else if !button_last_result then button_color_success 
-      else button_color_failure
+      if not !button_clicked      then  button_color_hover
+      else if !button_last_result then  button_color_success 
+      else                              button_color_failure
       ) 
     else button_color_off in
   set_color color;
@@ -44,3 +44,24 @@ let draw_indicator on_color off_color (ind : Indicator.t) =
   let ny = ind.pos.y - tsy - ind.size - indic_text_space in
   moveto nx ny;
   draw_string ind.name
+
+(* -- UI -- *)
+
+let draw_ui_pause () = 
+  if !Simulator.is_paused then
+    (
+      Graphics.moveto (size_x () / 2) 5;
+      draw_string "Paused."
+    )
+
+let draw_ui_unsafe () = 
+  if Simulator.is_unsafe () then 
+    (
+      set_color red;
+      Graphics.moveto (size_x () / 2) (size_y () / 2);
+      draw_string "UNSAFE!"
+    )
+
+let draw_ui_all () = 
+  draw_ui_pause   ();
+  draw_ui_unsafe  ()

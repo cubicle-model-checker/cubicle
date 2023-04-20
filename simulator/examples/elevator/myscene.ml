@@ -1,16 +1,23 @@
-(*                                     *)
-(*  An example scene for "germanish"   *) 
-(*  using the petri net scene library. *)
-(*                                     *)
+(*                                      *)
+(*  An example scene for "evelator"     *) 
+(*  using the scenelib fully.           *)
+(*                                      *)
 
 open Utils
 open Simulator
 open Bgraphics
+open Traces
 
 let window_size = 600
 
-let button_request_floor i () =
-  Simulator.take_transition "t_request" [i]
+let get_asc_dir () = 
+  match get_vuv "Dir" with 
+  | Val v ->
+      begin match v with 
+      | VConstr s -> s 
+      | _ -> failwith "Wrong model : dir is wrongly typed"
+      end 
+  | _ -> failwith "Wront model : not dir"
 
 let get_asc_level () = 
   match get_vuv "CurFloor" with 
@@ -21,23 +28,54 @@ let get_asc_level () =
       end
   | _ -> failwith "Wrong model : No Cur_Floor" 
 
+let indic_requested_floor i () = 
+  match get_vuv "Request" with 
+  | Arr a -> 
+      begin match List.nth a i with 
+      | VBool b -> b 
+      | _ -> failwith "Wrong model : no request" 
+      end 
+  | _ -> failwith "Wrong model : no request"
+
+let button_request_floor i () =
+  Simulator.take_transition "t_request" [i]
+
 let build_scene dt =
 
-  let buttons : Button.t list ref = ref [] in
-  let cell_size = 100 in
+  let buttons    : Button.t list ref = ref [] in
+  let indicators : Indicator.t list ref = ref [] in
+  let cell_size = 150  in
   let actual_size = 75 in
+  let indicator_size = 50 in 
   let cell_count = Utils.get_nb_proc () in
+  let center : Vector.t = { x = 250; y = 0 } in 
 
+  (*  
+    For each process, create a floor. 
+    A floor is composed of a button to call the elevator,
+    and an indicator showing if the elevator is called on the floor. 
+  *)
   for i=0 to cell_count - 1 do
+    let pos = Composition.expand_col center (cell_size) cell_count i in 
     let new_button : Button.t = 
       {
-        name= Format.sprintf "Request floor %d" i;
-        f = button_request_floor i;
-        pos = Composition.col Vector.zero (cell_size) cell_count i; 
-        size=actual_size;
+        name  = Format.sprintf "Request floor %d" i;
+        f     = button_request_floor i;
+        pos;
+        size  = actual_size;
       }
     in 
-    buttons := new_button::!buttons
+    let pos = Vector.sub pos { x = actual_size; y = 0 } in
+    let new_indicator : Indicator.t = 
+      {
+        name = "";
+        f    = indic_requested_floor i;
+        pos;
+        size=indicator_size;
+      }
+    in 
+    buttons := new_button::!buttons;
+    indicators := new_indicator::!indicators
   done;
 
   let pre_init () = 
@@ -46,16 +84,38 @@ let build_scene dt =
     auto_synchronize false
   in
 
+  let post_init () = 
+    (* 
+       The only simulation that is interesting 
+       on this model is the one where Next[i] = i+1, 
+        so we force the value of this variable. 
+    *)
+    let tmp = ref [] in
+    for i = cell_count-1 downto 0 do 
+      tmp := (VInt(i+1))::!tmp
+    done;
+    set_var "Next" (Arr !tmp); 
+    Simulator.lock_trans "t_request"; (* Lock transition for request, allowing only the user to call the elevator. *)
+    in
+
   let on_model_change () = 
     clear_graph ();
-    Utils.dumper ();
     List.iter Renderer.draw_button !buttons;
+    List.iter (Renderer.draw_indicator green black) !indicators;
     (* -- Draw elevator -- *)
     set_color red;
-    let asc_center : Vector.t = { x = - cell_size * 2; y = 0 } in
-    let asc_pos = Composition.col asc_center (cell_size) cell_count (get_asc_level ()) in
-    let center_pos = Vector.sub asc_pos { x = cell_size / 2; y = cell_size / 2 } in 
+    let asc_center : Vector.t = Vector.sub center { x = cell_size ; y = 0 } in
+    let asc_pos = Composition.expand_col asc_center (cell_size) cell_count (get_asc_level ()) in
+    let center_pos = Vector.sub asc_pos { x = actual_size / 2; y = actual_size / 2 } in 
     fill_rect center_pos.x center_pos.y actual_size actual_size;
+    set_color black;
+    let dir_str = get_asc_dir () in
+    let (w, _) = text_size  dir_str in
+    moveto (asc_pos.x - (w / 2)) asc_pos.y;
+    draw_string dir_str; 
+
+    Renderer.draw_ui_all ();
+
     synchronize ()
   in
 
@@ -63,5 +123,5 @@ let build_scene dt =
     Input.update on_model_change !buttons dt;
   in
 
-  let s : Scene.t = {pre_init; post_init=on_model_change; on_model_change; update; } in 
+  let s : Scene.t = {pre_init; post_init; on_model_change; update; } in 
   set_scene(s)

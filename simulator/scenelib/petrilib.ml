@@ -247,18 +247,7 @@ let draw_for_state () =
   List.iter (Renderer.draw_indicator red black) (Petri.get_indics pet);
   List.iter Renderer.draw_button (Petri.get_buttons pet);
 
-  if !Simulator.is_paused then
-    (
-      moveto 5 5;
-      draw_string "Paused."
-    );
-
-  if Simulator.is_unsafe () then 
-    (
-      set_color red;
-      moveto (size_x () / 2) (size_y () / 2);
-      draw_string "UNSAFE!"
-    );
+  Renderer.draw_ui_all ();
   synchronize ()
 
 let update dt  = (* Automatically manage pausing, navigating through the trace, buttons and Camera *)
