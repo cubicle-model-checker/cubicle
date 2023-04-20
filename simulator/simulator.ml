@@ -73,7 +73,7 @@ let step () =
   in
   if List.length possible_actions > 0 then  
     let (arg, ac, name) = get_random_in_list possible_actions in
-    ignore(take_transition name arg)
+    ignore(take_transition name arg);
   )
 
 (* Interaction functions *)
@@ -164,3 +164,5 @@ let get_vuv_for_proc_pair i j =
 
 let get_vuv vuv_name = try StringMap.find vuv_name (get_model_state ()) 
                       with Not_found -> failwith (Format.sprintf "(Simulator) Could'nt get vuv '%s' : Not_found)" vuv_name)
+
+let current_step () = Traces.current_step full_trace 

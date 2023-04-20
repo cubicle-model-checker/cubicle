@@ -32,6 +32,8 @@ let get (i, st) =
   if !i >= Array.length !st then failwith "Out of bounds.";
   (!st).(!i)
 
+let current_step (i, st) = !i
+
 let next (i, st) = 
   if !i +1 < Array.length (!st) then i := !i + 1
 
@@ -56,5 +58,15 @@ let add (i, st) tr =
 
 let empty () = (ref 0, ref [||])
 
-let save (tr : t) = failwith "todo"
-
+let save ((i, st) : t) (fmt : Format.formatter) = 
+  for j=0 to !i do
+    let ((tname, targs), _) = !st.(j) in
+    Format.fprintf fmt "%s" tname;
+    if List.length targs > 0 then 
+      (
+      Format.fprintf fmt " | args :";
+      List.iter (fun x -> Format.fprintf fmt " %d" x) targs;
+      );
+    Format.fprintf fmt "\n";
+  done;
+  Format.fprintf fmt "%!"

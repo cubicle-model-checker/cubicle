@@ -23,6 +23,9 @@ Devrait-on même garder le même répertoire git pour le simulateur que pour cub
 Implémenter la fonction "save trace", qui est une fonction avec la même signature que le modèle 
 (de façon a pouvoir être lu par les mêmes programme)
 Mais qui n'itère que sur un modèle.
+Export trace moyen simple : Prend un format en paramètre et y écrit :
+[transition_name] [args : ...] 
+
 
 ## Compilateur
 
@@ -59,6 +62,8 @@ Mettre couleur des boutons dans une structure, pareil pour indicateur
 Idéallement même une shape dans leurs structure (Cercle, Rectangle, filled ?)
 Inconvéniant : On a une dépendance a Graphics... sauf si on stocke la couleur par un triplet rgb ... 
 -> La couleur semble faisable après reflexion
+
+Meilleure organisation : Garder uniquement main, mymodel.ml et myscene.ml dans le root et tout le reste va dans simulator/ ou qqchose du genre
 
 ## Composition 
 

@@ -17,6 +17,7 @@ type model_state = var_value Maps.StringMap.t            (* name of var * value 
 type tstep = (string * int list) * model_state      (* name of transition taken to get here, args, state adter transition was taken *)
 type t 
 
+val current_step : t -> int
 val start 	  : t -> int -> unit      (* Recalibrer position *)
 val get   	  : t -> tstep				    (* Récup current elem  *)
 val next      : t -> unit
@@ -24,4 +25,4 @@ val prev      : t -> unit
 val add       : t -> tstep -> unit    (* add step at i *)
 val empty     : unit -> t
 val position  : t -> int              (* récup current position *)
-val save      : t -> unit             (* Save the current trace in a model that will play the trace *)
+val save      : t -> Format.formatter -> unit             (* Save the current trace in a model that will play the trace *)

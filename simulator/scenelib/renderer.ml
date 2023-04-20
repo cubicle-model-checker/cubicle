@@ -50,6 +50,7 @@ let draw_indicator on_color off_color (ind : Indicator.t) =
 let draw_ui_pause () = 
   if !Simulator.is_paused then
     (
+      set_color black;
       Graphics.moveto (size_x () / 2) 5;
       draw_string "Paused."
     )
@@ -62,6 +63,14 @@ let draw_ui_unsafe () =
       draw_string "UNSAFE!"
     )
 
+let draw_ui_step () =
+  set_color black;
+  let step_str = Format.sprintf "Step %d" (Simulator.current_step ()) in 
+  
+  Graphics.moveto (size_x () / 2) (size_y () - 30);
+  draw_string step_str
+
 let draw_ui_all () = 
   draw_ui_pause   ();
-  draw_ui_unsafe  ()
+  draw_ui_unsafe  ();
+  draw_ui_step    ()
