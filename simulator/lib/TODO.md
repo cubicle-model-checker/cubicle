@@ -26,7 +26,6 @@ Mais qui n'itère que sur un modèle.
 Export trace moyen simple : Prend un format en paramètre et y écrit :
 [transition_name] [args : ...] 
 
-
 ## Compilateur
 
 - Il faudrait un paramètre -o pour spécifier le path

@@ -11,9 +11,12 @@ open Printf
 (* Variables globales utilisées *)
 
 type g_varst = (Hstring.t * int) Hstring.HMap.t (* Hashtbl to store dimensions *)
+let executable_folder = 
+  let i = String.rindex Sys.executable_name '/' in 
+  String.sub Sys.executable_name 0 (i) 
 
-let tmp_file_name = "simulator/mymodel.ml"   (* Output file. Need to end with ".ml" *)
-let out_file = open_out tmp_file_name  
+let file_name = executable_folder^"/simulator/mymodel.ml"   (* Output file. Need to end with ".ml" *)
+let out_file = open_out file_name 
 let var_prefix = "v"                      
 let updated_prefix = "n"                  
 let pfile = fun d -> fprintf out_file d

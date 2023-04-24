@@ -5,7 +5,8 @@ open Atom
 type g_varst = (Hstring.t * int) Hstring.HMap.t
 
 (* Global variables used for compiling *)
-val tmp_file_name : string (* File to write compiled program to *)
+val executable_folder : string
+val file_name : string (* File to write compiled program to *)
 val out_file : out_channel 
 val var_prefix : string  
 val updated_prefix : string

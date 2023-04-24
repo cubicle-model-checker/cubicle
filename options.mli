@@ -97,3 +97,5 @@ val js_mode : unit -> bool
 val set_js_mode : bool -> unit
 
 val simulator : bool
+val scene     : string option
+val sim_out   : string option

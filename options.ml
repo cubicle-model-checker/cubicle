@@ -81,8 +81,15 @@ let subtyping = ref true
 let notyping = ref false
 let noqe = ref false
 
-let simulator = ref false
-         
+let simulator  = ref false
+let scene      = ref None
+let sim_out    = ref None 
+
+let set_scene s = 
+  if Sys.file_exists s && Filename.check_suffix s ".ml" then 
+    scene := Some(s) else raise (Arg.Bad "Scene does not exist or is not a .ml file")
+let set_sim_out o = sim_out := Some(o)
+
 let trace = ref NoTrace
 let set_trace = function
   | "alt-ergo" -> trace := AltErgoTr
@@ -96,6 +103,7 @@ let set_out o =
   else if not (Sys.is_directory o) then
     raise (Arg.Bad "-out takes a directory as argument");
   out := o
+
 
 let mode = ref "bfs"
 let set_mode m =
@@ -206,6 +214,8 @@ let specs =
     (* Hidden options *)
     "-notyping", Arg.Set notyping, ""; (* Disable typing *)
     "-sim", Arg.Set simulator, " simulator mode";
+    "-scene", Arg.String set_scene, " scene for simulator";
+    "-sim-out", Arg.String set_sim_out, " output file for simulation ";
   ]
 
 let alspecs = Arg.align specs
@@ -315,3 +325,5 @@ let set_js_mode b = js_mode := b
 let js_mode () = !js_mode
 
 let simulator = !simulator
+let scene = !scene
+let sim_out = !sim_out

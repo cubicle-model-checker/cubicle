@@ -3,8 +3,8 @@ open Maps
 open Model
 open Traces
 open Format
+let build_model () = 
 
-let build_model () =
 let direction = ["Up" ; "Down"] in
 
 let vCurFloor = ref 0 in

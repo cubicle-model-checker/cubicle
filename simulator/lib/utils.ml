@@ -20,10 +20,9 @@ let set_nb_proc nbp = nb_proc := nbp
 let dumper () = 
   let mstate = Model.get_state (!model) in
   printf "-------- BEGIN DUMP --------\n";
-  let print_val val_name val_value =
+  let print_var val_name val_value =
     printf "%s : " val_name;
-    let pval v = printf "%s " (Model.vuv_to_string v)
-    in
+    let pval v = printf "%s " (Model.vuv_to_string v) in
     let parr a = 
       printf "[ ";
       List.iter pval a; 
@@ -41,13 +40,11 @@ let dumper () =
     end;
     printf "\n"
   in
-  StringMap.iter print_val mstate;
+  StringMap.iter print_var mstate;
   printf "-------- END DUMP --------\n%!"
 
 let print_list_int l =
-  Format.printf "[ ";
-  List.iter (fun i -> Format.printf "%i " i) l;
-  Format.printf "]\n\n"
+  Format.printf "[ %s ]\n\n" (String.concat " " (List.map string_of_int l))
 
 (* Simulation functions *)
 

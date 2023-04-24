@@ -232,8 +232,6 @@ let write_transitions trans_list ty_defs g_vars =
       List.iteri write_args trans_args;
     in
 
-    (*  NOTE : Since we know how to get the new_val_name from a var_name, we could just use a Set instead of a Hashtbl *)
-
     let updated = Hashtbl.create (Hstring.HMap.cardinal g_vars) in
 
     (* Write Req *)
@@ -421,14 +419,13 @@ let write_model_create trans_list unsafe_list =
   pfile "mymodel := Model.set_vars ([], state_getter, state_setter) (!mymodel);\n";
   pfile "set_model (!mymodel)\n"
 
-let run ts s =
-  printf "Starting compilation... \n%!";
-  pfile "open Utils\n";
-  pfile "open Maps\n";
-  pfile "open Model\n";
-  pfile "open Traces\n";
-  pfile "open Format\n\n";
-  pfile "let build_model () =\n";
+let run ts s scene =
+  
+  (* -- Compilation of .cub -- *)
+  printf "Starting compilation of .cub ... \n%!";
+
+  List.iter (pfile "open %s\n") ["Utils"; "Maps"; "Model"; "Traces"; "Format" ];
+  pfile "let build_model () = \n\n";
   let g_types = write_types s.type_defs in
   let g_vars = write_vars s g_types in
   write_state_getter g_vars g_types;
@@ -439,4 +436,21 @@ let run ts s =
   write_model_create ts.t_trans s.unsafe;
   close_out out_file;
   printf "Compilation completed.\n%!";
+
+  (* -- Assembling the simulator -- *)
+  let scene = 
+    match scene with 
+    | None -> "defaultscene.ml"
+    | Some s -> s 
+  in
+
+  (* Get inside the simulation folder, run the makefile, then go back to where we were before *)
+  let target = executable_folder^"/simulator/" in
+  let before = Sys.getcwd () in 
+
+  Sys.chdir target;
+  (* TODO : Add the scene before running make *)
+  ignore(Sys.command "make");
+  (* TODO : Move output of make to correct location *)
+  Sys.chdir before;
   exit 0
