@@ -284,7 +284,6 @@ let print_interpret_env_file f (env,locks, cond, sem) name app_procs=
 
 let execute_random3 fmt glob_env trans all_procs unsafe applied_trans main_bt_env tr_table steps  =  
   let hcount = Hashtbl.create 2 in
-
   let taken = ref 0 in 
   let backtrack_env = ref main_bt_env in
   let steps = ref steps in
@@ -298,7 +297,7 @@ let execute_random3 fmt glob_env trans all_procs unsafe applied_trans main_bt_en
   Hashtbl.replace hcount hash (1, glob_env);
   let transitions = ref (Array.of_list (all_possible_transitions glob_env trans all_procs false)) in 
   let running = ref true in
-  let queue = ref applied_trans in 
+  let queue = ref applied_trans in
   while !running (*!taken < 1500  *)do
     try
       let l = Array.length !transitions in
@@ -307,18 +306,22 @@ let execute_random3 fmt glob_env trans all_procs unsafe applied_trans main_bt_en
       let (apply,apply_procs) = !transitions.(rand) in
       let tr_num = fresh_back () in
       let new_env = apply_transition apply_procs apply.tr_name trans !running_env in
+
       running_env := new_env;
       incr steps;
       transitions := Array.of_list (all_possible_transitions !running_env trans all_procs true);
       let lp = Array.length !transitions in
       Hashtbl.add tr_table tr_num (apply.tr_name, apply_procs);
       queue := PersistentQueue.push (tr_num, apply.tr_name,apply_procs, l, lp) !queue;
+
       check_unsafe !running_env unsafe;
       (*dump_transitions open_file apply.tr_name;*)
       let hash = hash_full_env new_env in
+
       (*dump_transitions open_file apply.tr_name !old_hash hash;
       old_hash := hash;*)
       (*dump_hashes open_file hash;*)
+
       begin
       try
 	let he,ee = Hashtbl.find hcount hash in
@@ -928,15 +931,15 @@ let setup_env tsys sys =
   let env_final, original_init =
       Env.fold (fun k x (env_acc,v_acc) ->
 	if Term.compare x throwaway = 0 then
-	  (*begin
+	  begin
 	    match k with 
 	      | Elem(n,_) | Access(n,_) -> 
 		let _, ty = Smt.Symbol.type_of n in
 		(Env.add k {value = random_value ty; typ = ty } env_acc, v_acc)
 		(*(env_acc, v_acc)*)
 	  |  _ -> assert false	
-	    end*)
-	  env_acc, v_acc
+	    end
+	  (*env_acc, v_acc*)
       else
 	begin
 	  match k with
@@ -1076,7 +1079,7 @@ let setup_env tsys sys =
 	    Hashtbl.fold (fun k (el,envoo) (ak, ael,overall) ->
 	      (*Format.printf "State: %d seen %d time(s)@." k el;*)
 	      (*print the state it saw multiple times*)
-	      if el > 1 then Format.printf "State: %d -- %a@." k  print_interpret_env envoo;
+	      (*if el > 1 then Format.printf "State: %d -- %a@." k  print_interpret_env envoo;*)
 
 	      if el > ael then (k,el,overall+el) else (ak,ael,overall+el)) hh (0,0,0) in
 
@@ -1287,7 +1290,10 @@ let setup_env tsys sys =
 	   
 	| TopDump ->
 
-	  
+	  let cmd = "x-terminal-emulator -e ocaml /Users/alexandrina/hello.ml" in
+	  let _ = Unix.system cmd in ()
+
+	  (*
 
 	  let pp = Variable.give_procs (Options.get_interpret_procs ()) in
 
@@ -1437,7 +1443,7 @@ let setup_env tsys sys =
 	  (*let p1 = Hstring.make "#1" in
 	  let l = possible_for_proc !global_env transitions procs p1 in
 	  print_poss_trans fmt l;
-	  Format.eprintf "list %d@." (List.length l);*)
+	  Format.eprintf "list %d@." (List.length l);*)*)
 	  
 	| TopAssign(name,n, tt) ->
 	  (*TO DO FOR CONSTRUCTORS: check that it belongs to type ++ deal with SUBTYPING*)
@@ -1461,6 +1467,6 @@ let setup_env tsys sys =
       | TopError e -> Format.printf "%a@." top_report e
       | End_of_file  -> interpret_bool := false
       | Stdlib.Sys.Break -> Format.printf "@."
-      (*| s ->  let e = Printexc.to_string s in Format.printf "%s %a@." e top_report (InputError)
-      *)
+      | s ->  let e = Printexc.to_string s in Format.printf "%s %a@." e top_report (InputError)
+      
   done  

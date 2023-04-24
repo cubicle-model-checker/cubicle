@@ -264,7 +264,7 @@ let print_queue fmt el =
     else
       begin
 	let x,r = PersistentQueue.pop q in 
-	Format.printf "%a" Term.print x;
+	Format.printf " %a" Term.print x;
 	print_trans r
       end 
   in print_trans el
@@ -272,7 +272,7 @@ let print_queue fmt el =
   
 
 let print_wait fmt el =
-  List.iter (fun x -> Format.printf "%a " Term.print x) el
+  List.iter (fun x -> Format.printf " %a " Term.print x) el
 
 
     
@@ -284,15 +284,15 @@ let print_interpret_env fmt (env,locks, cond, sem)=
   Format.printf  "%a" Pretty.print_line ();
   Format.printf "Lock Queues:@.";
   LockQueues.iter (fun k el ->
-    Format.printf "%a : { %a }@." Term.print k print_queue el) locks;
+    Format.printf "%a : {%a }@." Term.print k print_queue el) locks;
   Format.printf  "%a" Pretty.print_line ();
     Format.printf "Condition wait pools:@.";
   Conditions.iter (fun k el ->
-    Format.printf "%a : { %a }@." Term.print k print_wait el) cond;
+    Format.printf "%a : {%a }@." Term.print k print_wait el) cond;
   Format.printf  "%a" Pretty.print_line ();
   Format.printf "Semaphore wait lists:@.";
   Semaphores.iter (fun k el ->
-    Format.printf "%a : { %a }@." Term.print k print_wait el) sem;
+    Format.printf "%a : {%a }@." Term.print k print_wait el) sem;
   Format.printf  "%a" Pretty.print_line ()
 
 let print_debug_env fmt (env,locks, cond, sem)=
