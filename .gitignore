@@ -10,6 +10,8 @@
 *.opt
 *.byte
 *.output
+*.cmt
+*.cmti
 
 # Generated
 lexer.ml
