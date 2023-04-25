@@ -28,7 +28,7 @@ type t = (int ref) * (tstep Array.t ref)
 let start (i, st) j = i := j 
 
 let get (i, st) =
-  if !i >= Array.length !st then failwith "Out of bounds.";
+  if !i >= Array.length !st then failwith "(Traces) Out of bounds.";
   (!st).(!i)
 
 let current_step (i, st) = !i

@@ -27,6 +27,11 @@ let indic_text_space  = 2
 let button_size         = 50
 let button_text_size    = 50
 
+let button_color_success  = Color.green 
+let button_color_failure  = Color.red
+let button_color_off      = Color.black 
+let button_color_hover    : Color.t = { r=25; g=25; b=25}
+
 module Petri : sig
 
   type arc = 
@@ -95,6 +100,8 @@ struct
       f; 
       pos;
       size=indic_size;
+      color_on = Color.red;
+      color_off = Color.black;
       }
     in
     pet.indics := ni::!(pet.indics)
@@ -105,6 +112,10 @@ struct
         f;
         pos;
         size=button_size;
+        color_success=button_color_success;
+        color_hover=button_color_hover;
+        color_failure=button_color_failure;
+        color_off=button_color_off;
       } in 
     pet.buttons := nb::!(pet.buttons)
 
@@ -244,7 +255,7 @@ let draw_for_state () =
 
   (* Draw indicators *)
 
-  List.iter (Renderer.draw_indicator red black) (Petri.get_indics pet);
+  List.iter Renderer.draw_indicator (Petri.get_indics pet);
   List.iter Renderer.draw_button (Petri.get_buttons pet);
 
   Renderer.draw_ui_all ();

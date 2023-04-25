@@ -4,10 +4,6 @@ open Input
 
 (* -- Buttons -- *)
 let button_text_space = 0 
-let button_color_success  = green 
-let button_color_failure  = red
-let button_color_off      = black 
-let button_color_hover    = rgb 25 25 25 
 
 let draw_button (button : Button.t) =
   let (mx, my) = mouse_pos () in 
@@ -16,12 +12,12 @@ let draw_button (button : Button.t) =
   let hovered = mx >= rbpos.x - bs && mx <= rbpos.x + bs && my >= rbpos.y - bs && my <= rbpos.y + bs in
   let color = if hovered then 
     (
-      if not !button_clicked      then  button_color_hover
-      else if !button_last_result then  button_color_success 
-      else                              button_color_failure
+      if not !button_clicked      then  button.color_hover
+      else if !button_last_result then  button.color_success 
+      else                              button.color_failure
       ) 
-    else button_color_off in
-  set_color color;
+    else button.color_off in
+  set_color (Color.to_graphics color);
   fill_rect (button.pos.x - bs) (button.pos.y - bs) button.size button.size;
   let (tsx, tsy) = text_size button.name in
   let nx = button.pos.x - (tsx / 2) in
@@ -33,11 +29,11 @@ let draw_button (button : Button.t) =
 
 let indic_text_space = 2
 
-let draw_indicator on_color off_color (ind : Indicator.t) =
+let draw_indicator (ind : Indicator.t) =
   let hs = ind.size / 2 in
   let status = ind.f () in
-  let color  = if status then on_color else off_color in
-  set_color color;
+  let color  = if status then ind.color_on else ind.color_off in
+  set_color (Color.to_graphics color);
   fill_rect (ind.pos.x - hs) (ind.pos.y - hs) ind.size ind.size;
   let (tsx, tsy) = text_size ind.name in
   let nx = ind.pos.x - (tsx / 2) in

@@ -129,40 +129,22 @@ let set_var var_name var_val =
   Model.set_state (get_model ()) ms;
   on_model_change_callback ()
 
-let get_vuv_for_const () =
-  let mstate = get_model_state () in
-  let ret = ref [] in
-  let add_vars vname = function
-  | Traces.Val(v) -> 
-    ret := (vname, v)::(!ret)
-  | _ -> ()
-  in
-  StringMap.iter add_vars mstate;
-  !ret
-
-let get_vuv_for_proc i =
-  let mstate = get_model_state () in
-  let ret = ref [] in
-  let add_vars vname = function 
-    | Traces.Arr(a) -> ret := (vname, List.nth a i)::(!ret)
-    | _ -> ()
-  in
-  StringMap.iter add_vars mstate;
-  !ret
-
-let get_vuv_for_proc_pair i j = 
-  let mstate = get_model_state () in
-  let ret = ref [] in
-  let add_vars vname = function
-    | Traces.Mat(m) -> 
-        let a = List.nth m i in
-        ret := (vname, List.nth a j)::(!ret)
-    | _ -> ()
-  in
-  StringMap.iter add_vars mstate;
-  !ret
-
 let get_vuv vuv_name = try StringMap.find vuv_name (get_model_state ()) 
                       with Not_found -> failwith (Format.sprintf "(Simulator) Could'nt get vuv '%s' : Not_found)" vuv_name)
+
+let get_vuv_const vuv_name =
+  match get_vuv vuv_name with 
+  | Val v -> v 
+  | _ -> failwith "(Simulator) Requested vuv is not a val"
+
+let get_vuv_for_proc vuv_name i = 
+  match get_vuv vuv_name with 
+  | Arr a -> List.nth a i 
+  | _ -> failwith "(Simulator) Requested vuv is not an arr"
+
+let get_vuv_for_proc_pair vuv_name i j = 
+  match get_vuv vuv_name with 
+  | Mat m -> List.nth (List.nth m i) j 
+  | _ -> failwith "(Simulator) Requested vuv is not a mat"
 
 let current_step () = Traces.current_step full_trace 
