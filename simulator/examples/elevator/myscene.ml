@@ -1,6 +1,5 @@
 (*                                      *)
-(*  An example scene for "evelator"     *) 
-(*  using the scenelib fully.           *)
+(*  An example scene for "evelator.cub" *) 
 (*                                      *)
 
 open Utils
@@ -9,33 +8,25 @@ open Bgraphics
 open Traces
 
 let window_size = 600
+let button_color_success  = Color.green 
+let button_color_failure  = Color.red
+let button_color_off      = Color.black 
+let button_color_hover    : Color.t = { r=25; g=25; b=25}
 
 let get_asc_dir () = 
-  match get_vuv "Dir" with 
-  | Val v ->
-      begin match v with 
-      | VConstr s -> s 
-      | _ -> failwith "Wrong model : dir is wrongly typed"
-      end 
-  | _ -> failwith "Wront model : not dir"
+  match get_vuv_const "Dir" with 
+  | VConstr s -> s 
+  | _ -> failwith "Wrong model : dir is wrongly typed"
 
 let get_asc_level () = 
-  match get_vuv "CurFloor" with 
-  | Val v -> 
-      begin match v with 
-      | VInt i -> i 
-      | _ -> failwith "Wrong model : Cur_floor is not int"
-      end
-  | _ -> failwith "Wrong model : No Cur_Floor" 
+  match get_vuv_const "CurFloor" with 
+  | VInt i -> i 
+  | _ -> failwith "Wrong model : Cur_floor is not int"
 
 let indic_requested_floor i () = 
-  match get_vuv "Request" with 
-  | Arr a -> 
-      begin match List.nth a i with 
-      | VBool b -> b 
-      | _ -> failwith "Wrong model : no request" 
-      end 
-  | _ -> failwith "Wrong model : no request"
+  match get_vuv_for_proc "Request" i with 
+  | VBool b -> b 
+  | _ -> failwith "Wrong model : no request" 
 
 let button_request_floor i () =
   Simulator.take_transition "t_request" [i]
@@ -63,6 +54,10 @@ let build_scene dt =
         f     = button_request_floor i;
         pos;
         size  = actual_size;
+        color_success=button_color_success;
+        color_hover=button_color_hover;
+        color_failure=button_color_failure;
+        color_off=button_color_off;
       }
     in 
     let pos = Vector.sub pos { x = actual_size; y = 0 } in
@@ -72,6 +67,8 @@ let build_scene dt =
         f    = indic_requested_floor i;
         pos;
         size=indicator_size;
+        color_on=Color.green;
+        color_off=Color.black;
       }
     in 
     buttons := new_button::!buttons;
@@ -101,7 +98,7 @@ let build_scene dt =
   let on_model_change () = 
     clear_graph ();
     List.iter Renderer.draw_button !buttons;
-    List.iter (Renderer.draw_indicator green black) !indicators;
+    List.iter Renderer.draw_indicator !indicators;
     (* -- Draw elevator -- *)
     set_color red;
     let asc_center : Vector.t = Vector.sub center { x = cell_size ; y = 0 } in

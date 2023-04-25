@@ -419,7 +419,7 @@ let write_model_create trans_list unsafe_list =
   pfile "mymodel := Model.set_vars ([], state_getter, state_setter) (!mymodel);\n";
   pfile "set_model (!mymodel)\n"
 
-let run ts s scene =
+let run ts s scene sim_out =
   
   (* -- Compilation of .cub -- *)
   printf "Starting compilation of .cub ... \n%!";
@@ -438,19 +438,27 @@ let run ts s scene =
   printf "Compilation completed.\n%!";
 
   (* -- Assembling the simulator -- *)
-  let scene = 
-    match scene with 
-    | None -> "defaultscene.ml"
-    | Some s -> s 
-  in
+
 
   (* Get inside the simulation folder, run the makefile, then go back to where we were before *)
-  let target = executable_folder^"/simulator/" in
+  let libfolder = executable_folder^"/simulator/" in
   let before = Sys.getcwd () in 
+  let scene = 
+    match scene with 
+    | None -> libfolder^"defaultscene.ml"
+    | Some s -> s 
+  in
+  let sim_out = match sim_out with 
+  | None -> before^"/a"
+  | Some s -> s
+  in
 
-  Sys.chdir target;
-  (* TODO : Add the scene before running make *)
+  printf "Using scene %s...\n" scene;
+  ignore(Sys.command (sprintf "cp %s %smyscene.ml" scene libfolder));
+  
+  Sys.chdir libfolder;
   ignore(Sys.command "make");
-  (* TODO : Move output of make to correct location *)
   Sys.chdir before;
+  ignore(Sys.command (sprintf "cp %smain %s" libfolder sim_out));
+  printf "Output: %s\n" sim_out;
   exit 0
