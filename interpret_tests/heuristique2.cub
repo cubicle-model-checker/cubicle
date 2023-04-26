@@ -1,0 +1,54 @@
+type t = A | B | C | D
+ 
+var X : bool
+var Y : bool
+var Z : bool
+
+array PC[proc] : t
+
+unsafe () {
+       X = True &&
+       Y = True &&
+       Z = True
+       } 
+
+init (i) {
+     PC[i] = A
+     && X = False
+     && Y = False
+     && Z = False
+     }
+
+transition t1(i)
+requires {
+	 PC[i] = A &&
+	 forall_other k. PC[k] = A
+}
+{ X := True; PC[i] := B }
+
+transition t2(i j)
+requires {
+	 PC[i] = A &&
+	 PC[j] = B
+}
+{ Y := True; PC[i] := C }
+
+transition tX(i)
+requires { PC[i] = B }
+{ PC[i] := A; X := False}
+
+transition tY(i)
+requires { PC[i] = C }
+{ PC[i] := A; Y := False}
+
+transition tZ(i)
+requires { PC[i] = D }
+{ PC[i] := A; Z := False}
+
+transition t3(i j)
+requires {
+	 PC[i] = A &&
+	 PC[j] = C
+}
+{ Z := True; PC[i] := D }
+
