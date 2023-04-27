@@ -1,6 +1,9 @@
 open Format
 open Maps
 
+let sim_max_int   = 1000000
+let sim_max_float = 1000000.
+
 (* Getters and setters *)
 let scene         = ref Scene.empty
 let set_scene s   = scene := s

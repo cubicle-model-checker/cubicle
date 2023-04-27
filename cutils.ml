@@ -4,13 +4,9 @@ open Util
 open Atom
 open Printf
 
-(*
-  print_"..." functions write in the destination file.
-*)
-
 (* Variables globales utilisées *)
 
-type g_varst = (Hstring.t * int) Hstring.HMap.t (* Hashtbl to store dimensions *)
+type g_varst = (Hstring.t * int) Hstring.HMap.t (* Hashmap to store type and dimensions *)
 
 let executable_folder = 
   let i = String.rindex Sys.executable_name '/' in 
@@ -31,10 +27,6 @@ let pfile = fun d -> fprintf out_file d
 
 let get_var_type var_name g_vars    = let (t,_) = Hstring.HMap.find var_name g_vars in t
 let get_var_dim  var_name  g_vars   = try let (_, d) = Hstring.HMap.find var_name g_vars in d with Not_found -> -1
-
-let sim_max_int   = "1000000"
-let sim_max_float = "1000000."
-
 let get_var_name v = sprintf "%s%s" var_prefix (Hstring.view v)
 let get_updated_name v = sprintf "%s%s" updated_prefix (Hstring.view v)
 let get_constr_name s g_vars =
@@ -143,9 +135,9 @@ let rec print_term g_vars = function
 
 let get_random_for_type ty ty_defs =
   match (Hstring.view ty) with
-  | "int" -> "Random.int "^sim_max_int
+  | "int" -> "Random.int sim_max_int"
   | "proc" -> "get_random_proc ()"
-  | "real" -> "Random.float "^sim_max_float
+  | "real" -> "Random.float sim_max_float"
   | "bool" | "mbool" -> "Random.bool ()"
   | t -> Format.sprintf "get_random_in_list %s" t
 

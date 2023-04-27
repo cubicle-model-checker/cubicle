@@ -5,16 +5,6 @@ open Atom
 open Printf
 open Cutils
 
-(*
-
-Some notes about functions in this files:
-  In general, most functions write a sequence of instructions.
-  They are written considering that some other instruction will follow right behind them.
-  They consider that they are on a new line : Most instruction will end by begining a new line
-  Most functions end with "()" for simplicity. This could easily be avoided but would have made a longer compiler
-
-*)
-
 (* Type declaration *)
 
 let write_types t_def =
@@ -422,6 +412,7 @@ let write_model_create trans_list unsafe_list =
 let run ts s scene sim_out =
   
   (* -- Compilation of .cub -- *)
+
   printf "Starting compilation of .cub ... \n%!";
 
   List.iter (pfile "open %s\n") ["Utils"; "Maps"; "Model"; "Traces"; "Format" ];

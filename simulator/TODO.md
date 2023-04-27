@@ -10,7 +10,6 @@
 
 ## Compilateur
 
-- Mettre le "max_float" dans Simulator.Utils plutôt que dans le cutils
 - La plupart du code entre l'écriture des garde et des états unsafe semble aisément factorisable
 
 ## Scenes 
