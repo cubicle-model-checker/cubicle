@@ -29,19 +29,11 @@ Pouvoir déplacer transition et état dans l'espace
 - Camera speed
 - Camera on/off .. With mouse/without...
 
-Composition.ml : Grid_composition.
-La grid_composition doit être retirée de la PetriLib pour être générécisée dans la scenelib.
+Petrilib : Utiliser la composition de grille de compositor.ml
 
-Meilleure librairie : 
-Mettre couleur des boutons dans une structure, pareil pour indicateur 
-Idéallement même une shape dans leurs structure (Cercle, Rectangle, filled ?)
-Inconvéniant : On a une dépendance a Graphics... sauf si on stocke la couleur par un triplet rgb ... 
--> La couleur semble faisable après reflexion
+Idéallement même une shape dans structure Bouton / Indicateur (Cercle, Rectangle, filled ?)
 
-## TESTER PETRI
+## Compilation / Makefile
 
-- Hierarchical snoop
-
-## NOTES : 
-
-Quand on met un tiret dans le nom d'une variable, l'ast retire le tiret apparament : Souhaitable ?
+On voudrait utiliser des fichiers temporaires dans la compilation de la scene
+Make clean devrait retirer les fichier .cmt et .cmti non ?

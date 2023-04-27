@@ -95,7 +95,7 @@ let hstring_list_to_string hsl =
   sprintf "[%s]" (sub_hsllts hsl "")
 
 let const_to_string = function 
-  | ConstInt n -> sprintf "%s" (Num.string_of_num n)
+  | ConstInt n  -> sprintf "%s" (Num.string_of_num n)
   | ConstReal n -> sprintf "%s." (Num.string_of_num n)
   | ConstName n -> sprintf "%s" (get_var_name n)
 
