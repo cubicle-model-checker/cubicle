@@ -31,7 +31,7 @@ let set_sleep_time st = sleep_time := st
 
 let init () =
   pre_init_callback ();
-  Random.init (int_of_float (Unix.time ()));
+  Random.init (int_of_float (Sys.time ()));
   let minit = Model.get_init (get_model ()) in
   minit ();
   Traces.add full_trace (("init", []), Utils.get_model_state ());

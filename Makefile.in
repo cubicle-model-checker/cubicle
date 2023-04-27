@@ -46,8 +46,8 @@ EXE = @EXE@
 INCLPATHS = $(FUNCTORYLIB) $(Z3LIB) -I +unix -I common/ -I smt/
 INCLUDES = $(INCLPATHS) $(Z3CCFLAGS)
 
-BFLAGS = -dtypes -g $(INCLUDES) -annot -bin-annot
-OFLAGS = -dtypes -g $(INCLUDES) -annot -bin-annot
+BFLAGS = -dtypes -g $(INCLUDES)
+OFLAGS = -dtypes -g $(INCLUDES)
 
 REQBIB=nums.cma unix.cma functory.cma
 
@@ -71,7 +71,7 @@ all: make_functory $(OCAMLBEST)
 # configuration of the sim library 
 ##################################
 
-LFLAGS  = $(GRAPHICSLIB) -I simlib/ -a
+LFLAGS  = $(GRAPHICSLIB) -I simulator/lib -a
 LREQ    = graphics.cma
 LIBNAME = simlib.cma
 LIBNAMEML   = simulator/main.ml simulator/defaultscene.ml
@@ -104,6 +104,19 @@ smt/z3wrapper.ml: smt/z3wrapper_actual.ml smt/z3wrapper_fake.ml config.status
 	fi;\
 	chmod -w smt/z3wrapper.ml
 
+# library compilation 
+#####################
+
+LIBML = simulator/lib/color.ml simulator/lib/vector.ml simulator/lib/button.ml simulator/lib/maps.ml simulator/lib/scene.ml simulator/lib/traces.mli \
+				simulator/lib/traces.ml simulator/lib/model.mli simulator/lib/model.ml simulator/lib/utils.ml simulator/lib/simulator.ml simulator/lib/indicator.ml simulator/lib/input.ml simulator/lib/bgraphics.ml simulator/lib/basiclib.ml simulator/lib/composition.ml \
+				simulator/lib/renderer.ml simulator/lib/petrilib.ml
+
+LIBCMI = $(LIBML:.ml=.cmi)
+
+$(LIBNAME): $(LIBML)
+	$(OCAMLC) $(LFLAGS) -o simulator/lib/$@ $(LREQ) $^
+
+lib : $(LIBNAME)
 
 # bytecode and native-code compilation
 ######################################
@@ -154,19 +167,7 @@ VERSION_STR=$(shell command -v git > /dev/null && git describe --tags || echo "$
 version.ml: config.status
 	@echo "let version = \""$(VERSION_STR)"\"" > version.ml
 	@echo "let date = \""`date`"\"" >> version.ml
-	@echo "let libdir = \""$(LIBDIR)"\"" >> version.ml
-
-# library compilation 
-#####################
-
-LIBML = simlib/color.ml simlib/vector.ml simlib/button.ml simlib/maps.ml simlib/scene.ml simlib/traces.mli \
-				simlib/traces.ml simlib/model.mli simlib/model.ml simlib/utils.ml simlib/simulator.ml simlib/indicator.ml simlib/input.ml simlib/bgraphics.ml simlib/basiclib.ml simlib/composition.ml \
-			  simlib/renderer.ml simlib/petrilib.ml
-
-$(LIBNAME): $(LIBML)
-	$(OCAMLC) $(LFLAGS) -o simlib/$@ $(LREQ) $^
-
-lib : $(LIBNAME)
+	@echo "let libdir = \""$(LIBDIR)"\"" >> version.ml 
 
 # generic rules
 ###############
@@ -226,7 +227,7 @@ install:
 	mkdir -p $(BINDIR)
 	cp -f $(NAME).$(OCAMLBEST) $(BINDIR)/$(NAME)$(EXE)
 	mkdir -p $(LIBDIR)
-	cp -f simlib/*.cm[ia] $(LIBDIR)/
+	cp -f $(LIBCMI) simulator/lib/$(LIBNAME) $(LIBDIR)/
 	cp -f $(LIBNAMEML) $(LIBDIR)/
 	@echo "Installation completed in $(BINDIR) and $(LIBDIR). You may want to copy emacs/cubicle-mode.el in your emacs.d if you use Emacs."
 
@@ -252,8 +253,8 @@ clean::
 	@rm -f $(GENERATED) *.output
 	@rm -f $(NAME).byte $(NAME).opt
 	@rm -f functory.*
-	@rm -f simlib/*.cm[iox] simlib/*.annot 
-	@rm -f simlib/$(LIBNAME)
+	@rm -f simulator/lib/*.cm[iox] 
+	@rm -f simulator/lib/$(LIBNAME)
 
 # depend
 ########
