@@ -157,7 +157,6 @@ let draw_for_state () =
   let pet = get_petri () in
   let sttable = Petri.get_state_map pet   in
   let trtable = Petri.get_trans_table pet in
-  let (mx, my) = mouse_pos () in 
   
   (* Draw arcs *)
   set_color black;
@@ -216,7 +215,6 @@ let draw_for_state () =
         let cen = if row_size <= 1 then 0 else (row_size * psize) / 4 in
         let xtopleft = x - cen in 
         let ytopleft = y - cen in
-        let rpdiv = rpsize / 2 in
         let draw_proc i p =
           let xingrid = i mod row_size in
           let yingrid = i / row_size in

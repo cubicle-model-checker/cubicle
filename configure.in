@@ -73,7 +73,7 @@ if test "$OCAMLYACC" = no ; then
 fi
 
 
-#looking for functory library
+# looking for functory library
 
 if test "$USEOCAMLFIND" = yes; then
   FUNCTORYLIB=$(ocamlfind query -i-format functory)
@@ -92,8 +92,26 @@ else
   fi
 fi
 
+# looking for graphics library 
 
-#looking for Z3 ocaml bindings
+if test "$USEOCAMLFIND" = yes; then
+  GRAPHICSLIB=$(ocamlfind query -i-format graphics)
+fi
+
+if test -n "$GRAPHICSLIB";then
+  echo "ocamlfind found graphics in $GRAPHICSLIB"
+  GRAPHICSLD=yes
+else
+  AC_CHECK_FILE($OCAMLLIB/graphics/graphics.cma,GRAPHICSLD=yes,GRAPHICSLD=no)
+  if test "$GRAPHICSLD" = no ; then
+      AC_MSG_RESULT(Cannot find graphics library.)
+      GRAPHICSLIB=""
+  else
+     GRAPHICSLIB="-I +graphics"
+  fi
+fi
+
+# looking for Z3 ocaml bindings
 
 AC_ARG_WITH([z3],
     AS_HELP_STRING([--with-z3], [enable support for Z3 backend SMT solver] ),
@@ -145,6 +163,7 @@ AC_SUBST(OCAMLBEST)
 AC_SUBST(OCAMLVERSION)
 AC_SUBST(OCAMLLIB)
 AC_SUBST(ALTERGOLIB)
+AC_SUBST(GRAPHICSLIB)
 AC_SUBST(FUNCTORYLIB)
 AC_SUBST(Z3LIB)
 AC_SUBST(Z3CCFLAGS)

@@ -8,7 +8,10 @@ type g_varst = (Hstring.t * int) Hstring.HMap.t
 val executable_folder : string
 val file_name : string (* File to write compiled program to *)
 val out_file : out_channel 
-val var_prefix : string  
+
+val build_folder   : string
+val get_lib_folder : unit -> string
+val var_prefix     : string  
 val updated_prefix : string
 val pfile : ('a, out_channel, unit) format -> 'a (* Print to file *)
 

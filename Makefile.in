@@ -35,6 +35,7 @@ OCAMLLEX = @OCAMLLEX@
 OCAMLYACC= @OCAMLYACC@
 OCAMLLIB = @OCAMLLIB@
 FUNCTORYLIB = @FUNCTORYLIB@
+GRAPHICSLIB = @GRAPHICSLIB@
 Z3LIB = @Z3LIB@
 Z3CCFLAGS = @Z3CCFLAGS@
 OCAMLBEST= @OCAMLBEST@
@@ -42,7 +43,7 @@ OCAMLVERSION = @OCAMLVERSION@
 OCAMLWIN32 = @OCAMLWIN32@
 EXE = @EXE@
 
-INCLPATHS = $(FUNCTORYLIB) $(Z3LIB) -I common/ -I smt/
+INCLPATHS = $(FUNCTORYLIB) $(Z3LIB) -I +unix -I common/ -I smt/
 INCLUDES = $(INCLPATHS) $(Z3CCFLAGS)
 
 BFLAGS = -dtypes -g $(INCLUDES) -annot -bin-annot
@@ -66,6 +67,14 @@ BYTE=$(NAME).byte
 OPT=$(NAME).opt
 
 all: make_functory $(OCAMLBEST) 
+
+# configuration of the sim library 
+##################################
+
+LFLAGS  = $(GRAPHICSLIB) -I simlib/ -a
+LREQ    = graphics.cma
+LIBNAME = simlib.cma
+LIBNAMEML   = simulator/main.ml simulator/defaultscene.ml
 
 # configuration of the fake functory library
 ############################################
@@ -147,6 +156,18 @@ version.ml: config.status
 	@echo "let date = \""`date`"\"" >> version.ml
 	@echo "let libdir = \""$(LIBDIR)"\"" >> version.ml
 
+# library compilation 
+#####################
+
+LIBML = simlib/color.ml simlib/vector.ml simlib/button.ml simlib/maps.ml simlib/scene.ml simlib/traces.mli \
+				simlib/traces.ml simlib/model.mli simlib/model.ml simlib/utils.ml simlib/simulator.ml simlib/indicator.ml simlib/input.ml simlib/bgraphics.ml simlib/basiclib.ml simlib/composition.ml \
+			  simlib/renderer.ml simlib/petrilib.ml
+
+$(LIBNAME): $(LIBML)
+	$(OCAMLC) $(LFLAGS) -o simlib/$@ $(LREQ) $^
+
+lib : $(LIBNAME)
+
 # generic rules
 ###############
 
@@ -204,7 +225,10 @@ tags:
 install:
 	mkdir -p $(BINDIR)
 	cp -f $(NAME).$(OCAMLBEST) $(BINDIR)/$(NAME)$(EXE)
-	@echo "Installation completed in $(BINDIR). You may want to copy emacs/cubicle-mode.el in your emacs.d if you use Emacs."
+	mkdir -p $(LIBDIR)
+	cp -f simlib/*.cm[ia] $(LIBDIR)/
+	cp -f $(LIBNAMEML) $(LIBDIR)/
+	@echo "Installation completed in $(BINDIR) and $(LIBDIR). You may want to copy emacs/cubicle-mode.el in your emacs.d if you use Emacs."
 
 install-byte:
 	mkdir -p $(BINDIR)
@@ -218,19 +242,18 @@ install-man:
 	mkdir -p $(MANDIR)/man1
 	cp -f doc/*.1 $(MANDIR)/man1
 
-
-
-
 # clean
 #######
 
 clean:: 
-	@rm -f *.cm[iox] *.o *~ *.annot
+	@rm -f *.cm[iox] *.o *~ *.annot *.cmt *.cmti
 	@rm -f common/*.cm[iox] common/*.o common/*~ common/*.annot
 	@rm -f smt/*.cm[iox] smt/*.o smt/*~ smt/*.annot
 	@rm -f $(GENERATED) *.output
 	@rm -f $(NAME).byte $(NAME).opt
 	@rm -f functory.*
+	@rm -f simlib/*.cm[iox] simlib/*.annot 
+	@rm -f simlib/$(LIBNAME)
 
 # depend
 ########

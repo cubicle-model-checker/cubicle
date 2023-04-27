@@ -12,6 +12,7 @@
 *.output
 *.cmt
 *.cmti
+*.out
 
 # Generated
 lexer.ml

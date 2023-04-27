@@ -11,11 +11,19 @@ open Printf
 (* Variables globales utilisées *)
 
 type g_varst = (Hstring.t * int) Hstring.HMap.t (* Hashtbl to store dimensions *)
+
 let executable_folder = 
   let i = String.rindex Sys.executable_name '/' in 
   String.sub Sys.executable_name 0 (i) 
 
-let file_name = executable_folder^"/simulator/mymodel.ml"   (* Output file. Need to end with ".ml" *)
+let build_folder = Sys.getcwd ()
+let get_lib_folder () = 
+  let lf = Version.libdir^"/simlib.cma" in
+  if Sys.file_exists lf then Version.libdir else 
+  let lf = executable_folder^"/simlib/simlib.cma" in 
+  if Sys.file_exists lf then executable_folder^"/simlib/" else failwith "(Cutils) Simlib not found"
+
+let file_name = build_folder^"/mymodel.ml"
 let out_file = open_out file_name 
 let var_prefix = "v"                      
 let updated_prefix = "n"                  

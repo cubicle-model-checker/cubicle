@@ -439,26 +439,29 @@ let run ts s scene sim_out =
 
   (* -- Assembling the simulator -- *)
 
-
-  (* Get inside the simulation folder, run the makefile, then go back to where we were before *)
-  let libfolder = executable_folder^"/simulator/" in
-  let before = Sys.getcwd () in 
+  let lib_folder = get_lib_folder () in
+  
   let scene = 
     match scene with 
-    | None -> libfolder^"defaultscene.ml"
+    | None -> lib_folder^"/defaultscene.ml"
     | Some s -> s 
   in
-  let sim_out = match sim_out with 
-  | None -> before^"/a"
-  | Some s -> s
+
+  let sim_out = 
+    match sim_out with 
+    | None -> build_folder^"/a.out"
+    | Some s -> s
   in
 
-  printf "Using scene %s...\n" scene;
-  ignore(Sys.command (sprintf "cp %s %smyscene.ml" scene libfolder));
-  
-  Sys.chdir libfolder;
-  ignore(Sys.command "make");
-  Sys.chdir before;
-  ignore(Sys.command (sprintf "cp %smain %s" libfolder sim_out));
+  (* TODO : Copy in a tmp location to avoid overriding file *)
+  ignore(Sys.command (sprintf "cp -fv %s %s/myscene.ml && echo good1" scene build_folder));
+  ignore(Sys.command (sprintf "cp -fv %s/main.ml %s/main.ml && echo good2" lib_folder build_folder));
+
+  let cmd = sprintf "ocamlc -I %s -I +unix unix.cma simlib.cma mymodel.ml myscene.ml main.ml -o %s" lib_folder sim_out in
+  ignore(Sys.command cmd);
+  let rm_cmd = sprintf "rm -f %s/main.ml" build_folder in 
+  ignore(Sys.command rm_cmd);
+
   printf "Output: %s\n" sim_out;
+
   exit 0
