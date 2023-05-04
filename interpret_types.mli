@@ -104,7 +104,7 @@ val cub_to_val : Types.Term.t -> conc_value
 
 val val_to_cub : conc_value -> Types.term
 
-val random_value : Hstring.t -> conc_value 
+val random_value : Hstring.t ->  conc_value 
 
 val random_different_constr : Smt.Symbol.t -> Hstring.t -> Hstring.t
 

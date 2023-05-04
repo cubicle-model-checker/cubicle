@@ -227,8 +227,7 @@ let specs =
     "-undepth", Arg.Set_int unDepth, " depth of unsafe";
     "-interpret-proc", Arg.Set_int interpretProcs, " how many procs for interpreter";
     "-interpreter", Arg.Set interpreter, " start interpreter";
-    "-fuzz", Arg.Tuple [ Arg.Set fuzz;
-			 Arg.Set_int int_brab], " fuzz the model";
+    "-fuzz", Arg.Set fuzz, " fuzz the model";
     "-debug-interpret", Arg.Set debug_interpreter, " debug interpreter";
   ]
 
@@ -246,7 +245,6 @@ let cin =
   | None -> stdin
 
 
-let int_brab = !int_brab
 let depth_ib = !depth_ib
 let rounds = !rounds
 let mrkv_brab = !mrkv_brab
@@ -275,7 +273,7 @@ let forward_inv = !forward_inv
 let brab = !brab
 let enumerative =
   if brab <> -1 then brab
-  else if int_brab <> -1 then int_brab
+  else if !int_brab <> -1 then !int_brab
   else !enumerative
 let do_brab = brab <> -1
 let brab_up_to =
@@ -366,4 +364,7 @@ let js_mode () = !js_mode
 
 
 let set_interpret_procs n = interpretProcs := n
-let get_interpret_procs () = if int_brab > -1 then int_brab else !interpretProcs
+let get_interpret_procs () = if !int_brab > -1 then !int_brab else !interpretProcs
+
+let set_int_brab n = int_brab := n
+let get_int_brab () = !int_brab

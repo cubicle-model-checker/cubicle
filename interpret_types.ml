@@ -201,11 +201,11 @@ rocess active"
 
 
 let print_poss_trans fmt l =
-  Format.printf "Possible transitions:@."; 
-  List.iter (fun (t,p) -> Format.printf "transition %a(%a)@." Hstring.print t.tr_name Variable.print_vars p) l
+  Format.fprintf fmt "Possible transitions:@."; 
+  List.iter (fun (t,p) -> Format.fprintf fmt "transition %a(%a)@." Hstring.print t.tr_name Variable.print_vars p) l
 
 let print_transition fmt tr args =
-  Format.printf "transition %a(%a)" Hstring.print tr Variable.print_vars args
+  Format.fprintf fmt "transition %a(%a)" Hstring.print tr Variable.print_vars args
 
 let print_applied_trans fmt l =
   Format.printf "Applied transitions:@.";
@@ -214,14 +214,14 @@ let print_applied_trans fmt l =
     else
       begin
 	let (_,t,p,_,_),r = PersistentQueue.pop q in 
-	Format.printf "\ttransition %a(%a)@." Hstring.print t Variable.print_vars p;
+	Format.fprintf fmt "\ttransition %a(%a)@." Hstring.print t Variable.print_vars p;
 	print_trans r
       end 
   in print_trans l
   
 let print_debug_trans_path fmt l i =
   Format.printf "Applied transitions:\n---\n  pre: possible transitions before\n  post: possible transitions after\n  MANUAL: transition applied manually, pre/post not calculated\n  @{<b>@{<fg_green>**Step <int>@}@}: resulting env stored and accessible\n---@.";
-  if PersistentQueue.is_empty l then Format.printf "no applied transitions@.";
+  if PersistentQueue.is_empty l then Format.fprintf fmt "no applied transitions@.";
   let rec print_trans q =
     if PersistentQueue.is_empty q then ()
     else
@@ -237,10 +237,10 @@ let print_debug_trans_path fmt l i =
 	  else string_of_int ptpost in
 	
 	if tn mod i = 0 then 
-	  Format.printf "@{<b>@{<fg_green>**Step %d[pre: %s, post: %s]: transition %a(%a)@}@}@."
+	  Format.fprintf fmt "@{<b>@{<fg_green>**Step %d[pre: %s, post: %s]: transition %a(%a)@}@}@."
 	    tn s1 s2 Hstring.print t Variable.print_vars p
 	else
-	  Format.printf "Step %d[pre: %s, post: %s]: transition %a(%a)@."
+	  Format.fprintf fmt "Step %d[pre: %s, post: %s]: transition %a(%a)@."
 	    tn s1 s2 Hstring.print t Variable.print_vars p;
 	print_trans r
       end 
@@ -248,15 +248,15 @@ let print_debug_trans_path fmt l i =
   
 
 let print_title fmt s =
-  Format.printf "@{<b>%s@}\n" s;
-  Format.printf  "%a" Pretty.print_double_line ()
+  Format.fprintf fmt "@{<b>%s@}\n" s;
+  Format.fprintf  fmt "%a" Pretty.print_double_line ()
     
 let print_env fmt env =
   print_title fmt "Environment";
   Env.iter(fun k elem ->
-    Format.printf "%a : %a@." Term.print k Term.print elem
+    Format.fprintf fmt "%a : %a@." Term.print k Term.print elem
   ) env;
-  Format.printf  "%a@." Pretty.print_line ()
+  Format.fprintf  fmt "%a@." Pretty.print_line ()
 
 let print_queue fmt el =
   let rec print_trans q =
@@ -264,7 +264,7 @@ let print_queue fmt el =
     else
       begin
 	let x,r = PersistentQueue.pop q in 
-	Format.printf " %a" Term.print x;
+	Format.fprintf fmt " %a" Term.print x;
 	print_trans r
       end 
   in print_trans el
@@ -272,14 +272,14 @@ let print_queue fmt el =
   
 
 let print_wait fmt el =
-  List.iter (fun x -> Format.printf " %a " Term.print x) el
+  List.iter (fun x -> Format.fprintf fmt " %a " Term.print x) el
 
 
     
 let print_interpret_env fmt (env,locks, cond, sem)=
   print_title fmt "Final Environment";
   Env.iter(fun k {value = v} ->
-    Format.printf "%a : %a@." Term.print k print_val v
+    Format.fprintf fmt "%a : %a@." Term.print k print_val v
   ) env;
   Format.printf  "%a" Pretty.print_line ();
   Format.printf "Lock Queues:@.";

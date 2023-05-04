@@ -96,7 +96,6 @@ val unDepth : int
 val interpreter : bool
 val fuzz : bool
 val debug_interpreter : bool
-val int_brab : int
 val depth_ib : int
 val rounds : int
 val mrkv_brab : int
@@ -112,3 +111,7 @@ val set_js_mode : bool -> unit
 
 val set_interpret_procs : int -> unit
 val get_interpret_procs : unit -> int
+
+  
+val set_int_brab : int -> unit
+val get_int_brab : unit -> int
