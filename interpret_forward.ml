@@ -2315,7 +2315,7 @@ let semaphore_init s =
 let init_vals env init =
   if Options.debug_interpreter then Format.eprintf "Init_vals:@.";
   (*let procs = Variable.give_procs (Options.get_interpret_procs ()) in*)
-  let procs = Variable.give_procs Options.int_brab in
+  let procs = Variable.give_procs (Options.get_int_brab ()) in
   let _, dnf = init in
   List.fold_left (fun acc el ->
     SAtom.fold (fun atom sacc -> 
@@ -2361,12 +2361,12 @@ let init_vals env init =
 	    match t1, t2 with
 	      | Elem(_, Glob), Elem(_, Var) ->
 		let temp =
-		  Hstring.make ("#" ^ string_of_int(Options.int_brab + 1))
+		  Hstring.make ("#" ^ string_of_int((Options.get_int_brab ()) + 1))
 		in
 		Env.add t1 (Elem(temp, Var)) sacc
 	      | Elem (_, Var), Elem(_,Glob) ->
 		let temp =
-		  Hstring.make ("#" ^ string_of_int(Options.int_brab + 1))
+		  Hstring.make ("#" ^ string_of_int((Options.get_int_brab ()) + 1))
 		in
 		Env.add t2 (Elem(temp, Var)) sacc
 	      | _ -> assert false
@@ -2409,7 +2409,7 @@ let run env trans procs unsafe count depth =
             Unique states:%d@."
 	!curr_count
 	Options.depth_ib
-	Options.int_brab
+	(Options.get_int_brab ())
 	!overall
 	!visit_count
 	(stats.Hashtbl.num_bindings);
@@ -2461,7 +2461,7 @@ let run_markov env tsys trans procs unsafe count depth =
             Unique states:%d@."
 	  !curr_count
 	  Options.depth_ib
-	  Options.int_brab
+	  (Options.get_int_brab ())
 	  !overall
 	  !visit_count
 	  (stats.Hashtbl.num_bindings);
@@ -2522,7 +2522,7 @@ let throwaway = Elem(Hstring.make "UNDEF", Glob)
 let init tsys =
   Random.self_init ();
   let fmt = Format.std_formatter in
-  let num_procs = Options.int_brab in
+  let num_procs = Options.get_int_brab () in
   let procs = Variable.give_procs num_procs in
   (*set one sigma for the whole system*)
   let p_m,_ = List.fold_left (fun (acc, count) x ->
@@ -2538,7 +2538,7 @@ let init tsys =
   let var_terms = Forward.all_var_terms procs tsys in
   let const_list = List.map (fun x -> Elem(x, Glob)) tsys.t_consts in
   let var_terms = Term.Set.union var_terms (Term.Set.of_list const_list) in 
-  sys_procs := Options.int_brab;
+  sys_procs := Options.get_int_brab ();
   let un = List.map (fun x -> 0, Node.variables x, Node.litterals x ) tsys.t_unsafe in
   let all_unsafes = init_unsafe procs un in
 
@@ -2834,7 +2834,7 @@ let test_cand2s cands =
 let first_good_candidate3 n =
   (*Format.eprintf "also look at the cool stuff:@.";
   Format.eprintf "Length %d@." (List.length !visited_states);*)
-  let num_procs = Options.int_brab in
+  let num_procs = Options.get_int_brab () in
   let procs = Variable.give_procs num_procs in
   (*Format.eprintf "hello you are now in foraward interpret, look at the nodes!@.";*)
   (*List.iter (fun x -> Format.eprintf "%a\n------@." Node.print x) n;*)
@@ -2863,7 +2863,7 @@ let first_good_candidate3 n =
 let first_good_candidate n =
   (*Format.eprintf "candidates: @.";
   List.iter (fun x -> Format.eprintf  "%a@." Node.print x ) n;*)  
-  let num_procs = Options.int_brab in
+  let num_procs = Options.get_int_brab () in
   let procs = Variable.give_procs num_procs in
   try
     List.fold_left (fun acc s ->
@@ -2885,7 +2885,7 @@ let first_good_candidate n =
 
 
 let first_good_candid2ate n =
-  let num_procs = Options.int_brab in
+  let num_procs = Options.get_int_brab () in
   let procs = Variable.give_procs num_procs in
   let cands =
     List.fold_left (fun acc s ->

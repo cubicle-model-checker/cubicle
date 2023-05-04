@@ -18,7 +18,12 @@ val gen_array_combs : Hstring.t -> Variable.t list -> Variable.t list list
   
 val check_reqs : Types.SAtom.t ->
 Interpret_types.interpret_value Interpret_types.Env.t ->
-Variable.subst -> Hstring.t ->  Interpret_types.interpret_value Interpret_types.Env.t
+  Variable.subst -> Hstring.t ->  Interpret_types.interpret_value Interpret_types.Env.t
+
+val check_ureqs : Types.SAtom.t list ->
+Interpret_types.interpret_value Interpret_types.Env.t ->
+Variable.subst ->
+Hstring.t -> Interpret_types.interpret_value Interpret_types.Env.t
 
 
 val apply_transition : Variable.t list ->

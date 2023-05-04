@@ -125,9 +125,7 @@ let markov glob tsys all_procs tr trans=
       let env, _,_,_ = !running_env in 
       let rand = Random.int els in
       let (proposal,prop_procs) = tr_array.(rand) in
-      
-      
-      
+ 
       let sigma = Variable.build_subst proposal.tr_args prop_procs in
       
       (*check_actor_suspension sigma !global_env proposal.tr_process;*)
@@ -392,7 +390,9 @@ let markov_entropy_detailed glob tsys all_procs trans steps det_flag=
   let tried = ref 0 in
   let hcount = Hashtbl.create 10 in
   let proc_count = Array.make (Options.get_interpret_procs ()) 0 in
-  let t_count = Hashtbl.create 10 in 
+  let t_count = Hashtbl.create 10 in
+  let transitions = ref (Array.of_list (all_possible_transitions glob trans all_procs false))
+  in
   let matrix =
     if det_flag then
       create_detailed_hash tsys all_procs
@@ -415,8 +415,6 @@ let markov_entropy_detailed glob tsys all_procs trans steps det_flag=
 	end 
     ) [] tsys
   in
-
-  
   let els = List.length trt in 
   let tr_array = Array.of_list trt in
 
@@ -435,39 +433,47 @@ let markov_entropy_detailed glob tsys all_procs trans steps det_flag=
 
   while  (!taken < steps) && !running do
     try
-      let env, _,_,_ = !running_env in 
-      let rand = Random.int els in
-      let (proposal,prop_procs) = tr_array.(rand) in
+      let env, _,_,_ = !running_env in
+
+      let l = Array.length !transitions in
+      if l = 0 then raise (TopError Deadlock);
+      let rand = Random.int l in
+      let (proposal,prop_procs) = !transitions.(rand) in
       
-      
+
       
       let sigma = Variable.build_subst proposal.tr_args prop_procs in
       
       (*check_actor_suspension sigma !global_env proposal.tr_process;*)
-      let curr_env = ref env in 
+      let curr_env = ref env in
+
       curr_env := check_reqs proposal.tr_reqs env sigma proposal.tr_name;
       let trargs = List.map (fun x -> Variable.subst sigma x) proposal.tr_args in
+
       let ureqs = uguard  sigma all_procs trargs proposal.tr_ureq in
-      List.iter (fun u -> curr_env := check_reqs u !curr_env sigma proposal.tr_name) ureqs;
+
+      curr_env := check_ureqs ureqs !curr_env sigma proposal.tr_name;
+
+      (*List.iter (fun u ->
+	curr_env := check_reqs u !curr_env sigma proposal.tr_name) ureqs;
+     *)
+
 
       let _,l1,l2,l3 = !running_env in
       running_env := !curr_env, l1,l2,l3;
       let temp_env = apply_transition prop_procs proposal.tr_name trans !running_env in
       tried := 0;
-
-      
-      let w2 = entropy_env temp_env trans all_procs in 
-
+      let w2 = entropy_env temp_env trans all_procs in       
       
       let flag =
 	if w2 > !w1 then
 	  begin
-	    Format.eprintf "---@.";
+	    Format.eprintf "-@.";
 	    true
 	  end
 	else
 	  begin
-	    Format.eprintf "+++@.";
+	    Format.eprintf "+@.";
 	    
 	    (*Format.eprintf "w1: %d, w2: %d, delta:%d@." !w1 w2 (w2 - !w1);*)
 	    let prob = 2.718281828**(w2 -. !w1) in
@@ -482,7 +488,6 @@ let markov_entropy_detailed glob tsys all_procs trans steps det_flag=
 	  trans_proc_to_hstring proposal.tr_name prop_procs
 	else
 	  proposal.tr_name 
-
       in 
       if flag then
 	begin
@@ -542,7 +547,9 @@ let markov_entropy_detailed glob tsys all_procs trans steps det_flag=
 	  end;
 	  
 	end;*)
-      incr taken
+      incr taken;
+      transitions := Array.of_list (all_possible_transitions !running_env trans all_procs false)
+	
     with
       | TopError Deadlock -> raise (TopError Deadlock)
       | TopError (FalseReq _) -> incr tried; incr taken; if !tried > 1000 then running := false 

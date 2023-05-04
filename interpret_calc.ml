@@ -1649,8 +1649,8 @@ let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
 	    let v = Env.find lock_elem env  in
 	    begin	      
 	     match v.value  with
-		| VLock(b, po) ->
-		  let term = Elem(Variable.subst sigma p, Var) in 
+	       | VLock(b, po) ->
+		 let term = Elem(Variable.subst sigma p, Var) in
 		  if not b then
 		    begin
 		      (Env.add lock_elem
@@ -1682,7 +1682,9 @@ let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
 		      match po with
 			| None -> assert false
 			| Some p ->
+
 			  let q = LockQueues.find lock_elem lock_queue in
+
 
 			  if Term.compare p term = 0 then
 			    
@@ -2070,10 +2072,11 @@ let apply_transition args trname trans (env,lock_queue,cond_sets, semaphores) =
     so instead of iter, it has to be a function because one of the elements has to satisfy 
   *)
   (*let () = List.iter (fun u -> check_reqs u env sigma trname) ureqs in*)
-  let new_env = check_ureqs ureqs new_env sigma trname in 
+
+  let new_env = check_ureqs ureqs new_env sigma trname in
   let nv = update_vals new_env tr.tr_assigns sigma in
   let nv = update_arrs sigma new_env nv tr.tr_upds in
-  let nv, lockq,cond_sets, semaphores = update_locks_unlocks sigma new_env nv tr lock_queue cond_sets semaphores in 
+  let nv, lockq,cond_sets, semaphores = update_locks_unlocks sigma new_env nv tr lock_queue cond_sets semaphores in
   upd_non_dets nv tr.tr_nondets,lockq,cond_sets, semaphores
 
 
@@ -2226,7 +2229,7 @@ let all_possible_transitions (env,_,_,_) trans all_procs flag=
 	with
 	  | TopError _ -> acc
 	  | Stdlib.Sys.Break | Exit ->
-	    if (Options.int_brab <> -1) then raise Exit
+	    if ((Options.get_int_brab ()) <> -1) then raise Exit
 	    else 
 	    if flag 
 	    then
@@ -2253,7 +2256,7 @@ let all_possible_transitions (env,_,_,_) trans all_procs flag=
 	  with
 	    | TopError _ -> acc_t
 	    | Sys.Break | Exit->
-	      if (Options.int_brab <> -1) then raise Exit else 
+	      if ((Options.get_int_brab ()) <> -1) then raise Exit else 
 	      if flag 
 	      then
 		raise (TopError StopExecution)

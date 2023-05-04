@@ -50,6 +50,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
   let nb_remaining q post () = Q.length q, List.length !post
 
   let search ?(invariants=[]) ?(candidates=[]) system =
+
     
     let visited = ref Cubetrie.empty in
     let candidates = ref candidates in
@@ -60,11 +61,14 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
     Q.push_list !candidates q;
     Q.push_list system.t_unsafe q;
     List.iter (fun inv -> visited := Cubetrie.add_node inv !visited)
-              (invariants @ system.t_invs);
+      (invariants @ system.t_invs);
+
+    (*Format.eprintf "system invs: %d@." (List.length system.t_invs);*)
 
     try
       while not (Q.is_empty q) do
         let n = Q.pop q in
+	(*Format.eprintf "look what I popped %a@." Node.print n;*)
         Safety.check system n;
         begin
           match Fixpoint.check n !visited with

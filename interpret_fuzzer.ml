@@ -19,7 +19,7 @@ let visit_count = ref 0
 let overall = ref 0
 let hCount = Hashtbl.create 100
 let hSCount = Hashtbl.create 100
-
+  
 let system_sigma_en = ref []
 let system_sigma_de = ref []
 let tr_count = Hashtbl.create 10
@@ -77,6 +77,35 @@ let print_interpret_env fmt (env,locks, cond, sem)=
   Semaphores.iter (fun k el ->
     Format.fprintf fmt "%a : { %a }\n" Term.print k print_wait el) sem
 
+let random_value h num_procs=
+  (*Random.self_init ();*)
+  match is_int h, is_real h, is_bool h,
+    is_proc h, is_lock h, is_rlock h, is_condition h, is_semaphore h
+  with
+    | true, false, false, false, false, false, false, false -> VInt (Random.int 10)
+    | false, true, false, false, false, false, false, false -> VReal (Random.float 10.)
+    | false, false, true, false, false, false, false, false -> let r = Random.int 12 in
+				   if r mod 2 = 0 then VBool true
+				   else VBool false
+    | false, false, false, true,false, false, false, false -> let r = (Random.int 25) mod num_procs in
+				   let s = "#"^(string_of_int (r+1)) in
+				   VProc (Hstring.make s)
+    | false, false, false, false,false, false, false, false -> 
+      let constrs = Smt.Type.constructors h in
+      if (List.length constrs) = 0 then VConstr(Hstring.make "ABSTRACT")
+      else
+	begin
+      let arr = Array.of_list constrs in
+      let r = Random.int (List.length constrs -1) in
+      let el = arr.(r) in
+      VConstr(el)
+	end 
+    | false,false,false,false,true, false, false, false -> VLock (false, None)
+    | false, false, false, false, false, true, false,false -> VRLock(false, None, 0)
+    | false, false, false, false, false, false, true, false -> VLock (false, None)
+    | false, false, false, false, false, false, false, true -> VSemaphore(3) 
+    | _  -> assert false
+    
     
 
 let install_sigint () =
@@ -140,6 +169,11 @@ let fresh =
 
 
 
+
+let isomorphic (env1, locks1, conds1, sems1) (env2, locks2, conds2, sems2) =
+  assert false
+  
+  
     
   
 let print_forward_trace fmt el =
@@ -167,8 +201,16 @@ exception NeverSeen of Interpret_types.global * (Ast.transition_info * Variable.
 exception StopExit
 exception Dead of int
 exception Done
-  
 
+type param_err = 
+  | RaiseProc (*need to raise Proc*)
+  | OKProc of Hstring.t list * Hstring.t list (*same values*)
+  | BadRaise (*raising a proc made something disappear*)
+  | DecidedProc of int * (int * int) list
+  | TooDead of int
+
+exception ParamFuzz of param_err
+      
 let reconstruct_trace parents me =
   let trace = ref [] in
   let bad = ref me in
@@ -187,6 +229,8 @@ let reconstruct_trace parents me =
   Format.printf "Init";
   List.iter (fun (x,y) -> Format.printf " -> %a(%a)" Hstring.print x Variable.print_vars y) !trace;
   Format.printf " -> @{<fg_magenta>unsafe@}@."
+
+
 
 
 let reconstruct_trace_file fmt parents me =
@@ -240,6 +284,7 @@ let env_to_map env =
       | _ -> assert false
   ) env STMap.empty
     
+
 
 exception OKCands of Node.t list
 
@@ -404,6 +449,256 @@ let force_procs_forward code glob_env trans all_procs p_proc all_unsafes =
   Format.printf "Force proc: new states seen: %d. New added to pool: %d Removed from pool %d@." !new_seen !add_pool !rem_pool
     
 
+let markov_entropy_detailed glob tsys all_procs trans steps matrix=
+  let num_procs = List.length all_procs in
+  Options.set_interpret_procs num_procs;
+  sys_procs := num_procs;
+  Random.self_init ();
+  let tried = ref 0 in
+  let hcount = Hashtbl.create 10 in
+  let proc_count = Array.make num_procs 0 in
+  let t_count = Hashtbl.create 10 in
+  let transitions = ref (Array.of_list (all_possible_transitions glob trans all_procs false)) 
+  in
+  let taken = ref 0 in
+  
+  let before = Hstring.make "Init" in
+  let before = ref before in
+  
+  let running = ref true in
+  let running_env = ref glob in
+
+  let accept = ref 0  in
+  let reject = ref 0 in
+  
+  let w1 = ref (entropy_env glob trans all_procs) in 
+
+  while  (!taken < steps) && !running do
+    try
+      let env, _,_,_ = !running_env in
+      let l = Array.length !transitions in
+      if l = 0 then raise (TopError Deadlock);
+      let rand = Random.int l in
+      let (proposal,prop_procs) = !transitions.(rand) in
+      let sigma = Variable.build_subst proposal.tr_args prop_procs in
+      
+      (*check_actor_suspension sigma !global_env proposal.tr_process;*)
+      let curr_env = ref env in
+
+      curr_env := check_reqs proposal.tr_reqs env sigma proposal.tr_name;
+      let trargs = List.map (fun x -> Variable.subst sigma x) proposal.tr_args in
+
+      let ureqs = uguard  sigma all_procs trargs proposal.tr_ureq in
+
+      curr_env := check_ureqs ureqs !curr_env sigma proposal.tr_name;
+
+      let _,l1,l2,l3 = !running_env in
+      running_env := !curr_env, l1,l2,l3;
+      let temp_env = apply_transition prop_procs proposal.tr_name trans !running_env in
+      tried := 0;
+      let w2 = entropy_env temp_env trans all_procs in       
+      
+      let flag =
+	if w2 > !w1 then
+	  begin
+	    (*Format.eprintf "-@.";*)
+	    true
+	  end
+	else
+	  begin
+	    (*Format.eprintf "+@.";*)
+	    (*Format.eprintf "w1: %d, w2: %d, delta:%d@." !w1 w2 (w2 - !w1);*)
+	    let prob = 2.718281828**(w2 -. !w1) in
+	      (*fw2/.fw1 in*)
+	    let rand_prob = Random.float 1.0 in
+	(*Format.eprintf "old: %f , new: %f\nrand : %f, prob: %f@." !w1 w2 rand_prob prob;*)
+	    prob > rand_prob
+	  (*if prob > rand_prob then true else false *)
+	end
+      in
+      let prop_hs =
+	  proposal.tr_name 
+      in 
+      if flag then
+	begin
+	  incr accept;
+	  w1 := w2;
+	  running_env := temp_env;
+	  let pair = (!before, prop_hs) in
+	  begin
+	    try
+	      let cpair = Hashtbl.find matrix pair in
+	      Hashtbl.replace matrix pair (cpair+1)
+	    with Not_found ->
+	      Hashtbl.add matrix pair 1
+	  end;
+	  before := prop_hs;
+	  
+	  let hash = hash_full_env temp_env in
+	  begin
+	    try
+	      let he,ee = Hashtbl.find hcount hash in
+	      Hashtbl.replace hcount hash ((he+1),ee)
+	    with Not_found ->
+	      Hashtbl.add hcount hash (1,temp_env)
+	  end;
+	  let appl = procs_to_int_list prop_procs in
+	  List.iter (fun x ->
+	    proc_count.(x-1) <- proc_count.(x-1) + 1) appl;
+	  begin
+	    try
+	      let htc= Hashtbl.find t_count prop_hs in
+	      Hashtbl.replace t_count prop_hs (htc+1)
+	    with Not_found -> Hashtbl.add t_count prop_hs 1
+	  end ;
+	end
+      else
+	begin
+	  incr reject
+	end;
+      incr taken;
+      transitions := Array.of_list (all_possible_transitions !running_env trans all_procs false)
+	
+    with
+      | TopError Deadlock ->
+	raise (TopError Deadlock)
+      | TopError (FalseReq _) -> incr tried; incr taken; if !tried > 1000 then running := false 
+      | Stdlib.Sys.Break -> raise Exit
+      | Stdlib.Exit -> raise Exit
+  done;  
+  !running_env, (hcount,proc_count, t_count, matrix), !accept
+
+
+
+let check_exits l =
+  (*List.iter (fun ((h,h1), v) -> Format.eprintf "%a->%a : %d@." Hstring.print h Hstring.print h1 v) l;*)
+  let rec aux l (tr,rep) acc =
+    match l with
+      | [] -> acc
+      | ((kf,_), v)::tl ->
+	if Hstring.equal kf tr then
+	  begin
+	    if v <> 0
+	    then
+	      aux tl (tr,(true || rep)) acc
+	    else aux tl (tr, rep) acc
+	  end
+	else
+	  begin
+	    if rep then
+	      aux tl (kf, (v = 0)) acc
+	    else aux tl (kf, (v=0)) (tr::acc)
+	  end
+  in
+  let (kf,_), v  = List.hd l in
+  aux (List.tl l) (kf, v = 0) []
+
+
+
+let check_enters l =
+  let rec aux l (tr,rep) acc =
+    match l with 
+      | [] -> acc
+      | ((_,kt), v):: tl ->
+	if Hstring.equal kt tr then
+	  begin
+	    if v <> 0
+	    then
+	      aux tl (tr,(true || rep)) acc
+	    else aux tl (tr, rep) acc
+	  end
+	else
+	  begin
+	    if rep then
+	      aux tl (kt, (v = 0)) acc
+	    else aux tl (kt, (v=0)) (tr::acc)
+	  end
+  in
+  let (_,kt), v  = List.hd l in
+  aux (List.tl l) (kt, v = 0) []
+    
+	
+let h_init = Hstring.make "Init"    
+
+let compare_matrix m_old m_new acp1 acp2 =
+  
+  let l_old = Hashtbl.fold (fun (k1,k2) v acc ->
+    if Hstring.equal k1 h_init || Hstring.equal k2 h_init
+    then acc
+    else 
+    ((k1,k2),v)::acc) m_old [] in
+  let l_new = Hashtbl.fold (fun (k1,k2) v acc ->
+    if Hstring.equal k1 h_init || Hstring.equal k2 h_init
+    then acc
+    else 
+    ((k1,k2),v)::acc) m_new [] in
+
+  let exits = List.sort (fun ((kf,_), _) ((kf2,_), _) -> Hstring.compare kf kf2) l_old in
+  let enters = List.sort (fun ((_,kt), _) ((_,kt2), _) -> Hstring.compare kt kt2) l_old in
+
+  
+  let check_ex = check_exits exits in
+  let check_ent = check_enters enters in
+
+ (* begin
+    match check_ex, check_ent with
+      | [], [] -> ()
+      | ll, [] ->
+	non_ex := true;
+	Format.printf "Warning: following transition(s) never exited: @.";
+	List.iter ( fun x -> Format.printf "%a " Hstring.print x )ll;
+	Format.printf "@."
+      | [], ll ->
+	non_ent := true;
+	Format.printf "Warning: following transition(s) never entered: @.";
+	List.iter ( fun x -> Format.printf "%a " Hstring.print x )ll;
+	Format.printf "@."
+      | l1,l2 ->
+	non_ex := true;
+	non_ent := true;
+	Format.printf "Warning: following transitions never exited: @.";
+	List.iter ( fun x -> Format.printf "%a " Hstring.print x )l1;
+	Format.printf "@.";
+	Format.printf "Warning: following transitions never entered: @.";
+	List.iter ( fun x -> Format.printf "%a " Hstring.print x )l2;
+	Format.printf "@."
+    end ; *)
+  
+  List.iter2 (fun ((k_old_from, k_old_to), v_old) ((k_new_from, k_new_to), v_new) ->
+    assert (Hstring.equal k_old_from k_new_from);
+    assert (Hstring.equal k_old_to k_new_to);
+    if v_old = 0 && v_new <> 0 then
+      begin
+	Format.printf "Changed value:@.";
+	Format.printf "Old: %a->%a : %d@." Hstring.print k_old_from Hstring.print k_old_to v_old;
+	Format.printf "New: %a->%a : %d@." Hstring.print k_new_from Hstring.print k_new_to v_new;
+	raise (ParamFuzz RaiseProc)
+      end ;
+    if v_old <> 0 && v_new = 0 then
+      begin
+	Format.printf "Changed value:@.";
+	Format.printf "Old: %a->%a : %d@." Hstring.print k_old_from Hstring.print k_old_to v_old;
+	Format.printf "New :%a->%a : %d@." Hstring.print k_new_from Hstring.print k_new_to v_new;
+	raise (ParamFuzz BadRaise)
+      end 
+  )  l_old l_new;
+  raise (ParamFuzz (OKProc (check_ex, check_ent)))
+    
+let preprocess sys =
+  let temp = 
+    List.fold_left (fun acc (_,vl,_) ->
+      let c = List.length vl in
+      if c > acc then c else acc ) 0 sys.unsafe in
+  let temp2 =
+    List.fold_left (fun acc tr ->
+      let c = List.length tr.tr_args in
+      if c > acc then c else acc ) 0 sys.trans in
+  max temp temp2
+    
+
+
+
+    
 
     
 let markov_entropy code glob all_procs trans all_unsafes=
@@ -896,7 +1191,7 @@ let further_bfs code node transitions all_procs all_unsafes =
     
 let interpret_bfs original_env transitions all_procs all_unsafes =
   try
-    let max_depth = 5 in
+    let max_depth = 50 in
     let curr_depth = ref 0 in
     let node = ref 0 in
     let rem = ref 1 in
@@ -1222,7 +1517,7 @@ let choose_random_proc arr n =
       
 let continue_from_bfs all_procs transitions all_unsafes =
   Format.printf "Current number of states: %d@." (List.length !visited_states);
-  let num_procs = Options.int_brab in
+  let num_procs = Options.get_int_brab () in
   let procs = Variable.give_procs num_procs in
   let arr_procs = Array.of_list procs in
   try 
@@ -1260,7 +1555,7 @@ let go_from_bfs original_env transitions all_procs all_unsafes tsys =
   List.iter (fun x -> Hashtbl.add fuzz_tr_count x.tr_name 0) tsys;
   interpret_bfs original_env transitions all_procs all_unsafes;
   (*if BFS finished to_do queue, there's no need to keep exploring down*)
-  if !pool_size = 0 then ()
+  if !pool_size = 0 then Format.printf "No more states to explore@."
   else continue_from_bfs all_procs transitions all_unsafes 
       
 
@@ -1273,10 +1568,10 @@ let semaphore_init s =
 			
 
       
-let init_vals env init =
+let init_vals env init num_procs=
   if Options.debug_interpreter then Format.eprintf "Init_vals:@.";
   (*let procs = Variable.give_procs (Options.get_interpret_procs ()) in*)
-  let procs = Variable.give_procs Options.int_brab in
+  let procs = Variable.give_procs num_procs in
   let _, dnf = init in
   List.fold_left (fun acc el ->
     SAtom.fold (fun atom sacc -> 
@@ -1322,12 +1617,12 @@ let init_vals env init =
 	    match t1, t2 with
 	      | Elem(_, Glob), Elem(_, Var) ->
 		let temp =
-		  Hstring.make ("#" ^ string_of_int(Options.int_brab + 1))
+		  Hstring.make ("#" ^ string_of_int(num_procs + 1))
 		in
 		Env.add t1 (Elem(temp, Var)) sacc
 	      | Elem (_, Var), Elem(_,Glob) ->
 		let temp =
-		  Hstring.make ("#" ^ string_of_int(Options.int_brab + 1))
+		  Hstring.make ("#" ^ string_of_int(num_procs + 1))
 		in
 		Env.add t2 (Elem(temp, Var)) sacc
 	      | _ -> assert false
@@ -1409,20 +1704,10 @@ let write_states_to_file name =
       key
       print_interpret_env el.state ) bfs_visited;
   close_out open_file 
-  
-    
-
 
         
 let fuzz original_env transitions procs all_unsafes t_transitions =
   TimerFuzz.start ();
-  let s1 = String.make Pretty.vt_width '*' in
-  let s2 = String.make ((Pretty.vt_width-14)/2) ' ' in
-  ignore (Sys.command "clear");
-  Format.printf "@{<b>@{<fg_cyan>%s@}@}" s1;
-  Format.printf "%sCubicle Fuzzer%s@." s2 s2;
-  Format.printf "@{<b>@{<fg_cyan>%s@}@}@." s1;
-
   let dfile = Filename.basename Options.file in
   let open_file = open_out (dfile^".stats") in
   
@@ -1432,37 +1717,18 @@ let fuzz original_env transitions procs all_unsafes t_transitions =
   write_file dfile open_file;
   close_out open_file;
   write_states_to_file dfile;
+  Format.eprintf "yoyo@.";
   raise Done
   
 
 let throwaway = Elem(Hstring.make "UNDEF", Glob)
 
-
-let init tsys =
-  Random.self_init ();
-  let fmt = Format.std_formatter in
-  let num_procs = Options.int_brab in
+let init_aux tsys sys num_procs = 
   let procs = Variable.give_procs num_procs in
-  (*set one sigma for the whole system*)
-  let p_m,_ = List.fold_left (fun (acc, count) x ->
-	    let pl = Hstring.make("mapped_"^(string_of_int count))
-	    in
-	    ((pl,x)::acc, count+1)
-  ) ([], 0) procs in
-  system_sigma_en := p_m ;
-  
-  (*system_sigma_de := Variable.build_subst p_m procs;*)
-  (*all terms for the procs, i.e generate instantiated array terms*)
-  (* var X[proc]: bool --> X[#1], X[#2] ...  *)
   let var_terms = Forward.all_var_terms procs tsys in
   let const_list = List.map (fun x -> Elem(x, Glob)) tsys.t_consts in
   let var_terms = Term.Set.union var_terms (Term.Set.of_list const_list) in 
-  sys_procs := Options.int_brab;
-  let un = List.map (fun x -> 0, Node.variables x, Node.litterals x ) tsys.t_unsafe in
-  let all_unsafes = init_unsafe procs un in
-
  (* List.iter (fun x -> Format.eprintf "unsafe: %a@." SAtom.print x) all_unsafes;*)
-  
   let orig_env,lock_queue, cond_sets, semaphores =
     Term.Set.fold ( fun x (acc,acc_lock, cond_acc, sem_acc) ->
       match x with
@@ -1497,18 +1763,10 @@ let init tsys =
     ) var_terms (Env.empty, LockQueues.empty, Conditions.empty, Semaphores.empty)
   in
 
-  if Options.debug_interpreter then
-    begin
-      Format.eprintf "Very first environment:@.";
-      print_env fmt orig_env
-    end;
+  
     
-  let env = init_vals orig_env tsys.t_init in
-  if Options.debug_interpreter then
-    begin
-    Format.eprintf "First initialized environment: @.";
-    print_env fmt env
-    end;
+  let env = init_vals orig_env tsys.t_init num_procs in
+  
   (*let original_init = Env.fold (fun k x acc ->
     if Term.compare x throwaway = 0 then
       acc
@@ -1519,6 +1777,17 @@ let init tsys =
   let env_final, original_init =
       Env.fold (fun k x (env_acc,v_acc) ->
 	if Term.compare x throwaway = 0 then
+	  begin
+	    match k with 
+	      | Elem(n,_) | Access(n,_) -> 
+		let _, ty = Smt.Symbol.type_of n in
+		if is_lock ty || is_rlock ty || is_condition ty || is_semaphore ty then
+		  (Env.add k {value = random_value ty num_procs; typ = ty } env_acc, v_acc)
+		else env_acc, v_acc 
+	      |  _ -> assert false	
+	  end
+
+	  
 	  (*begin
 	    match k with 
 	      | Elem(n,_) | Access(n,_) -> 
@@ -1527,7 +1796,7 @@ let init tsys =
 		(*(env_acc, v_acc)*)
 	  |  _ -> assert false	
 	    end*)
-	  env_acc, v_acc
+      (*env_acc, v_acc*)
       else
 	begin
 	  match k with
@@ -1561,7 +1830,7 @@ let init tsys =
 		    let tt = 
 		      match vg2.value with
 			| VGlob n2 ->
-			  {value = random_value vg2.typ; typ = vg2.typ }
+			  {value = random_value vg2.typ num_procs; typ = vg2.typ }
 			| tt -> vg2
 		    in
 		    let e1 =  Env.add (Elem(n,Glob)) tt acc in
@@ -1580,8 +1849,6 @@ let init tsys =
 		       {value =  v; typ = x.typ}
 	| _ ->
 	  x
-
-
     ) env_final in
   let orig_init =
     Env.mapi (fun k x ->
@@ -1590,25 +1857,150 @@ let init tsys =
 		       {value =  v; typ = x.typ}
 	| _ ->
 	  x
-
-
-    ) original_init in
-
-  
+    ) original_init in 
   let env_final =
     List.fold_left (fun acc x ->
       Env.add (Elem(x, Var)) {value = VAlive; typ = ty_proc} acc
   ) env_final procs
   in
+  let original_env = env_final, lock_queue, cond_sets, semaphores in 
+  let unsafe = List.map (fun x -> 0,x.cube.vars ,x.cube.litterals) tsys.t_unsafe in
+  let unsafe = init_unsafe procs unsafe in
+  original_env, unsafe
+
+
+
+let decide_how_many_procs tsys sys trans  =
+  let stop = ref true in
+  let deadlock_count = ref 0 in
+  let pick_min = preprocess sys in
+  Format.eprintf "Minimum number of processes: %d@." pick_min;
+  let procs = ref (Variable.give_procs pick_min) in
+  let matrix = create_transition_hash sys.trans in
+  let curr_proc = ref pick_min in
+  sys_procs := pick_min;
+  let oe, _ =  init_aux tsys sys pick_min in
+  let less_beh = ref [] in 
+  let orig_env = ref oe in
+  let pot_env = ref oe in
   
+  while !stop do
+    sys_procs := (!curr_proc + 1);
+    let pe, _ = init_aux tsys sys (!curr_proc + 1) in
+    pot_env := pe;
+    try 
+    let _, (_,_,_,mat), acp1 = markov_entropy_detailed !orig_env sys.trans !procs trans 250000 (Hashtbl.copy matrix) in
+    let new_procs = Variable.give_procs (!curr_proc + 1) in 
+    let _,(_,_,_,m1), acp2 = markov_entropy_detailed !pot_env sys.trans new_procs trans 250000 (Hashtbl.copy matrix) 
+    in
+     
+      compare_matrix mat m1 acp1 acp2
+    with
+      | ParamFuzz RaiseProc ->
+	Format.printf "Raising process number from %d to %d@." !curr_proc (!curr_proc + 1);
+	curr_proc := (!curr_proc + 1);
+	procs := Variable.give_procs !curr_proc;
+	orig_env := pe 
+      | ParamFuzz BadRaise ->
+	less_beh := (!curr_proc, (!curr_proc+1))::!less_beh;
+	Format.printf "Raising process number from %d to %d@." !curr_proc (!curr_proc + 1);
+	curr_proc := (!curr_proc + 1);
+	procs := Variable.give_procs !curr_proc;
+	orig_env := pe 
+	(*Format.printf "@{<b>@{<fg_red>WARNING@}@}";
+	Format.printf "Going from %d procs to %d procs has modified system behaviour.\n\
+                       Transitions no longer appear to be explored. Please verify your model.\n\
+                       Please enter which value of procs you prefer to start the fuzzer with.\n\
+                       If you wish to stop the fuzzer, type stop@." !curr_proc (!curr_proc + 1) ;
+	begin
+	  let rec decide () =
+	    let inp = read_line () in
+	    if inp = "stop" then
+	      begin
+		Format.printf "Exiting fuzzer@."; raise Exit;
+	      end ; 
+	    try 
+	      let d = int_of_string inp in
+	      raise (ParamFuzz (DecidedProc d))
+	    with
+	      | Failure _ ->  Format.printf "Invalid input. Please enter an integer or type stop@."; decide ()
+	  in decide ()
+	  end*)
+	
+      | ParamFuzz (OKProc (exits, enters)) ->
+	stop := false;
+	(*if exits <> [] then
+	  begin
+	    Format.printf "Warning: following transitions never exited: @.";
+	    List.iter ( fun x -> Format.printf "%a " Hstring.print x ) exits;
+	    Format.printf "@."
+	  end;
+	if enters <> [] then
+	  begin
+	    Format.printf "Warning: following transitions never entered: @.";
+	    List.iter ( fun x -> Format.printf "%a " Hstring.print x ) enters;
+	    Format.printf "@."
+	  end;*)
+	raise (ParamFuzz (DecidedProc (!curr_proc, !less_beh)))
+      | TopError Deadlock ->
+	incr deadlock_count;
+	if !deadlock_count > 5 then raise (ParamFuzz (TooDead !deadlock_count));
+	curr_proc := (!curr_proc + 1);
+	procs := Variable.give_procs !curr_proc;
+	orig_env := pe;
+	
+	
+  done
+    
+    
+let init tsys sys = 
+  Random.self_init ();
+
+  let s1 = String.make Pretty.vt_width '*' in
+  let s2 = String.make ((Pretty.vt_width-14)/2) ' ' in
+  ignore (Sys.command "clear");
+  Format.printf "@{<b>@{<fg_cyan>%s@}@}" s1;
+  Format.printf "%sCubicle Fuzzer%s@." s2 s2;
+  Format.printf "@{<b>@{<fg_cyan>%s@}@}@." s1;
+
+
+  let final_procs = ref 0 in
   let t_transitions = List.map (fun x -> x.tr_info) tsys.t_trans in 
   let transitions =
     List.fold_left ( fun acc t ->    
       Trans.add t.tr_name t acc ) Trans.empty t_transitions in
-  List.iter (fun x -> Hashtbl.add fuzz_tr_count x.tr_name 0 )t_transitions;
-  let original_env = env_final, lock_queue, cond_sets, semaphores in 
-  let unsafe = List.map (fun x -> 0,x.cube.vars ,x.cube.litterals) tsys.t_unsafe in
-  let unsafe = init_unsafe procs unsafe in
+  List.iter (fun x -> Hashtbl.add fuzz_tr_count x.tr_name 0 ) t_transitions;
+
   install_sigint ();
+  begin
+  try 
+    decide_how_many_procs tsys sys transitions
+  with
+    | ParamFuzz (DecidedProc (n, ll)) ->
+      Format.printf "Analysis finished. The fuzzer will run with %d procs @." n; final_procs := n;
+      if ll <> [] then
+	begin
+	  try 
+	    Format.printf "@{<b>@{<fg_red>WARNING@}@}";
+	    Format.printf "Going from:@.";
+	    List.iter (fun (x,y) -> Format.printf "%d to %d procs@." x y) ll;
+	    Format.printf "removed certain behaviors.\n\
+                     The system has stabilized at %d procs.\n\ 
+                     Running analysis of stable version vs. lost behaviors.\n\
+                     Press Ctrl-C to abort analysis and continue fuzzing with %d procs@." n n
+	  with
+	    | Sys.Break -> Format.printf "Analysis canceled. Continuing to fuzzer@."
+	end 
+	
+    | ParamFuzz (TooDead n) -> Format.printf "The model has deadlocked with %d different values of procs.\n\
+                                              Please verify your model and try again.@." n; raise Exit
+    | _ -> assert false
+      
+  end ;
+  let procs = Variable.give_procs !final_procs in
+  let fp = !final_procs in
+  let original_env, all_unsafes = init_aux tsys sys fp in
+  Options.set_interpret_procs fp;
+  Options.set_int_brab fp;
+  sys_procs := fp;
   fuzz original_env transitions procs all_unsafes t_transitions
-    
