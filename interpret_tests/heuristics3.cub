@@ -1,0 +1,47 @@
+(*Needs to go up to 4*)
+(*
+heuristics3.cub1683032220.data :: for 4
+heuristics3.cub1683032173.data :: for 3
+*)
+type t = A | B | C
+
+array P1[proc] : t
+array P2[proc] : bool
+
+(*var F : bool
+var G : bool*)
+
+(*
+Error trace: Init -> t1(#1) -> t3(#1, #4) -> t1(#2) -> t1(#3) -> t2(#2, #4) -> t4(#1, #2, #3)*)
+(*unsafe(i j k) { P1[i] = A && P1[j] = C && P1[k] = A && P2[i] = False && P2[j] = False && P2[k] = False }
+*)
+(*unsafe(i j k) { P1[i] = A && P1[k] = A &&P1[j] = C && P2[i] = False && P2[j] = False && P2[k] = True }*)
+
+(*unsafe(i j k l) { P1[i] = A && P1[j] = C  && P1[k] = A && P1[l] = A  && P2[i] = False && P2[j] = False && P2[k] = False && P2[l] = True }
+*)
+init(i) { P1[i] = A && P2[i] = True  (*&& F = False && G = False *)}
+(*unsafe () { G = True}*)
+
+transition t1(i)
+requires { P1[i] = A (*&& F = False*)}
+{ P2[i] := False }
+
+transition t2(i j)
+requires { P2[i] = False && P1[j] = A (*&& F = False*)}
+{ P2[j] := True;
+  P1[i] := C (*; F := True*)}
+
+transition t3(i j)
+requires { P2[i] = False && P1[j] = A (*&& F = False *)}
+{ P2[j] := True;
+  P1[i] := B;
+}
+
+transition t4(i j k)
+requires { P1[i] = B && P2[j] = False && P2[k] = False (*&& F = True*)}
+{ P1[i] := A ;
+ (* G := True*)} 
+
+
+
+
