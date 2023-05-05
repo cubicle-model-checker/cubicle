@@ -472,9 +472,22 @@ let markov_entropy_detailed glob tsys all_procs trans steps matrix=
   let reject = ref 0 in
   
   let w1 = ref (entropy_env glob trans all_procs) in 
-
-  while  (!taken < steps) && !running do
+  let bl = Pretty.vt_width / 10 in
+  let blf = float_of_int bl in
+  while  (!taken <= steps) && !running do
     try
+      let percent = 100.0*.(float_of_int !taken)/.(float_of_int steps) in
+      let prog = (int_of_float((ceil percent)/. (100.0 /.blf))) in
+      let prog_s = String.make prog '=' in
+      Format.printf "\r";
+      Format.printf "Calculating [" ;
+      let emp1 = String.make (bl - prog) ' ' in
+      Format.printf "%s%s]" prog_s emp1;
+      let b_size = if (ceil percent) < 10.0 then 2 else if (ceil percent) < 100.0 then 1 else 0 in
+      let bar = String.make b_size ' ' in
+
+      Format.printf " %d%% %s| %d " (int_of_float (ceil percent)) bar !taken ;
+      Format.printf "%!";
       let env, _,_,_ = !running_env in
       let l = Array.length !transitions in
       if l = 0 then raise (TopError Deadlock);
@@ -565,7 +578,8 @@ let markov_entropy_detailed glob tsys all_procs trans steps matrix=
       | TopError (FalseReq _) -> incr tried; incr taken; if !tried > 1000 then running := false 
       | Stdlib.Sys.Break -> raise Exit
       | Stdlib.Exit -> raise Exit
-  done;  
+  done;
+  Format.printf "@.";
   !running_env, (hcount,proc_count, t_count, matrix), !accept
 
 
@@ -1270,6 +1284,7 @@ let interpret_bfs original_env transitions all_procs all_unsafes =
 	  end ) possible;
       if env_d > !curr_depth then incr curr_depth
     done;
+    Format.printf "@.";
     if not (Queue.is_empty to_do) then finish_queue to_do transitions all_procs
   with
     | Stdlib.Sys.Break | Exit -> ()
@@ -1714,10 +1729,11 @@ let fuzz original_env transitions procs all_unsafes t_transitions =
   go_from_bfs original_env transitions procs all_unsafes t_transitions;
   TimerFuzz.pause ();
   Format.printf "├─Time elapsed       : %a@." print_time (TimerFuzz.get ());
+  Format.printf "├─States seen        : %d@." !visit_count;
+
   write_file dfile open_file;
   close_out open_file;
   write_states_to_file dfile;
-  Format.eprintf "yoyo@.";
   raise Done
   
 
