@@ -91,7 +91,9 @@ val uguard : (Variable.t * Variable.t) list -> Hstring.t list -> Hstring.t list 
 val all_arrange : int -> 'a list -> 'a list list
 val all_combs_as_pairs : 'a list -> ('a * 'a) list
 val create_transition_hash : Ast.transition_info list -> (Hstring.t * Hstring.t, int) Hashtbl.t
+val create_transition_map : Ast.transition_info list -> int Interpret_types.MatrixMap.t
 
+  
 val create_detailed_hash: Ast.transition_info list -> Hstring.t list -> (Hstring.t * Hstring.t, int) Hashtbl.t
 
   

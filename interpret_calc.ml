@@ -76,7 +76,12 @@ let create_transition_hash t =
   List.iter (fun x -> Hashtbl.add ht x 0) all_combs;
   ht
 
-
+let create_transition_map t =
+  let names = List.map (fun x -> x.tr_name) t in
+  let names = (Hstring.make "Init") :: names in
+  let all_combs = all_combs_as_pairs names in
+  List.fold_left (fun acc x -> MatrixMap.add x 0 acc) MatrixMap.empty all_combs
+  
 let trans_proc_to_hstring t p =
   let t_name = Hstring.view t in
   let procs = var_list_to_hstring p in

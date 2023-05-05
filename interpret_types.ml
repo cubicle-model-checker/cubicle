@@ -77,6 +77,14 @@ module Conditions = Map.Make(struct type t = Types.Term.t let compare=  Types.Te
 module Semaphores = Map.Make(struct type t = Types.Term.t let compare=  Types.Term.compare end)
 
 
+module MatrixMap = Map.Make (struct type t = Hstring.t * Hstring.t
+				   let compare (h1,h2) (h3,h4) =
+				     let c = Hstring.compare h1 h3 in
+				     if c = 0 then Hstring.compare h2 h4
+				     else c
+end )
+module TransMap = Map.Make (Hstring)
+  
 
   
 module Backtrack = Map.Make(struct

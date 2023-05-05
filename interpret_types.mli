@@ -52,7 +52,10 @@ module Trans : Map.S with type key = Hstring.t
 module LockQueues : Map.S with type key = Types.Term.t
 module Conditions : Map.S with type key = Types.Term.t
 module Semaphores : Map.S with type key = Types.Term.t
-module Backtrack : Map.S with type key = int 
+module Backtrack : Map.S with type key = int
+
+module MatrixMap : Map.S with type key = Hstring.t * Hstring.t
+module TransMap : Map.S with type key = Hstring.t
 
 (*module HT : Hashtbl.S with type key = Types.Term.t*)
 

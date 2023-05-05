@@ -28,6 +28,8 @@ let deadlocks = ref (0, [])
 let unsafe_states = ref []
 let dead_states = ref []
 
+let calc_proc = ref 0
+
 let parents = Hashtbl.create 200
 
 
@@ -40,7 +42,18 @@ module ExitMap = Map.Make (struct type t =  Hstring.t * Variable.t list
 				    if c = 0 then 
 				      Variable.compare_list vl vl2 
 				    else c
+
+				      
 end)
+
+module ParamMap = Map.Make (struct type t = Hstring.t * Hstring.t
+				   let compare (h1,h2) (h3,h4) =
+				     let c = Hstring.compare h1 h3 in
+				     if c = 0 then Hstring.compare h2 h4
+				     else c
+end )
+module TransMap = Map.Make (Hstring)
+  
   
 type data = {
   state : Interpret_types.global;
@@ -112,7 +125,7 @@ let install_sigint () =
   Sys.set_signal Sys.sigint 
     (Sys.Signal_handle 
        (fun _ ->
-         Format.printf "\n@{<b>@{<fg_magenta>Stopping search@}@}@.";
+         Format.printf "\n@{<b>@{<fg_magenta>Stopping...@}@}@.";
          raise Exit
        ))
 
@@ -449,13 +462,14 @@ let force_procs_forward code glob_env trans all_procs p_proc all_unsafes =
   Format.printf "Force proc: new states seen: %d. New added to pool: %d Removed from pool %d@." !new_seen !add_pool !rem_pool
     
 
-let markov_entropy_detailed glob tsys all_procs trans steps matrix=
+let markov_entropy_detailed glob tsys all_procs trans steps matrix =
   let num_procs = List.length all_procs in
   Options.set_interpret_procs num_procs;
   sys_procs := num_procs;
   Random.self_init ();
   let tried = ref 0 in
   let hcount = Hashtbl.create 10 in
+  let matrix = ref matrix in
   let proc_count = Array.make num_procs 0 in
   let t_count = Hashtbl.create 10 in
   let transitions = ref (Array.of_list (all_possible_transitions glob trans all_procs false)) 
@@ -480,7 +494,7 @@ let markov_entropy_detailed glob tsys all_procs trans steps matrix=
       let prog = (int_of_float((ceil percent)/. (100.0 /.blf))) in
       let prog_s = String.make prog '=' in
       Format.printf "\r";
-      Format.printf "Calculating [" ;
+      Format.printf "Calculating for %d processes [" num_procs;
       let emp1 = String.make (bl - prog) ' ' in
       Format.printf "%s%s]" prog_s emp1;
       let b_size = if (ceil percent) < 10.0 then 2 else if (ceil percent) < 100.0 then 1 else 0 in
@@ -540,10 +554,10 @@ let markov_entropy_detailed glob tsys all_procs trans steps matrix=
 	  let pair = (!before, prop_hs) in
 	  begin
 	    try
-	      let cpair = Hashtbl.find matrix pair in
-	      Hashtbl.replace matrix pair (cpair+1)
+	      let cpair = MatrixMap.find pair !matrix  in
+	      matrix := MatrixMap.add pair (cpair+1) !matrix
 	    with Not_found ->
-	      Hashtbl.add matrix pair 1
+	      matrix := MatrixMap.add pair 1 !matrix
 	  end;
 	  before := prop_hs;
 	  
@@ -576,11 +590,9 @@ let markov_entropy_detailed glob tsys all_procs trans steps matrix=
       | TopError Deadlock ->
 	raise (TopError Deadlock)
       | TopError (FalseReq _) -> incr tried; incr taken; if !tried > 1000 then running := false 
-      | Stdlib.Sys.Break -> raise Exit
-      | Stdlib.Exit -> raise Exit
   done;
   Format.printf "@.";
-  !running_env, (hcount,proc_count, t_count, matrix), !accept
+  !running_env, (hcount,proc_count, t_count, !matrix), !accept
 
 
 
@@ -635,13 +647,13 @@ let check_enters l =
 let h_init = Hstring.make "Init"    
 
 let compare_matrix m_old m_new acp1 acp2 =
-  
-  let l_old = Hashtbl.fold (fun (k1,k2) v acc ->
+  Format.printf "└─Analyzing results@.";
+  let l_old = MatrixMap.fold (fun (k1,k2) v acc ->
     if Hstring.equal k1 h_init || Hstring.equal k2 h_init
     then acc
     else 
     ((k1,k2),v)::acc) m_old [] in
-  let l_new = Hashtbl.fold (fun (k1,k2) v acc ->
+  let l_new = MatrixMap.fold (fun (k1,k2) v acc ->
     if Hstring.equal k1 h_init || Hstring.equal k2 h_init
     then acc
     else 
@@ -654,45 +666,22 @@ let compare_matrix m_old m_new acp1 acp2 =
   let check_ex = check_exits exits in
   let check_ent = check_enters enters in
 
- (* begin
-    match check_ex, check_ent with
-      | [], [] -> ()
-      | ll, [] ->
-	non_ex := true;
-	Format.printf "Warning: following transition(s) never exited: @.";
-	List.iter ( fun x -> Format.printf "%a " Hstring.print x )ll;
-	Format.printf "@."
-      | [], ll ->
-	non_ent := true;
-	Format.printf "Warning: following transition(s) never entered: @.";
-	List.iter ( fun x -> Format.printf "%a " Hstring.print x )ll;
-	Format.printf "@."
-      | l1,l2 ->
-	non_ex := true;
-	non_ent := true;
-	Format.printf "Warning: following transitions never exited: @.";
-	List.iter ( fun x -> Format.printf "%a " Hstring.print x )l1;
-	Format.printf "@.";
-	Format.printf "Warning: following transitions never entered: @.";
-	List.iter ( fun x -> Format.printf "%a " Hstring.print x )l2;
-	Format.printf "@."
-    end ; *)
   
   List.iter2 (fun ((k_old_from, k_old_to), v_old) ((k_new_from, k_new_to), v_new) ->
     assert (Hstring.equal k_old_from k_new_from);
     assert (Hstring.equal k_old_to k_new_to);
     if v_old = 0 && v_new <> 0 then
       begin
-	Format.printf "Changed value:@.";
-	Format.printf "Old: %a->%a : %d@." Hstring.print k_old_from Hstring.print k_old_to v_old;
-	Format.printf "New: %a->%a : %d@." Hstring.print k_new_from Hstring.print k_new_to v_new;
+	Format.printf " └─Changed value:@.";
+	Format.printf "   └─Old: %a->%a : %d@." Hstring.print k_old_from Hstring.print k_old_to v_old;
+	Format.printf "   └─New: %a->%a : %d@." Hstring.print k_new_from Hstring.print k_new_to v_new;
 	raise (ParamFuzz RaiseProc)
       end ;
     if v_old <> 0 && v_new = 0 then
       begin
-	Format.printf "Changed value:@.";
-	Format.printf "Old: %a->%a : %d@." Hstring.print k_old_from Hstring.print k_old_to v_old;
-	Format.printf "New :%a->%a : %d@." Hstring.print k_new_from Hstring.print k_new_to v_new;
+	Format.printf " └─Changed value:@.";
+	Format.printf "   └─Old: %a->%a : %d@." Hstring.print k_old_from Hstring.print k_old_to v_old;
+	Format.printf "   └─New :%a->%a : %d@." Hstring.print k_new_from Hstring.print k_new_to v_new;
 	raise (ParamFuzz BadRaise)
       end 
   )  l_old l_new;
@@ -1226,7 +1215,7 @@ let interpret_bfs original_env transitions all_procs all_unsafes =
     let to_do = Queue.create () in
     Queue.push (he, 0,original_env) to_do;
     Hashtbl.add parents he (true, None, he);
-    Format.printf "[VISITED][REMAINING][DEPTH]@.";
+    Format.printf "\n[VISITED][REMAINING][DEPTH]@.";
     let time = Unix.time () in
     while (!curr_depth < max_depth) &&
       (not (Queue.is_empty to_do)) &&
@@ -1538,7 +1527,7 @@ let continue_from_bfs all_procs transitions all_unsafes =
   try 
   let running = ref true in
   while !running do
-    if !pool_size = 0 then begin Format.printf "No more states to explore@."; raise Exit end;
+    if !pool_size = 0 then begin Format.printf "\n\nNo more states to explore@."; raise Exit end;
     let rand = Random.int !pool_size in
     let node = choose_node rand in
     (*choose one of four methods to explore further*)
@@ -1886,99 +1875,80 @@ let init_aux tsys sys num_procs =
 
 
 
-let decide_how_many_procs tsys sys trans  =
+let decide_how_many_procs tsys sys trans pick_min =
   let stop = ref true in
   let deadlock_count = ref 0 in
-  let pick_min = preprocess sys in
-  Format.eprintf "Minimum number of processes: %d@." pick_min;
+  Format.eprintf "└─Minimum number of procs required: %d@." pick_min;
   let procs = ref (Variable.give_procs pick_min) in
-  let matrix = create_transition_hash sys.trans in
+  let matrix = create_transition_map sys.trans in
   let curr_proc = ref pick_min in
   sys_procs := pick_min;
   let oe, _ =  init_aux tsys sys pick_min in
   let less_beh = ref [] in 
   let orig_env = ref oe in
   let pot_env = ref oe in
+
+  let _, (_,_,_,mat), acp1 =
+    markov_entropy_detailed oe sys.trans !procs trans 250000 matrix in
+
+  let old_mat = ref mat in
+  let old_mat2 = ref mat in
+
   
   while !stop do
     sys_procs := (!curr_proc + 1);
     let pe, _ = init_aux tsys sys (!curr_proc + 1) in
     pot_env := pe;
-    try 
-    let _, (_,_,_,mat), acp1 = markov_entropy_detailed !orig_env sys.trans !procs trans 250000 (Hashtbl.copy matrix) in
-    let new_procs = Variable.give_procs (!curr_proc + 1) in 
-    let _,(_,_,_,m1), acp2 = markov_entropy_detailed !pot_env sys.trans new_procs trans 250000 (Hashtbl.copy matrix) 
-    in
      
-      compare_matrix mat m1 acp1 acp2
+    
+    let new_procs = Variable.give_procs (!curr_proc + 1) in
+    try 
+      let _,(_,_,_,m1), acp2 = markov_entropy_detailed !pot_env sys.trans new_procs trans 250000 matrix
+      in
+      old_mat := !old_mat2;
+      old_mat2 := m1; 
+      compare_matrix !old_mat !old_mat2 acp1 acp2
     with
       | ParamFuzz RaiseProc ->
 	Format.printf "Raising process number from %d to %d@." !curr_proc (!curr_proc + 1);
+	calc_proc := !curr_proc;
 	curr_proc := (!curr_proc + 1);
-	procs := Variable.give_procs !curr_proc;
-	orig_env := pe 
+	procs := Variable.give_procs !curr_proc
       | ParamFuzz BadRaise ->
 	less_beh := (!curr_proc, (!curr_proc+1))::!less_beh;
 	Format.printf "Raising process number from %d to %d@." !curr_proc (!curr_proc + 1);
+	calc_proc := !curr_proc; 
 	curr_proc := (!curr_proc + 1);
-	procs := Variable.give_procs !curr_proc;
-	orig_env := pe 
-	(*Format.printf "@{<b>@{<fg_red>WARNING@}@}";
-	Format.printf "Going from %d procs to %d procs has modified system behaviour.\n\
-                       Transitions no longer appear to be explored. Please verify your model.\n\
-                       Please enter which value of procs you prefer to start the fuzzer with.\n\
-                       If you wish to stop the fuzzer, type stop@." !curr_proc (!curr_proc + 1) ;
-	begin
-	  let rec decide () =
-	    let inp = read_line () in
-	    if inp = "stop" then
-	      begin
-		Format.printf "Exiting fuzzer@."; raise Exit;
-	      end ; 
-	    try 
-	      let d = int_of_string inp in
-	      raise (ParamFuzz (DecidedProc d))
-	    with
-	      | Failure _ ->  Format.printf "Invalid input. Please enter an integer or type stop@."; decide ()
-	  in decide ()
-	  end*)
+	procs := Variable.give_procs !curr_proc
+      
 	
       | ParamFuzz (OKProc (exits, enters)) ->
 	stop := false;
-	(*if exits <> [] then
-	  begin
-	    Format.printf "Warning: following transitions never exited: @.";
-	    List.iter ( fun x -> Format.printf "%a " Hstring.print x ) exits;
-	    Format.printf "@."
-	  end;
-	if enters <> [] then
-	  begin
-	    Format.printf "Warning: following transitions never entered: @.";
-	    List.iter ( fun x -> Format.printf "%a " Hstring.print x ) enters;
-	    Format.printf "@."
-	  end;*)
+	
 	raise (ParamFuzz (DecidedProc (!curr_proc, !less_beh)))
       | TopError Deadlock ->
 	incr deadlock_count;
 	if !deadlock_count > 5 then raise (ParamFuzz (TooDead !deadlock_count));
+	calc_proc := !curr_proc; 
 	curr_proc := (!curr_proc + 1);
 	procs := Variable.give_procs !curr_proc;
 	orig_env := pe;
-	
-	
   done
     
     
-let init tsys sys = 
+let init tsys sys =
+  try 
   Random.self_init ();
 
   let s1 = String.make Pretty.vt_width '*' in
   let s2 = String.make ((Pretty.vt_width-14)/2) ' ' in
   ignore (Sys.command "clear");
-  Format.printf "@{<b>@{<fg_cyan>%s@}@}" s1;
+  Format.printf "@{<b>@{<fg_red>%s@}@}" s1;
   Format.printf "%sCubicle Fuzzer%s@." s2 s2;
-  Format.printf "@{<b>@{<fg_cyan>%s@}@}@." s1;
+  Format.printf "@{<b>@{<fg_red>%s@}@}@." s1;
 
+  let pick_min = preprocess sys in
+  calc_proc := pick_min;
 
   let final_procs = ref 0 in
   let t_transitions = List.map (fun x -> x.tr_info) tsys.t_trans in 
@@ -1988,35 +1958,98 @@ let init tsys sys =
   List.iter (fun x -> Hashtbl.add fuzz_tr_count x.tr_name 0 ) t_transitions;
 
   install_sigint ();
-  begin
-  try 
-    decide_how_many_procs tsys sys transitions
-  with
-    | ParamFuzz (DecidedProc (n, ll)) ->
-      Format.printf "Analysis finished. The fuzzer will run with %d procs @." n; final_procs := n;
-      if ll <> [] then
-	begin
-	  try 
-	    Format.printf "@{<b>@{<fg_red>WARNING@}@}";
-	    Format.printf "Going from:@.";
-	    List.iter (fun (x,y) -> Format.printf "%d to %d procs@." x y) ll;
-	    Format.printf "removed certain behaviors.\n\
+
+  Format.printf "Please enter the number of procs you would like the fuzzer to use.\n\
+                 If you would like the fuzzer to decide, please enter 0\n\
+                 \n\
+                 ATTENTION: number must be greater than minimum necessary for transitions and unsafe formulas.\n\
+\n\
+                 Minimum required: %d processes@." pick_min;
+
+  let rec decide () =
+    flush stdout; Format.printf "> %!";
+    let inp = read_int_opt () in
+    match inp with
+      | Some n -> if n <> 0 && n < pick_min then
+	  begin
+	    Format.printf "Invalid input. Number must be greater than or equal to %d@." pick_min;
+	    decide ()
+	  end
+	else 
+	  n  	
+      | None -> Format.printf "Invalid input. Please enter a valid integer@."; decide ()
+  in
+  let dec = decide () in
+  ignore (Sys.command "clear");
+  Format.printf "@{<b>@{<fg_red>%s@}@}" s1;
+  Format.printf "%sCubicle Fuzzer%s@." s2 s2;
+  Format.printf "@{<b>@{<fg_red>%s@}@}@." s1;
+  if dec <> 0 then
+    begin
+      let procs = Variable.give_procs dec in
+      let original_env, all_unsafes = init_aux tsys sys dec in
+      Options.set_interpret_procs dec;
+      Options.set_int_brab dec;
+      sys_procs := dec;
+      Format.printf "The fuzzer will run with %d procs @." dec; 
+      fuzz original_env transitions procs all_unsafes t_transitions
+    end 
+
+  else
+    begin
+      Format.printf "Calculating necessary number of processes...@."; 
+      begin
+	try 
+	  decide_how_many_procs tsys sys transitions pick_min
+	with
+	  | ParamFuzz (DecidedProc (n, ll)) ->
+	    Format.printf "\n\nAnalysis finished. The fuzzer will run with %d procs @." n;
+	    final_procs := n;
+	    if ll <> [] then
+	      begin
+		try 
+		  Format.printf "@{<b>@{<fg_red>WARNING@}@}";
+		  Format.printf "Going from:@.";
+		  List.iter (fun (x,y) -> Format.printf "%d to %d procs@." x y) ll;
+		  Format.printf "removed certain behaviors.\n\
                      The system has stabilized at %d procs.\n\ 
                      Running analysis of stable version vs. lost behaviors.\n\
                      Press Ctrl-C to abort analysis and continue fuzzing with %d procs@." n n
-	  with
-	    | Sys.Break -> Format.printf "Analysis canceled. Continuing to fuzzer@."
-	end 
-	
-    | ParamFuzz (TooDead n) -> Format.printf "The model has deadlocked with %d different values of procs.\n\
-                                              Please verify your model and try again.@." n; raise Exit
-    | _ -> assert false
-      
-  end ;
-  let procs = Variable.give_procs !final_procs in
-  let fp = !final_procs in
-  let original_env, all_unsafes = init_aux tsys sys fp in
-  Options.set_interpret_procs fp;
-  Options.set_int_brab fp;
-  sys_procs := fp;
-  fuzz original_env transitions procs all_unsafes t_transitions
+		with
+		  | Sys.Break -> Format.printf "Analysis canceled. Continuing to fuzzer@."
+	      end 
+		
+	  | ParamFuzz (TooDead n) ->
+	    Format.printf "The model has deadlocked with %d different values of procs.\n\
+                           Please verify your model and try again.@." n; raise Exit
+	  | _ ->
+	    Format.printf "Calculation of procs interrupted.\n\
+                           Would you like to run the fuzzer with the last number of procs?\n\
+                           [last seen: %d procs] (y/n)@." !calc_proc;
+	    begin
+	      let rec decide () =
+		flush stdout; Format.printf "> %!";
+
+		let inp = read_line () in
+		match inp with
+		  | "y" ->
+		    final_procs := !calc_proc;
+		    Format.printf "The fuzzer will run with %d procs.@." !calc_proc;
+		  | "n" -> Format.printf "Exiting fuzzer.@."; raise Done
+		  | _ -> Format.printf  "Invalid input. Type y or n@."; decide ()
+	      in decide ()
+	    end;
+	    
+      end ;
+      let procs = Variable.give_procs !final_procs in
+      let fp = !final_procs in
+      let original_env, all_unsafes = init_aux tsys sys fp in
+      Options.set_interpret_procs fp;
+      Options.set_int_brab fp;
+      sys_procs := fp;
+      fuzz original_env transitions procs all_unsafes t_transitions
+    end 
+
+  with
+    | Exit -> raise Done
+    | End_of_file -> raise Done
