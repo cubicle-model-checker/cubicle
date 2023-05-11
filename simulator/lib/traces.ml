@@ -11,6 +11,7 @@ type var_unit_value =
   | VFloat      of float
   | VBool       of bool
   | VConstr     of string
+  (* unused currently *)
   | VLock       of int option
   | VRlock      of int option * int
   | VSemaphore  of int

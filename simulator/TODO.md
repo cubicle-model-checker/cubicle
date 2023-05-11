@@ -11,6 +11,7 @@
 ## Compilateur
 
 - La plupart du code entre l'écriture des garde et des états unsafe semble aisément factorisable
+- Pourquoi utiliser des StringMap non persistant plutôt que juste des hashtbl string, ... ?
 
 ## Scenes 
 
@@ -35,4 +36,4 @@ Idéallement même une shape dans structure Bouton / Indicateur (Cercle, Rectang
 ## Compilation / Makefile
 
 On voudrait utiliser des fichiers temporaires dans la compilation de la scene
-Make clean devrait retirer les fichier .cmt et .cmti non ?
+On voudrait silence le ocamlc qui assemble le modèle

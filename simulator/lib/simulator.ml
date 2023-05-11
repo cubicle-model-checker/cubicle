@@ -86,6 +86,8 @@ let unlock_trans trans_name =
 
 let toggle_pause () = is_paused := not (!is_paused); on_model_change_callback ()
 
+let add_lock trans_name lfun = Hashtbl.add runtime_lock trans_name lfun
+
 let take_step_back () =
   Traces.prev full_trace;
   let (_, ms) = Traces.get full_trace in

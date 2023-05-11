@@ -67,7 +67,7 @@ end
 struct
   
   type arc = 
-  | TransToState of string * string  
+  | TransToState  of string * string  
   | StateToTrans  of string * string
   type t = 
     { states  : (string, Vector.t) Hashtbl.t;

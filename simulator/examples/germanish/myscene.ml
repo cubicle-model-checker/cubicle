@@ -3,43 +3,24 @@
 (*  using the petri net scene library. *)
 (*                                     *)
 
-open Utils
 open Simulator
 open Petrilib
 
 let state_from_proc i = 
-  match (get_vuv "Cache") with
-  | Arr(a) -> 
-      begin match List.nth a i with
-      (* Could be done with
-      | VConstr(s)  -> s
-      But we would lose the error of a wrong model, changing it for an error in the scene.
-      *)
-      | VConstr("Invalid")    -> "Invalid"
-      | VConstr("Shared")     -> "Shared"
-      | VConstr("Exclusive")  -> "Exclusive"
-      | _                     -> failwith "Wrong model"
-      end 
-  | _ -> failwith "Wrong Model : No cache"
+  match get_vuv_for_proc "Cache" i with
+  | VConstr(s) -> s
+  | _          -> failwith "Wrong model : Cache is not a constr"
 
 
 let indic_someone_want_exclusive () = 
-  match (get_vuv "Curcmd") with  
-  | Val(v) ->
-      begin match v with
-      | VConstr("Reqe") -> true
-      | _ -> false
-      end
-  | _ -> failwith "Wrong Model : No Curcmd"
+  match get_vuv_const "Curcmd" with  
+  | VConstr("Reqe") -> true
+  | _               -> false
 
 let indic_someone_want_shared () = 
-  match (get_vuv "Curcmd") with
-  | Val(v) -> 
-      begin match v with 
-      | VConstr("Reqs") -> true
-      | _ -> false 
-      end 
-  | _ -> failwith "Wrong Model : No Curcmd"
+  match get_vuv_const "Curcmd" with
+  | VConstr("Reqs") -> true
+  | _ -> false 
 
 let button_request_shared () =
   Simulator.take_transition "req_shared" [(Utils.get_random_proc ())]
@@ -80,5 +61,5 @@ let build_scene () =
 
   set_petri pmodel;
   
-  let s : Scene.t = {pre_init; post_init=draw_for_state; on_model_change=draw_for_state; update; } in 
+  let s = {pre_init; post_init=draw_for_state; on_model_change=draw_for_state; update; } in 
   set_scene(s)
