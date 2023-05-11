@@ -19,8 +19,8 @@ let get_lib_folder () =
   let lf = executable_folder^"/simlib/simlib.cma" in 
   if Sys.file_exists lf then executable_folder^"/simlib/" else failwith "(Cutils) Simlib not found"
 
-let file_name = build_folder^"/mymodel.ml"
-let out_file = open_out file_name 
+let file_name  = build_folder^"/mymodel.ml"
+let out_file   = if Options.simulator then open_out file_name else Out_channel.stdout
 let var_prefix = "v"                      
 let updated_prefix = "n"                  
 let pfile = fun d -> fprintf out_file d
