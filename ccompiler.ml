@@ -12,7 +12,7 @@ let write_types t_def =
   let print_type hs = pfile " ; \"%s\"" (Hstring.view hs) in
   let write_possible_type hstring_list = List.iter print_type hstring_list in
   let write_type (loc, (t_name, t_values)) = 
-    pfile "let %s = [\"%s\"" (Hstring.view t_name) (Hstring.view (List.hd t_values));
+    pfile "let _%s = [\"%s\"" (Hstring.view t_name) (Hstring.view (List.hd t_values));
     write_possible_type (List.tl t_values);
     pfile "] in\n";
     Hashtbl.add returned t_name t_values
@@ -441,6 +441,7 @@ let run ts s scene sim_out =
     | None -> build_folder^"/a.out"
     | Some s -> s
   in
+
 
   ignore(Sys.command ("cp -fv "^scene^" "^tmp_folder^"/myscene.ml"));
   ignore(Sys.command ("cp -fv "^lib_folder^"/main.ml "^tmp_folder^"/main.ml"));

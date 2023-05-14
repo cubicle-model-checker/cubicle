@@ -15,5 +15,4 @@
 
 ## Compilation / Makefile
 
-- On voudrait silence le ocamlc qui assemble le modèle
 - Donner la possibilté de save le mymodel.ml ?
