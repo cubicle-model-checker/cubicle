@@ -1,8 +1,8 @@
 # TODO
 
-## Model
+## Model, Traces...
 
-- Utiliser une structure de donnée non persistante
+Gros problème : On ne gère pas les variables de dimension quelconques....
 
 ## Simulateur
 
@@ -18,4 +18,3 @@
 On voudrait utiliser des fichiers temporaires dans la compilation de la scene
 On voudrait silence le ocamlc qui assemble le modèle
 On voudrait mieux nettoyer le fichier courant des reste de la compilation
-

@@ -9,10 +9,8 @@ let scene         = ref Scene.empty
 let set_scene s   = scene := s
 let get_scene ()  = !scene
 
-let model        = ref Model.empty
-let set_model m  = model := m
-let get_model () = !model
-let get_model_state () = Model.get_state (!model)
+let model              : Model.t = Model.create ()
+let get_model_state () = Model.get_state model
 
 let nb_proc         = ref 0 
 let get_nb_proc ()  = !nb_proc
@@ -21,7 +19,7 @@ let set_nb_proc nbp = nb_proc := nbp
 (* Debug functions *)
 
 let dumper () = 
-  let mstate = Model.get_state (!model) in
+  let mstate = get_model_state () in
   printf "-------- BEGIN DUMP --------\n";
   let print_var val_name val_value =
     printf "%s : " val_name;

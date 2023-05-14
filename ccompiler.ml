@@ -390,24 +390,22 @@ let write_unsafe unsafe g_vars =
   List.iteri sub_write_unsafe unsafe
 
 let write_model_create trans_list unsafe_list =  
-  pfile "\nlet mymodel = ref Model.empty in\n\n";
 
   let write_trans trans = 
     let trans_info = trans.tr_info in
     let trans_name = Hstring.view trans_info.tr_name in
-    pfile "mymodel := Model.add_trans %s %s (!mymodel);\n" (string_of_int (List.length trans_info.tr_args)) trans_name
+    pfile "Model.add_trans %s %s model;\n" (string_of_int (List.length trans_info.tr_args)) trans_name
   in
   List.iter write_trans trans_list;
 
   let write_unsafe i (_, args, _) = 
     let unsafe_fun_name = sprintf "unsafe_%d" i in
-    pfile "mymodel := Model.add_unsafe %d %s (!mymodel);\n" (List.length args) unsafe_fun_name
+    pfile "Model.add_unsafe %d %s model;\n" (List.length args) unsafe_fun_name
   in 
   List.iteri write_unsafe unsafe_list;
 
-  pfile "mymodel := Model.set_init init (!mymodel);\n";
-  pfile "mymodel := Model.set_vars ([], state_getter, state_setter) (!mymodel);\n";
-  pfile "set_model (!mymodel)\n"
+  pfile "Model.set_init init model;\n";
+  pfile "Model.set_vars ([], state_getter, state_setter) model;\n"
 
 let run ts s scene sim_out =
   

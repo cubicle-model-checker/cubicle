@@ -32,21 +32,21 @@ let set_sleep_time st = sleep_time := st
 let init () =
   pre_init_callback ();
   Random.init (int_of_float (Sys.time ()));
-  let minit = Model.get_init (get_model ()) in
+  let minit = Model.get_init model in
   minit ();
   Traces.add full_trace (("init", []), Utils.get_model_state ());
   post_init_callback ()
 
 let get_possible_action_for_arg arg trans_list trans_map = 
   let sub_gpafa returned name = 
-    let (req, ac) = StringMap.find name trans_map in
+    let (req, ac) = Hashtbl.find trans_map name in
     let lock      = try Hashtbl.find runtime_lock name with Not_found -> (fun _ -> true) in
     if (req arg && lock arg) then ((arg,ac,name)::returned) else returned in
   List.fold_left sub_gpafa [] trans_list
 
 let take_transition tname args = 
-  let (trans_map, _) = Model.get_trans (get_model ()) in
-  let (req, ac) = StringMap.find tname trans_map in
+  let (trans_map, _) = Model.get_trans model in
+  let (req, ac) = Hashtbl.find trans_map tname in
   if req args then
   (
     ac args;
@@ -61,14 +61,14 @@ let step () =
   (
   let possible_actions = 
     let returned_list = ref [] in 
-    let (trans_map, trans_table) = Model.get_trans (get_model ()) in
+    let (trans_map, trans_table) = Model.get_trans model in
     let test_transition arg_number trans_list =
       if arg_number > get_nb_proc () then failwith (Format.sprintf "More than %d proc is required for this simulation." (arg_number))
       else
       let arg_list = get_args arg_number in
       List.iter (fun arg -> returned_list := (get_possible_action_for_arg arg trans_list trans_map)@(!returned_list)) arg_list
     in
-    IntMap.iter test_transition trans_table;
+    Hashtbl.iter test_transition trans_table;
     !returned_list
   in
   if List.length possible_actions > 0 then  
@@ -91,7 +91,7 @@ let add_lock trans_name lfun = Hashtbl.add runtime_lock trans_name lfun
 let take_step_back () =
   Traces.prev full_trace;
   let (_, ms) = Traces.get full_trace in
-  Model.set_state (get_model ()) ms;
+  Model.set_state model ms;
   on_model_change_callback ()
 
 let take_step_forward () = 
@@ -118,7 +118,7 @@ let is_unsafe () =
       if (List.exists (fun uns -> test_unsafe uns) unsafe_list) then res := true
     ) 
   in
-  IntMap.iter test_unsafes (Model.get_unsafe (get_model ()));
+  Hashtbl.iter test_unsafes (Model.get_unsafe model);
   !res
 
 (* Scene functions *)
@@ -128,7 +128,7 @@ let set_var var_name var_val =
   let mstate = StringMap.add var_name var_val (get_model_state ()) in 
   Traces.add full_trace ((Format.sprintf "Manually set %s " var_name, []), mstate);
   let (_, ms) = Traces.get full_trace in
-  Model.set_state (get_model ()) ms;
+  Model.set_state model ms;
   on_model_change_callback ()
 
 let get_vuv vuv_name = try StringMap.find vuv_name (get_model_state ()) 

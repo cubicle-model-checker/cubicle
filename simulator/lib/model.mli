@@ -9,26 +9,21 @@ type transition_req   = (int list -> bool)
 type transition_ac    = (int list -> unit)
 type transition       = transition_req * transition_ac 
 
-type transition_map   = transition Maps.StringMap.t  
-type transition_table = string list Maps.IntMap.t                (* Key is number of argument of transitions, value is name of transition*)
-type transitions      = transition_map * transition_table
+type transition_valtable   = (string, transition) Hashtbl.t (* name -> transition *)
+type transition_nametable = (int,    string list) Hashtbl.t (* nb_args -> names   *)
+type transitions      = transition_valtable * transition_nametable
 
-type unsafe          = (int list -> bool)
-type unsafes         = (unsafe list) Maps.IntMap.t
+type unsafe           = (int list -> bool)
+type unsafes          = (int,unsafe list) Hashtbl.t
 
-type t =
-  { vars  : variable_table;
-    init  : unit -> unit;
-    trans : transitions;
-    unsafe : unsafes;
-  }
+type t
 
-val empty : t
-val add_trans  : Maps.IntMap.key -> Maps.StringMap.key * transition_req * transition_ac -> t -> t 
-val add_unsafe : int -> unsafe -> t -> t 
+val create : unit -> t
+val add_trans  : Maps.IntMap.key -> Maps.StringMap.key * transition_req * transition_ac -> t -> unit 
+val add_unsafe : int -> unsafe -> t -> unit 
 
-val set_init : init -> t -> t
-val set_vars : variable_table -> t -> t
+val set_init : init -> t -> unit
+val set_vars : variable_table -> t -> unit
 
 
 val get_state : t -> model_state

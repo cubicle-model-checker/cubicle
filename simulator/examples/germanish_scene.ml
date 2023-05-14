@@ -2,7 +2,7 @@
 (*  An example scene for "germanish"   *) 
 (*  using the petri net scene library. *)
 (*                                     *)
-
+open Utils
 open Simulator
 open Petrilib
 

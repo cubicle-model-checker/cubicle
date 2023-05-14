@@ -214,7 +214,7 @@ let specs =
     (* Hidden options *)
     "-notyping", Arg.Set notyping, ""; (* Disable typing *)
     "-sim", Arg.Set simulator, " simulator mode";
-    "-scene", Arg.String set_scene, " scene for simulator";
+    "-sim-scene", Arg.String set_scene, " scene for simulator";
     "-sim-out", Arg.String set_sim_out, " output file for simulation ";
   ]
 
