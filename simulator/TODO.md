@@ -2,7 +2,7 @@
 
 ## Model, Traces...
 
-Gros problème : On ne gère pas les variables de dimension quelconques....
+- On ne gère pas les variables de dimension quelconques....
 
 ## Simulateur
 
@@ -15,6 +15,5 @@ Gros problème : On ne gère pas les variables de dimension quelconques....
 
 ## Compilation / Makefile
 
-On voudrait utiliser des fichiers temporaires dans la compilation de la scene
-On voudrait silence le ocamlc qui assemble le modèle
-On voudrait mieux nettoyer le fichier courant des reste de la compilation
+- On voudrait silence le ocamlc qui assemble le modèle
+- Donner la possibilté de save le mymodel.ml ?

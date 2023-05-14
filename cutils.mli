@@ -10,6 +10,7 @@ val file_name : string (* File to write compiled program to *)
 val out_file : out_channel 
 
 val build_folder   : string
+val tmp_folder     : string
 val get_lib_folder : unit -> string
 val var_prefix     : string  
 val updated_prefix : string

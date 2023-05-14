@@ -442,11 +442,9 @@ let run ts s scene sim_out =
     | Some s -> s
   in
 
-  (* TODO : Copy in a tmp location to avoid overriding file *)
-  ignore(Sys.command ("cp -fv "^scene^" "^build_folder^"/myscene.ml && echo good1"));
-  ignore(Sys.command ("cp -fv "^lib_folder^"/main.ml "^build_folder^"/main.ml && echo good2"));
+  ignore(Sys.command ("cp -fv "^scene^" "^tmp_folder^"/myscene.ml"));
+  ignore(Sys.command ("cp -fv "^lib_folder^"/main.ml "^tmp_folder^"/main.ml"));
 
-  ignore(Sys.command ("ocamlc -I "^lib_folder^" -I +unix unix.cma simlib.cma mymodel.ml myscene.ml main.ml -o "^sim_out));
-  (* TODO : Remove temporary files *)
+  ignore(Sys.command ("ocamlc -I "^lib_folder^" -I "^tmp_folder^" -I +unix unix.cma simlib.cma "^tmp_folder^"/mymodel.ml "^tmp_folder^"/myscene.ml "^tmp_folder^"/main.ml -o "^sim_out));
   printf "Output: %s\n" sim_out;
   exit 0
