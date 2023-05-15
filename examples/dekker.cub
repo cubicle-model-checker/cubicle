@@ -21,5 +21,3 @@ requires { Crit[i] = True }
   Crit[i] := False; 
   Want[i] := False
 }
-
-

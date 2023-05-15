@@ -163,13 +163,9 @@ let write_init (vars, dnf) g_vars ty_defs =
     in
     List.iter sub_build (!union_list);
 
-    (*
-      Now that we have a correct union_map, we can print it.
-    *)
     let print_dim dim hm = 
       if dim >= 0 then (* We don't want to do anything for constr, only for vars with a positive dim *)
         (
-        (* On écrit une boucle for si dim > 0 *)
         if dim > 0 then 
           pfile "%sfor tmp_%d = 0 to (get_nb_proc () - 1) do \n" (mult_string "\t" dim) (dim-1);
         let print_set head set =
@@ -442,10 +438,10 @@ let run ts s scene sim_out =
     | Some s -> s
   in
 
+  ignore(Sys.command (sprintf "cp -fv %s %s/myscene.ml" scene tmp_folder));
+  ignore(Sys.command (sprintf "cp -fv %s/main.ml %s/main.ml" lib_folder tmp_folder));
 
-  ignore(Sys.command ("cp -fv "^scene^" "^tmp_folder^"/myscene.ml"));
-  ignore(Sys.command ("cp -fv "^lib_folder^"/main.ml "^tmp_folder^"/main.ml"));
-
-  ignore(Sys.command ("ocamlc -I "^lib_folder^" -I "^tmp_folder^" -I +unix unix.cma simlib.cma "^tmp_folder^"/mymodel.ml "^tmp_folder^"/myscene.ml "^tmp_folder^"/main.ml -o "^sim_out));
+  ignore(Sys.command (
+    sprintf "ocamlc -I %s -I %s -I +unix unix.cma simlib.cma %s/mymodel.ml %s/myscene.ml %s/main.ml -o %s" lib_folder tmp_folder tmp_folder tmp_folder tmp_folder sim_out));
   printf "Output: %s\n" sim_out;
   exit 0
