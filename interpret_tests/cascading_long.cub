@@ -20,7 +20,7 @@ PC[#3] : A5*)
 
 init(i) { PC[i] = A1 && X = 0 && Y = 0 && Z = 0 && Casc = False }
 
-unsafe() { Casc = True }
+unsafe(i j) { PC[i] = A4 && PC[j] = A4 }
 
 transition t1(i)
 requires {PC[i] = A1} {PC[i] := A2}
