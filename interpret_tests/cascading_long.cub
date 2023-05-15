@@ -1,0 +1,61 @@
+type t = A1 | A2 | A3 | A4 | A5 | A6 | A7
+
+array PC[proc] : t
+var X : int
+var Y : int
+var Z : int
+var Casc : bool
+
+(*t -> 0.71*)
+
+(*#1 : process active
+#2 : process active
+#3 : process active
+X : 1
+Y : 36044
+Z : 0
+PC[#1] : A2
+PC[#2] : A5
+PC[#3] : A5*)
+
+init(i) { PC[i] = A1 && X = 0 && Y = 0 && Z = 0 && Casc = False }
+
+unsafe() { Casc = True }
+
+transition t1(i)
+requires {PC[i] = A1} {PC[i] := A2}
+
+transition t2(i)
+requires {PC[i] = A2} {PC[i] := A3}
+
+transition t4(i j)
+requires {PC[i] = A3 && PC[j] <> A3} { Y := Y + 1; PC[i] := A1 }
+
+transition t(i)
+requires {PC[i] = A3 && forall_other j. PC[j] = A3} { X := X+1; PC[k] := case | _ : A4} (*rare state*)
+
+transition t5(i)
+requires { PC[i] = A4 }
+{ PC[i] := A5 }
+
+transition t6(i j)
+requires { PC[i] = A4}
+{ PC[i] := A1 }
+
+transition t7(i)
+requires { PC[i] = A5 && forall_other j. PC[j] = A5} { PC[j] := case | _ : A6 }
+
+transition t8(i)
+requires { PC[i] = A6 }
+{ PC[i] := A7 }
+
+transition t9(i)
+requires { PC[i] = A6 }
+{ PC[i] := A1 }
+
+transition t10(i)
+requires { PC[i] = A7 && forall_other j. PC[j] = A7} { Z := Z + 1; PC[j] := case | _ : A1; Casc := True }
+
+
+
+
