@@ -65,7 +65,7 @@ let rec get_args n =
   let sub l = 
     let res = ref [] in 
     for i = 0 to get_nb_proc () - 1 do 
-      res := (i::l) :: !res
+      if not (List.mem i l) then res := (i::l) :: !res
     done;
     !res 
   in
