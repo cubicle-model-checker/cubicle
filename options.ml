@@ -40,6 +40,8 @@ let quiet = ref false
 let bitsolver = ref false
 let enumsolver = ref false
 
+let fuzz_s = ref 100000
+
 let unDepth = ref 1
 let interpretProcs = ref 3
 let debug_interpreter = ref false
@@ -229,6 +231,7 @@ let specs =
     "-interpreter", Arg.Set interpreter, " start interpreter";
     "-fuzz", Arg.Set fuzz, " fuzz the model";
     "-debug-interpret", Arg.Set debug_interpreter, " debug interpreter";
+    "-fuzz-states", Arg.Set_int fuzz_s, " set stopping limit"; 
   ]
 
 let alspecs = Arg.align specs
@@ -353,6 +356,7 @@ let notyping = !notyping
 let trace = !trace
 let out_trace = !out
 
+let fuzz_s = !fuzz_s 
 
 
 (* Setters *)
