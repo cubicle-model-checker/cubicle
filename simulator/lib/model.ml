@@ -11,7 +11,7 @@ type transition_ac    = (int list -> unit)
 type transition       = transition_req * transition_ac 
 
 type transition_valtable   = (string, transition) Hashtbl.t (* name -> transition *)
-type transition_nametable = (int,    string list) Hashtbl.t (* nb_args -> names   *)
+type transition_nametable  = (int,    string list) Hashtbl.t (* nb_args -> names   *)
 type transitions      = transition_valtable * transition_nametable
 
 type unsafe           = (int list -> bool)

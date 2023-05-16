@@ -56,6 +56,17 @@ let take_transition tname args =
     true
   ) else false
 
+let take_transition_if_possible tname = 
+  let (trans_map, trans_table) = Model.get_trans model in
+  let arg_number = ref (-1) in 
+  Hashtbl.iter (fun k -> fun v -> if List.mem tname v then arg_number := k) trans_table;
+  if !arg_number < 0 then false else 
+  (
+    let args_list = get_args !arg_number in 
+    List.exists (fun arg -> take_transition tname arg) args_list 
+  )
+
+
 let step () =
   if not !is_paused then
   (

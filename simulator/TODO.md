@@ -7,6 +7,7 @@
 ## Simulateur
 
 - La trace devrait garder le nb_proc
+- On voudrait avoir une fonction Take_transition_if_possible qui essaye de prendre une transition avec arguments quelconque si possible
 
 ## Compilateur
 
