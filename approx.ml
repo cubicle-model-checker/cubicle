@@ -234,11 +234,10 @@ let approximations s =
   (* Heuristics for generating candidates *)
   let max_procs = enumerative in
   let max_literals = max 2 (candidate_heuristic + 1) in
-  (*Format.eprintf "amx proc %d@." max_procs;
+  (*Format.eprintf "max proc %d@." max_procs;
 
-  Format.eprintf "eugh %d@." candidate_heuristic;
-  Format.eprintf "eughwqd %d@." max_literals;*)
-  let candidate_heuristic = 3 in
+  Format.eprintf "Candheur: %d@." candidate_heuristic;
+  Format.eprintf "MaxLit %d@." max_literals;*)
   let max_ratio_arrays_after = (3, candidate_heuristic - 1) in
   let init = 
     SAtom.fold 
@@ -253,27 +252,27 @@ let approximations s =
     SAtom.fold
       (fun a acc ->
 	let a = approx_arith a in
-	(*Format.eprintf "ello: %a@." Atom.print a;*)
+	(*Format.eprintf "Atom: %a@." Atom.print a;*)
        if useless_candidate (SAtom.singleton a) then acc
        else if not abstr_num && arith_atom a then acc
        else if lit_non_cfm a then acc
        else
          SSAtoms.fold
            (fun sa' acc ->
-	     (*Format.eprintf "did I survive mate@.";*)
+	     (*Format.eprintf "SSFold@.";*)
              let nsa = SAtom.add a sa' in
 	     (*Format.eprintf "NSA: %a@." SAtom.print nsa;*)
             if Variable.Set.cardinal (SAtom.variables nsa) > max_procs then
 	      begin
-		(*Format.eprintf "YEET@.";*)
+		(*Format.eprintf "Card > max@.";*)
 		acc
 	      end 
-            else if SAtom.cardinal nsa > max_literals then begin (*Format.eprintf "yayeet@.";*) acc end 
+            else if SAtom.cardinal nsa > max_literals then begin (*Format.eprintf "nsa > max lit@.";*) acc end 
             else SSAtoms.add nsa acc
            ) acc acc
       ) sa init
   in
-  (*SSAtoms.iter (fun x -> Format.eprintf "????\n%a@." SAtom.print x) parts;*)
+  (*SSAtoms.iter (fun x -> Format.eprintf "Iter: \n%a@." SAtom.print x) parts;*)
 
   (* Filter non interresting candidates *)
   let parts =
@@ -330,13 +329,13 @@ module Make ( O : Oracle.S ) : S = struct
 
   let subsuming_candidate s =
     let approx = approximations s in
-   (*Format.eprintf "-----regfoirgjo---------APPROX %d --@." (List.length approx);
+   (*Format.eprintf "--------------APPROX %d --@." (List.length approx);
     List.iter (fun x -> Format.eprintf "%a\n------@." Node.print x) approx;*)
 (*
     let head_node = List.hd approx in
     let hnl = Node.litterals head_node in
-    Format.eprintf "Hello friend: %a@." SAtom.print hnl;
-    
+    Format.eprintf "SATOM: %a@." SAtom.print hnl;
+
     Format.eprintf "----------------@.";*)
     let approx = if max_cands = -1 then approx else keep max_cands approx in
     if verbose > 0 && not quiet then 
