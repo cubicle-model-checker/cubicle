@@ -102,7 +102,9 @@ val mrkv_brab : int
 val int_brab_quiet : bool
 val int_deadlock : bool 
 
-val fuzz_s : int 
+val fuzz_s : int
+val fuzz_d : int
+val fuzz_t : int
 
 val js_mode : unit -> bool
 

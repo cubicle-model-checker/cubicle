@@ -41,6 +41,8 @@ let bitsolver = ref false
 let enumsolver = ref false
 
 let fuzz_s = ref 100000
+let fuzz_d = ref 10
+let fuzz_t = ref 10
 
 let unDepth = ref 1
 let interpretProcs = ref 3
@@ -168,10 +170,7 @@ let specs =
     "-brab", Arg.Set_int brab,
     "<nb> Backward reachability with approximations and backtrack helped \
      with a finite model of size <nb>";
-    "-int-brab", Arg.Tuple [ Arg.Set_int int_brab;
-			     Arg.Set_int rounds;
-			     Arg.Set_int depth_ib;
-			     Arg.Set_int mrkv_brab], " <nb> procs <nb> rounds <nb> depth <bool> smart";
+    "-int-brab", Arg.Set_int int_brab, " <nb> procs <nb> rounds <nb> depth <bool> smart";
     "-int-brab-debug", Arg.Set int_brab_quiet, " Activate interpreter brab";
     "-int-deadlock", Arg.Set int_deadlock, " Deadlock details for interpreter forward";
     "-upto", Arg.Set brab_up_to,
@@ -231,7 +230,10 @@ let specs =
     "-interpreter", Arg.Set interpreter, " start interpreter";
     "-fuzz", Arg.Set fuzz, " fuzz the model";
     "-debug-interpret", Arg.Set debug_interpreter, " debug interpreter";
-    "-fuzz-states", Arg.Set_int fuzz_s, " set stopping limit"; 
+    "-fuzz-states", Arg.Set_int fuzz_s, " set stopping limit";
+    "-fuzz-limit", Arg.Tuple [Arg.Set_int fuzz_s;
+			      Arg.Set_int fuzz_d;
+			      Arg.Set_int fuzz_t;], "<states> <depth> <time in s>";
   ]
 
 let alspecs = Arg.align specs
@@ -356,7 +358,9 @@ let notyping = !notyping
 let trace = !trace
 let out_trace = !out
 
-let fuzz_s = !fuzz_s 
+let fuzz_s = !fuzz_s
+let fuzz_d = !fuzz_d
+let fuzz_t = !fuzz_t 
 
 
 (* Setters *)
