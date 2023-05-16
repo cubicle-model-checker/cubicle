@@ -165,7 +165,8 @@ let check_unsafe_prover (env,_,_,_) unsafe =
   ) unsafe
 
 
-let check_unsafe (env,_,_,_) unsafes =
+let check_unsafe glob unsafes =
+  let env, _,_,_ = glob in
   (*unsafe = (loc * variable * satom) list *)
   let v = Env.fold (fun key {value = el} acc ->
     match el with

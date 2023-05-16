@@ -32,6 +32,8 @@ let calc_proc = ref 0
 
 let parents = Hashtbl.create 200
 
+let entropy_sum = ref 0.
+
 
   
 module STMap = Map.Make (Types.Term)
@@ -131,14 +133,14 @@ let install_sigint () =
 
 
 let print_transitions fmt t =
-  List.iter (fun (x, y) -> Format.printf "%a(%a); " Hstring.print x Variable.print_vars y) t
+  List.iter (fun (x, y) -> Format.fprintf fmt "%a(%a); " Hstring.print x Variable.print_vars y) t
 
 
 let print_exit_map fmt t =
-  ExitMap.iter (fun (x,y) d -> Format.printf "%a(%a) : %d times; %!" Hstring.print x Variable.print_vars y d) t
+  ExitMap.iter (fun (x,y) d -> Format.fprintf fmt "%a(%a) : %d times; %!" Hstring.print x Variable.print_vars y d) t
     
 let print_stateless_data fmt data =
-  Format.printf "{ seen: %d;\n\
+  Format.fprintf fmt "{ seen: %d;\n\
                    exit_number: %d;\n\
                    exit_transitions: %a\n\
                    exit_remaining: %a\n\
@@ -151,7 +153,7 @@ let print_stateless_data fmt data =
 
     
 let print_data fmt data =
-  Format.printf "{ state: %a;\n\
+  Format.fprintf fmt "{ state: %a;\n\
                    seen: %d;\n\
                    exit_number: %d;\n\
                    exit_transitions: %a\n\
@@ -166,8 +168,6 @@ let print_data fmt data =
     
     
     
-
-
 
 let fuzzy_visited = Hashtbl.create 200
 
@@ -197,12 +197,12 @@ let print_forward_trace fmt el =
 	let (x,p),r = PersistentQueue.pop q in
 	if PersistentQueue.is_empty r then
 	  begin
-	    Format.printf "%a(%a) @." Hstring.print x Variable.print_vars p;
+	    Format.fprintf fmt "%a(%a) @." Hstring.print x Variable.print_vars p;
 	    print_trans r
 	  end
 	else
 	  begin
-	    Format.printf "%a(%a) -> " Hstring.print x Variable.print_vars p;
+	    Format.fprintf fmt "%a(%a) -> " Hstring.print x Variable.print_vars p;
 	print_trans r
 	  end 
       end 
@@ -348,6 +348,11 @@ let force_procs_forward code glob_env trans all_procs p_proc all_unsafes =
   while !steps < depth do
     incr overall;
     try
+      if (List.length !visited_states) > Options.fuzz_s then
+      begin
+	Format.printf "\n\nSet limit reached@."; raise Exit
+      end;
+
       let tr_with_proc = choose_current_proc_list p_proc !transitions in
       let choose_from =
 	if tr_with_proc = []
@@ -462,14 +467,15 @@ let force_procs_forward code glob_env trans all_procs p_proc all_unsafes =
   Format.printf "Force proc: new states seen: %d. New added to pool: %d Removed from pool %d@." !new_seen !add_pool !rem_pool
     
 
-let markov_entropy_detailed glob tsys all_procs trans steps matrix =
+let markov_entropy_detailed glob tsys all_procs trans steps matr =
   let num_procs = List.length all_procs in
   Options.set_interpret_procs num_procs;
   sys_procs := num_procs;
-  Random.self_init ();
+  (*Random.self_init ();*)
   let tried = ref 0 in
   let hcount = Hashtbl.create 10 in
-  let matrix = ref matrix in
+  let matrix = ref matr in
+  let possibility = ref matr in 
   let proc_count = Array.make num_procs 0 in
   let t_count = Hashtbl.create 10 in
   let transitions = ref (Array.of_list (all_possible_transitions glob trans all_procs false)) 
@@ -486,21 +492,13 @@ let markov_entropy_detailed glob tsys all_procs trans steps matrix =
   let reject = ref 0 in
   
   let w1 = ref (entropy_env glob trans all_procs) in 
-  let bl = Pretty.vt_width / 10 in
-  let blf = float_of_int bl in
   while  (!taken <= steps) && !running do
     try
       let percent = 100.0*.(float_of_int !taken)/.(float_of_int steps) in
-      let prog = (int_of_float((ceil percent)/. (100.0 /.blf))) in
-      let prog_s = String.make prog '=' in
+      (*let prog = (int_of_float((ceil percent)/. (100.0 /.blf))) in
+      let prog_s = String.make prog '=' in*)
       Format.printf "\r";
-      Format.printf "Calculating for %d processes [" num_procs;
-      let emp1 = String.make (bl - prog) ' ' in
-      Format.printf "%s%s]" prog_s emp1;
-      let b_size = if (ceil percent) < 10.0 then 2 else if (ceil percent) < 100.0 then 1 else 0 in
-      let bar = String.make b_size ' ' in
-
-      Format.printf " %d%% %s| %d " (int_of_float (ceil percent)) bar !taken ;
+      Format.printf " %d %% (%d) " (int_of_float (ceil percent)) !taken;
       Format.printf "%!";
       let env, _,_,_ = !running_env in
       let l = Array.length !transitions in
@@ -545,7 +543,8 @@ let markov_entropy_detailed glob tsys all_procs trans steps matrix =
       in
       let prop_hs =
 	  proposal.tr_name 
-      in 
+      in
+      let flag = true in
       if flag then
 	begin
 	  incr accept;
@@ -559,6 +558,16 @@ let markov_entropy_detailed glob tsys all_procs trans steps matrix =
 	    with Not_found ->
 	      matrix := MatrixMap.add pair 1 !matrix
 	  end;
+	  
+	  Array.iter (fun (artr,_) ->
+	    let pair = (!before, artr.tr_name) in
+	      try
+		let cpair = MatrixMap.find pair !possibility in
+		possibility := MatrixMap.add pair (cpair+1) !possibility
+	      with Not_found ->
+		possibility := MatrixMap.add pair 1 !possibility
+	  ) !transitions;
+	  
 	  before := prop_hs;
 	  
 	  let hash = hash_full_env temp_env in
@@ -592,7 +601,11 @@ let markov_entropy_detailed glob tsys all_procs trans steps matrix =
       | TopError (FalseReq _) -> incr tried; incr taken; if !tried > 1000 then running := false 
   done;
   Format.printf "@.";
-  !running_env, (hcount,proc_count, t_count, !matrix), !accept
+  (*MatrixMap.iter (fun (k,k1) el -> Format.eprintf "%a -> %a : %d@." Hstring.print k Hstring.print k1 el) !possibility;
+  MatrixMap.iter (fun (k,k1) el -> Format.eprintf "%a -> %a : %d@." Hstring.print k Hstring.print k1 el) !matrix;
+  *)
+
+  !running_env, (hcount,proc_count, t_count, !matrix, !possibility), !accept
 
 
 
@@ -646,7 +659,7 @@ let check_enters l =
 	
 let h_init = Hstring.make "Init"    
 
-let compare_matrix m_old m_new acp1 acp2 =
+let compare_matrix m_old m_new  =
   Format.printf "└─Analyzing results@.";
   let l_old = MatrixMap.fold (fun (k1,k2) v acc ->
     if Hstring.equal k1 h_init || Hstring.equal k2 h_init
@@ -666,6 +679,14 @@ let compare_matrix m_old m_new acp1 acp2 =
   let check_ex = check_exits exits in
   let check_ent = check_enters enters in
 
+  (*Format.eprintf "OLD@.";
+
+  MatrixMap.iter (fun (k,k1) el -> Format.eprintf "%a -> %a : %d@." Hstring.print k Hstring.print k1 el) m_old;
+
+  Format.eprintf "NEW@.";
+
+  MatrixMap.iter (fun (k,k1) el -> Format.eprintf "%a -> %a : %d@." Hstring.print k Hstring.print k1 el) m_new;*)
+    
   
   List.iter2 (fun ((k_old_from, k_old_to), v_old) ((k_new_from, k_new_to), v_new) ->
     assert (Hstring.equal k_old_from k_new_from);
@@ -677,13 +698,13 @@ let compare_matrix m_old m_new acp1 acp2 =
 	Format.printf "   └─New: %a->%a : %d@." Hstring.print k_new_from Hstring.print k_new_to v_new;
 	raise (ParamFuzz RaiseProc)
       end ;
-    if v_old <> 0 && v_new = 0 then
+    (*if v_old <> 0 && v_new = 0 then
       begin
 	Format.printf " └─Changed value:@.";
 	Format.printf "   └─Old: %a->%a : %d@." Hstring.print k_old_from Hstring.print k_old_to v_old;
-	Format.printf "   └─New :%a->%a : %d@." Hstring.print k_new_from Hstring.print k_new_to v_new;
+	Format.printf "   └─New: %a->%a : %d@." Hstring.print k_new_from Hstring.print k_new_to v_new;
 	raise (ParamFuzz BadRaise)
-      end 
+      end *)
   )  l_old l_new;
   raise (ParamFuzz (OKProc (check_ex, check_ent)))
     
@@ -705,7 +726,7 @@ let preprocess sys =
 
     
 let markov_entropy code glob all_procs trans all_unsafes=
-  Random.self_init ();
+ (* Random.self_init ();*)
   let taken = ref 0 in
   let new_seen = ref 0 in
   let transitions = ref (Array.of_list (all_possible_transitions glob.state trans all_procs false))
@@ -723,6 +744,11 @@ let markov_entropy code glob all_procs trans all_unsafes=
   let w1 = ref (entropy_env glob.state trans all_procs) in 
   while !taken < steps do
     try
+      if (List.length !visited_states) > Options.fuzz_s then
+      begin
+	Format.printf "\n\nSet limit reached@."; raise Exit
+      end;
+
       let l = Array.length !transitions in
       if l = 0 then raise (TopError Deadlock);
       let rand = Random.int l in
@@ -907,7 +933,7 @@ let choose_random_of_equal l =
   else
     begin
       let l = Array.of_list l in
-      Random.self_init ();
+      (*Random.self_init ();*)
       let i = Random.int c in
       l.(i)
     end  
@@ -928,9 +954,14 @@ let run_smart code node all_procs trans all_unsafes =
     ref (Array.of_list (all_possible_transitions node.state trans all_procs false)) in
   while !steps < max_depth do
     try
+      if (List.length !visited_states) > Options.fuzz_s then
+      begin
+	Format.printf "\n\nSet limit reached@."; raise Exit
+      end;
+
     let l = Array.length !transitions in
     if l = 0 then raise ( Dead !old_hash);
-    let _,most_interesting =
+    let _, most_interesting =
       try 
 	Array.fold_left (fun (curr_max, acc) (tr, trp) ->
 	  let temp = apply_transition trp tr.tr_name trans !running_env in
@@ -1153,6 +1184,11 @@ let further_bfs code node transitions all_procs all_unsafes =
 		taken_transitions = ExitMap.empty; } in
 	    Hashtbl.add bfs_visited he nd;
 	    incr visit_count;
+	    if (List.length !visited_states) > Options.fuzz_s then
+	      begin
+		Format.printf "\n\nSet limit reached@."; raise Exit
+	      end;
+
 	    Hashtbl.add parents he (false, Some (at, at_p), ha);
 	    begin
 	      try
@@ -1301,6 +1337,11 @@ let run_forward code node all_procs trans all_unsafes =
     ref (Array.of_list (all_possible_transitions node.state trans all_procs false)) in
   while !steps < max_depth do
     try
+      if (List.length !visited_states) > Options.fuzz_s then
+      begin
+	Format.printf "\n\nSet limit reached@."; raise Exit
+      end;
+
       let l = Array.length !transitions in
       if l = 0 then raise (Dead !old_hash);
       let rand = Random.int l in
@@ -1413,6 +1454,11 @@ let do_new_exit code node all_procs trans all_unsafes =
   let added = ref 0 in
   
   try
+    if (List.length !visited_states) > Options.fuzz_s then
+      begin
+	Format.printf "\n\nSet limit reached@."; raise Exit
+      end;
+
     let ee = Hashtbl.find bfs_visited hash in
     let (apply,apply_procs),lr =
       try List.hd ee.exit_remaining, List.tl ee.exit_remaining
@@ -1527,6 +1573,11 @@ let continue_from_bfs all_procs transitions all_unsafes =
   try 
   let running = ref true in
   while !running do
+    if (List.length !visited_states) > Options.fuzz_s then
+      begin
+	Format.printf "\n\nSet limit reached@."; raise Exit
+      end;
+
     if !pool_size = 0 then begin Format.printf "\n\nNo more states to explore@."; raise Exit end;
     let rand = Random.int !pool_size in
     let node = choose_node rand in
@@ -1556,7 +1607,7 @@ let continue_from_bfs all_procs transitions all_unsafes =
     
 
 let go_from_bfs original_env transitions all_procs all_unsafes tsys =
-  List.iter (fun x -> Hashtbl.add fuzz_tr_count x.tr_name 0) tsys;
+  (*List.iter (fun x -> Hashtbl.add fuzz_tr_count x.tr_name 0) tsys;*)
   interpret_bfs original_env transitions all_procs all_unsafes;
   (*if BFS finished to_do queue, there's no need to keep exploring down*)
   if !pool_size = 0 then Format.printf "No more states to explore@."
@@ -1720,6 +1771,10 @@ let fuzz original_env transitions procs all_unsafes t_transitions =
   Format.printf "├─Time elapsed       : %a@." print_time (TimerFuzz.get ());
   Format.printf "├─States seen        : %d@." !visit_count;
 
+
+  Hashtbl.iter (fun key el -> Format.eprintf "%a:--> %d@." Hstring.print key el) fuzz_tr_count;
+  let j = Hashtbl.stats fuzz_tr_count in
+  Format.eprintf "--> %d@." j.num_bindings;
   write_file dfile open_file;
   close_out open_file;
   write_states_to_file dfile;
@@ -1888,11 +1943,23 @@ let decide_how_many_procs tsys sys trans pick_min =
   let orig_env = ref oe in
   let pot_env = ref oe in
 
-  let _, (_,_,_,mat), acp1 =
-    markov_entropy_detailed oe sys.trans !procs trans 250000 matrix in
+  let poss_first = all_possible_transitions oe trans !procs false in
+  Format.printf "Calculating for %d processes:@." pick_min;
 
-  let old_mat = ref mat in
-  let old_mat2 = ref mat in
+  let possy = List.fold_left ( fun pos (n, np) ->
+    let e = apply_transition np n.tr_name trans oe in
+    
+    let _,(_,_,_,_,pos), _ = markov_entropy_detailed e sys.trans !procs trans 25000 pos in
+    pos) matrix poss_first in 
+  
+  (*let _, (_,_,_,mat,possy), acp1 =
+    markov_entropy_detailed oe sys.trans !procs trans 250000 matrix in*)
+
+  (*let old_mat = ref mat in
+  let old_mat2 = ref mat in*)
+
+  let old_pos = ref possy in
+  let old_pos2 = ref possy in 
 
   
   while !stop do
@@ -1900,14 +1967,26 @@ let decide_how_many_procs tsys sys trans pick_min =
     let pe, _ = init_aux tsys sys (!curr_proc + 1) in
     pot_env := pe;
      
-    
     let new_procs = Variable.give_procs (!curr_proc + 1) in
-    try 
-      let _,(_,_,_,m1), acp2 = markov_entropy_detailed !pot_env sys.trans new_procs trans 250000 matrix
-      in
-      old_mat := !old_mat2;
-      old_mat2 := m1; 
-      compare_matrix !old_mat !old_mat2 acp1 acp2
+    try
+
+      let poss_first = all_possible_transitions !pot_env trans new_procs false in
+      Format.printf "Calculating for %d processes:@." (!curr_proc + 1 );
+
+      let pos = List.fold_left ( fun pos (n, np) ->
+	let e = apply_transition np n.tr_name trans !pot_env in
+	
+	let _,(_,_,_,_,pos), _ = markov_entropy_detailed e sys.trans new_procs trans 25000 pos in
+	pos) matrix poss_first in 
+      
+      (*let _,(_,_,_,m1,pos), acp2 = markov_entropy_detailed !pot_env sys.trans new_procs trans 250000 matrix*)
+      
+      (*old_mat := !old_mat2;
+      old_mat2 := m1;*)
+      old_pos := !old_pos2;
+      old_pos2 := pos;
+      (*compare_matrix !old_mat !old_mat2 acp1 acp2*)
+      compare_matrix !old_pos !old_pos2  
     with
       | ParamFuzz RaiseProc ->
 	Format.printf "Raising process number from %d to %d@." !curr_proc (!curr_proc + 1);
@@ -2035,7 +2114,7 @@ let init tsys sys =
 		  | "y" ->
 		    final_procs := !calc_proc;
 		    Format.printf "The fuzzer will run with %d procs.@." !calc_proc;
-		  | "n" -> Format.printf "Exiting fuzzer.@."; raise Done
+		  | "n" -> Format.printf "@{<b>@{<fg_blue>Exiting fuzzer. @}@."; raise Done
 		  | _ -> Format.printf  "Invalid input. Type y or n@."; decide ()
 	      in decide ()
 	    end;
@@ -2051,5 +2130,5 @@ let init tsys sys =
     end 
 
   with
-    | Exit -> raise Done
+    | Exit -> Format.printf "@{<b>@{<fg_blue>Exiting fuzzer. @}@."; raise Done
     | End_of_file -> raise Done
