@@ -1,0 +1,1567 @@
+(*number_procs 3*)
+
+type t = A1 | A2 | A3 | A4 | None
+type d = Z | One | Two | Three | Four | Five
+
+type pc = Empty | L2_1 | L2_2 | L2_3 | L3_1 | L3_2 | L3_3 | L4_1 | L4_2 | L4_3 |  L5_1 | L5_2 | L5_3 | L2_1_1
+
+(*---- Flash NoData ----*)
+type cache_state = CACHE_I | CACHE_S | CACHE_E
+type node_cmd = NODE_None | NODE_Get | NODE_GetX
+type uni_cmd = UNI_None | UNI_Get | UNI_GetX | UNI_Put | UNI_PutX | UNI_Nak
+type inv_cmd = INV_None | INV_Inv | INV_InvAck
+type rp_cmd  = RP_None | RP_Replace
+type wb_cmd = WB_None | WB_Wb
+type shwb_cmd = SHWB_None | SHWB_ShWb | SHWB_FAck
+type nakc_cmd = NAKC_None | NAKC_Nakc
+(*------------------*)
+
+
+array Cmd[proc] : t
+array Data[proc] : d
+array PC1[proc] : pc
+array PC2[proc] : pc
+
+var C : t
+var P : proc
+
+var Sync : bool
+
+(*---- Flash ----*)
+
+
+(*---------------------------- Home process -----------------------------*)
+
+var Home : proc
+
+var ProcCmd_home : node_cmd
+var InvMarked_home : bool
+var CacheState_home : cache_state
+
+var UniMsg_Cmd_home : uni_cmd
+var UniMsg_Proc_home : proc
+
+var InvMsg_Cmd_home : inv_cmd
+var RpMsg_Cmd_home : rp_cmd
+
+(*------------------------------ Processes ------------------------------*)
+
+array ProcCmd[proc] : node_cmd
+array InvMarked[proc] : bool
+array CacheState[proc] : cache_state
+
+(*------------------------------ Directory ------------------------------*)
+
+var Dir_Pending : bool
+var Dir_Local : bool
+var Dir_Dirty : bool
+var Dir_HeadVld : bool
+var Dir_HeadPtr : proc
+var Dir_ShrVld : bool
+array Dir_ShrSet[proc] : bool
+array Dir_InvSet[proc] : bool
+var Dir_ShrSet_home : bool
+var Dir_InvSet_home : bool
+
+
+(*------------------------------- Memory --------------------------------*)
+
+
+(*------------------------------- Network -------------------------------*)
+
+array UniMsg_Cmd[proc] : uni_cmd
+array UniMsg_Proc[proc] : proc
+
+array InvMsg_Cmd[proc] : inv_cmd
+array RpMsg_Cmd[proc] : rp_cmd
+
+var WbMsg_Cmd : wb_cmd
+var WbMsg_Proc : proc
+
+var ShWbMsg_Cmd : shwb_cmd
+var ShWbMsg_Proc : proc
+
+var NakcMsg_Cmd : nakc_cmd
+
+
+(*-------------------------- Auxiliary variables ------------------------*)
+
+var Collecting : bool
+
+(*-----------------------------------------------------------------------*)
+
+(*------------------*)
+
+(*
+(1)  InvMarked_home = @MTrue
+(2)  ShWbMsg_Cmd = SHWB_ShWb && ShWbMsg_Proc = Home
+(3)  CacheState_home = CACHE_E && Dir_HeadVld = @MTrue
+(4)  UniMsg_Cmd_home = UNI_PutX && Dir_HeadVld = @MFalse
+(5)  UniMsg_Cmd_home = UNI_PutX && Dir_Dirty = @MFalse
+(6)  UniMsg_Cmd_home = UNI_PutX && WbMsg_Cmd = WB_Wb
+(7)  UniMsg_Cmd_home = UNI_PutX && ShWbMsg_Cmd = SHWB_ShWb
+(8)  Dir_HeadVld = @MFalse && WbMsg_Cmd = WB_Wb
+(9)  Dir_Dirty = @MFalse && WbMsg_Cmd = WB_Wb
+(10)  UniMsg_Cmd_home = UNI_Put && Dir_HeadVld = @MFalse
+(11)  UniMsg_Cmd_home = UNI_Put && Dir_Dirty = @MFalse
+(12)  Dir_HeadVld = @MFalse && ShWbMsg_Cmd = SHWB_ShWb
+(13)  Dir_Dirty = @MFalse && ShWbMsg_Cmd = SHWB_ShWb
+(14)  UniMsg_Cmd_home = UNI_Put && WbMsg_Cmd = WB_Wb
+(15)  WbMsg_Cmd = WB_Wb && ShWbMsg_Cmd = SHWB_ShWb
+(16)  UniMsg_Cmd_home = UNI_Put && ShWbMsg_Cmd = SHWB_ShWb
+(17)  CacheState_home = CACHE_E && Dir_Dirty = @MFalse
+(18)  ProcCmd_home = NODE_Get && Dir_Local = @MTrue
+(19)  CacheState_home = CACHE_I && Dir_Local = @MTrue && Dir_Dirty = @MTrue
+(20)  UniMsg_Cmd_home = UNI_PutX && CacheState[#1] = CACHE_E
+(21)  Dir_HeadVld = @MFalse && CacheState[#1] = CACHE_E
+(22)  Dir_Dirty = @MFalse && CacheState[#1] = CACHE_E
+(23)  WbMsg_Cmd = WB_Wb && CacheState[#1] = CACHE_E
+(24)  UniMsg_Cmd_home = UNI_Put && CacheState[#1] = CACHE_E
+(25)  ShWbMsg_Cmd = SHWB_ShWb && CacheState[#1] = CACHE_E
+(26)  Home <> #1 && CacheState_home = CACHE_E && UniMsg_Cmd[#1] = UNI_PutX
+(27)  Home <> #1 && UniMsg_Cmd_home = UNI_PutX && UniMsg_Cmd[#1] = UNI_PutX
+(28)  Home <> #1 && Dir_HeadVld = @MFalse && UniMsg_Cmd[#1] = UNI_PutX
+(29)  Home <> #1 && Dir_Dirty = @MFalse && UniMsg_Cmd[#1] = UNI_PutX
+(30)  Home <> #1 && CacheState[#1] = CACHE_E && UniMsg_Cmd[#1] = UNI_PutX
+(31)  Home <> #1 && WbMsg_Cmd = WB_Wb && UniMsg_Cmd[#1] = UNI_PutX
+(32)  Home <> #1 && UniMsg_Cmd_home = UNI_Put && UniMsg_Cmd[#1] = UNI_PutX
+(33)  Home <> #1 && ShWbMsg_Cmd = SHWB_ShWb && UniMsg_Cmd[#1] = UNI_PutX
+(34)  Home <> #2 && CacheState[#1] = CACHE_E && UniMsg_Cmd[#2] = UNI_PutX
+(35)  Home <> #1 && Home <> #2 && UniMsg_Cmd[#1] = UNI_PutX && UniMsg_Cmd[#2] = UNI_PutX
+*)
+
+
+
+
+init (i) { C = None && Cmd[i] = None && Data[i] = Z && PC1[i] = Empty && PC2[i] = Empty && Sync = False &&
+
+     Home <> i &&
+
+     Dir_Pending = False &&
+     Dir_Local = False &&
+     Dir_Dirty = False &&
+     Dir_HeadVld = False &&
+     Dir_ShrVld = False &&
+
+     WbMsg_Cmd = WB_None &&
+     ShWbMsg_Cmd = SHWB_None &&
+     NakcMsg_Cmd = NAKC_None &&
+
+     ProcCmd[i] = NODE_None &&
+     InvMarked[i] = False &&
+     CacheState[i] = CACHE_I &&
+
+     Dir_ShrSet[i] = False &&
+     Dir_InvSet[i] = False &&
+
+     UniMsg_Cmd[i] = UNI_None &&
+     InvMsg_Cmd[i] = INV_None &&
+     RpMsg_Cmd[i] = RP_None &&
+
+
+     ProcCmd_home = NODE_None &&
+     InvMarked_home = False &&
+     CacheState_home = CACHE_I &&
+
+     Dir_ShrSet_home = False &&
+     Dir_InvSet_home = False &&
+
+     UniMsg_Cmd_home = UNI_None &&
+     InvMsg_Cmd_home = INV_None &&
+     RpMsg_Cmd_home = RP_None &&
+
+     Collecting = False}
+
+	  
+
+unsafe (p) { CacheState_home = CACHE_E && CacheState[p] = CACHE_E }
+unsafe (i j) { CacheState[i] = CACHE_E && CacheState[j] = CACHE_E }
+
+
+transition choix1(i)
+requires { Cmd[i] = None }
+{
+ Cmd[i] := A1
+}
+
+
+transition choix2(i)
+requires { Cmd[i] = None }
+{
+ Cmd[i] := A2
+}
+
+
+transition choix3(i)
+requires { Cmd[i] = None }
+{
+ Cmd[i] := A3
+}
+
+
+transition choix4(i)
+requires { Cmd[i] = None }
+{
+ Cmd[i] := A4
+}
+
+
+(*
+transition data1(i)
+requires { PC1[i] <> Empty ||  PC2[i] <> Empty }
+{
+ Data[i] := One
+}
+
+
+transition data2_1(i)
+requires { PC1[i] <> Empty ||  PC2[i] <> Empty }
+{
+ Data[i] := Two
+}
+
+transition data3(i)
+requires { PC1[i] <> Empty  ||  PC2[i] <> Empty }
+{
+ Data[i] := Three
+}
+
+
+transition data4(i)
+requires { PC1[i] <> Empty ||  PC2[i] <> Empty }
+{
+ Data[i] := Four;
+}
+
+transition data5(i)
+requires { PC1[i] <> Empty  ||  PC2[i] <> Empty }
+{
+ Data[i] := Five;
+}
+*)
+transition cmd1(i)
+requires { Cmd[i] = A1 && C = None }
+{
+ C := A1;
+ Cmd[i] := None;
+ P := i;
+}
+
+
+transition cmd2(i)
+requires { Cmd[i] = A2 && C = None}
+{
+ C := A2;
+ Cmd[i] := None;
+ P := i;
+}
+
+
+transition cmd3(i)
+requires { Cmd[i] = A3 && C = None}
+{
+ C := A3;
+ Cmd[i] := None;
+ P := i;
+}
+
+transition cmd4(i)
+requires { Cmd[i] = A4 && C = None}
+{
+ C := A4;
+ Cmd[i] := None;
+ P := i;
+}
+
+transition process_A1(i)
+requires { C = A1 && P = i && PC1[i] = Empty }
+{ PC1[i] := L2_1 ; C := None; P := ?;  }
+
+
+transition process_A2(i)
+requires { C = A2 && P = i && PC1[i] = Empty }
+{ PC1[i] := L3_1 ; C := None; P := ?; }
+
+transition process_A3(i)
+requires { C = A3 && P = i && PC1[i] = Empty }
+{ PC1[i] := L4_1 ; C := None; P := ?; }
+
+transition process_A4(i)
+requires { C = A4 && P = i && PC1[i] = Empty }
+{ PC1[i] := L5_1 ; C := None; P := ?; }
+
+transition seq2_1(i)
+requires { PC1[i] = L2_1 }
+{ PC1[i] := L2_1_1; }
+
+transition seq2_1_1(i)
+requires { PC1[i] = L2_1_1 }
+{ PC1[i] := L2_2; }
+
+transition seq2_2(i)
+requires { PC1[i] = L2_2 }
+{ PC1[i] := Empty;
+  PC2[i] := L2_3; }
+
+transition seq2_3(i)
+requires { PC2[i] = L2_3 }
+{ PC2[i] := Empty; }
+
+transition seq3_1(i)
+requires { PC1[i] = L3_1 }
+{ PC1[i] := L3_2; }
+
+transition seq3_2(i)
+requires { PC1[i] = L3_2 }
+{ PC1[i] := Empty;
+  PC2[i] := L3_3; }
+
+transition seq3_3(i)
+requires { PC2[i] = L3_3 }
+{ PC2[i] := Empty; }
+
+
+transition seq4_1(i)
+requires { PC1[i] = L4_1 }
+{ PC1[i] := L4_2; }
+
+transition seq4_2(i)
+requires { PC1[i] = L4_2 }
+{ PC1[i] := Empty;
+  PC2[i] := L4_3; }
+
+transition seq4_3(i)
+requires { PC2[i] = L4_3 }
+{ PC2[i] := Empty; }
+
+
+transition seq5_1(i)
+requires { PC1[i] = L5_1 }
+{ PC1[i] := L5_2; }
+
+transition seq5_2(i)
+requires { PC1[i] = L5_2 }
+{ PC1[i] := Empty;
+  PC2[i] := L5_3; }
+
+transition seq5_3(i)
+requires { PC2[i] = L5_3 }
+{ PC2[i] := Empty; }
+
+transition sync(i j m)
+requires {Sync = False && PC2[i] = L5_3 && PC1[j] = L5_1 && PC2[m] = L4_3 && forall_other k. PC2[k] = L5_3}
+{ PC2[l] := case | _ : Empty;
+  Sync := True } 
+
+
+(*--------- Flash ---------*)
+
+
+
+(*----------------------- Muphi rule PI_Remote_Get ----------------------*)
+
+transition pi_Remote_Get (src)
+requires { Sync = True && Home <> src && 
+  	   ProcCmd[src] = NODE_None &&
+  	   CacheState[src] = CACHE_I }
+{
+	ProcCmd[src] := NODE_Get;
+ 	UniMsg_Cmd[src] := UNI_Get;
+  	UniMsg_Proc[src] := Home;
+
+}
+
+
+(*--------------------- Muphi rule PI_Local_Get_Get ---------------------*)
+
+transition pi_Local_Get_Get ()
+requires {  Sync = True && ProcCmd_home = NODE_None &&
+  	   CacheState_home = CACHE_I &&
+  	   Dir_Pending = False && Dir_Dirty = True }
+{
+	ProcCmd_home := NODE_Get;
+  	Dir_Pending := True;
+	UniMsg_Cmd_home := UNI_Get;
+	UniMsg_Proc_home := Dir_HeadPtr;
+  	Collecting := False;
+}
+
+
+(*--------------------- Muphi rule PI_Local_Get_Put ---------------------*)
+
+transition pi_Local_Get_Put_InvM ()
+requires {  Sync = True && ProcCmd_home = NODE_None &&
+	   CacheState_home = CACHE_I &&
+           Dir_Pending = False && Dir_Dirty = False &&
+	   InvMarked_home = True }
+{
+	Dir_Local := True;
+  	ProcCmd_home := NODE_None;
+    	InvMarked_home := False;
+    	CacheState_home := CACHE_I;
+}
+
+transition pi_Local_Get_Put ()
+requires {  Sync = True && ProcCmd_home = NODE_None &&
+	   CacheState_home = CACHE_I &&
+           Dir_Pending = False && Dir_Dirty = False &&
+	   InvMarked_home = False }
+{
+	Dir_Local := True;
+  	ProcCmd_home := NODE_None;
+    	CacheState_home := CACHE_S;
+}
+
+
+
+(*---------------------- Muphi rule PI_Remote_GetX ----------------------*)
+
+transition pi_Remote_GetX (src)
+requires {  Sync = True && Home <> src &&
+	   ProcCmd[src] = NODE_None &&
+  	   CacheState[src] = CACHE_I }
+{
+  ProcCmd[src] := NODE_GetX;
+  UniMsg_Cmd[src] := UNI_GetX;
+  UniMsg_Proc[src] := Home;
+}
+
+
+(*-------------------- Muphi rule PI_Local_GetX_GetX --------------------*)
+
+transition pi_Local_GetX_GetX ()
+requires {  Sync = True && ProcCmd_home = NODE_None &&
+  	   CacheState_home <> CACHE_E &&
+  	   Dir_Pending = False && Dir_Dirty = True }
+{
+  ProcCmd_home := NODE_GetX;
+  Dir_Pending := True;
+  UniMsg_Cmd_home := UNI_GetX;
+  UniMsg_Proc_home := Dir_HeadPtr;
+  Collecting := False;
+}
+
+(*-------------------- Muphi rule PI_Local_GetX_PutX --------------------*)
+
+transition pi_Local_GetX_PutX_HeadVld ()
+requires {  Sync = True && ProcCmd_home = NODE_None &&
+	   CacheState_home <> CACHE_E &&
+	   Dir_Pending = False && Dir_Dirty = False &&
+	   Dir_HeadVld = True }
+{
+	Dir_Local := True;
+ 	Dir_Dirty := True;
+
+    	Dir_Pending := True;
+    	Dir_HeadVld := False;
+    	Dir_ShrVld := False;
+
+	Dir_ShrSet_home := False;
+	Dir_ShrSet[p] := case | _ : False;
+
+	Dir_InvSet_home := False;
+	Dir_InvSet[p] := case 
+		      	 | Dir_HeadPtr = p : True
+		      	 | Dir_ShrVld = True && Dir_ShrSet[p] = True : True
+
+			 | _ : False;
+
+	InvMsg_Cmd_home := INV_None;
+	InvMsg_Cmd[p] := case 
+		      	 | Dir_HeadPtr = p : INV_Inv
+		      	 | Dir_ShrVld = True && Dir_ShrSet[p] = True : INV_Inv
+			 | _ : INV_None;
+
+	Collecting := True;
+
+  	ProcCmd_home := NODE_None;
+  	InvMarked_home := False;
+  	CacheState_home := CACHE_E;
+}
+
+
+transition pi_Local_GetX_PutX ()
+requires {  Sync = True && ProcCmd_home = NODE_None &&
+	   CacheState_home <> CACHE_E &&
+	   Dir_Pending = False && Dir_Dirty = False &&
+	   Dir_HeadVld = False }
+{
+	Dir_Local := True;
+ 	Dir_Dirty := True;
+
+  	ProcCmd_home := NODE_None;
+  	InvMarked_home := False;
+  	CacheState_home := CACHE_E;
+}
+
+
+(*---------------------- Muphi rule PI_Remote_PutX ----------------------*)
+
+transition pi_Remote_PutX (dst)
+requires {  Sync = True && Home <> dst &&
+  	   ProcCmd[dst] = NODE_None &&
+  	   CacheState[dst] = CACHE_E }
+{
+	CacheState[dst] := CACHE_I;
+  	WbMsg_Cmd := WB_Wb;
+  	WbMsg_Proc := dst;
+}
+
+
+(*---------------------- Muphi rule PI_Local_PutX -----------------------*)
+
+transition pi_Local_PutX_pending ()
+requires {  Sync = True && ProcCmd_home = NODE_None &&
+  	   CacheState_home = CACHE_E && 
+	   Dir_Pending = True }
+{
+	CacheState_home := CACHE_I;
+    	Dir_Dirty := False;
+}
+
+transition pi_Local_PutX ()
+requires {  Sync = True && ProcCmd_home = NODE_None &&
+  	   CacheState_home = CACHE_E && 
+	   Dir_Pending = False }
+{
+	CacheState_home := CACHE_I;
+    	Dir_Local := False;
+    	Dir_Dirty := False;
+}
+
+
+(*-------------------- Muphi rule PI_Remote_Replace ---------------------*)
+
+transition pi_Remote_Replace (src)
+requires {  Sync = True && Home <> src && 
+	   ProcCmd[src] = NODE_None &&
+  	   CacheState[src] = CACHE_S }
+{
+  CacheState[src] := CACHE_I;
+  RpMsg_Cmd[src] := RP_Replace;
+}
+
+
+(*--------------------- Muphi rule PI_Local_Replace ---------------------*)
+
+transition pi_Local_Replace ()
+requires {  Sync = True && ProcCmd_home = NODE_None &&
+  	   CacheState_home = CACHE_S }
+{
+	Dir_Local := False;
+  	CacheState_home := CACHE_I;
+}
+
+
+
+(*-------------------------- Muphi rule NI_Nak --------------------------*)
+
+transition ni_Nak (dst)
+requires {  Sync = True && UniMsg_Cmd[dst] = UNI_Nak }
+{
+	UniMsg_Cmd[dst] := UNI_None;
+  	ProcCmd[dst] := NODE_None;
+  	InvMarked[dst] := False;
+}
+
+transition ni_Nak_home ()
+requires {  Sync = True && UniMsg_Cmd_home = UNI_Nak }
+{
+	UniMsg_Cmd_home := UNI_None;
+  	ProcCmd_home := NODE_None;
+  	InvMarked_home := False;
+}
+
+(*----------------------- Muphi rule NI_Nak_Clear -----------------------*)
+
+transition ni_Nak_Clear ()
+requires {  Sync = True && NakcMsg_Cmd = NAKC_Nakc }
+{
+	NakcMsg_Cmd := NAKC_None;
+  	Dir_Pending := False;
+}
+
+
+(*--------------------- Muphi rule NI_Local_Get_Nak ---------------------*)
+
+transition ni_Local_Get_Nak1 (src)
+requires {  Sync = True && Home <> src &&
+	   UniMsg_Cmd[src] = UNI_Get &&
+  	   UniMsg_Proc[src] = Home &&
+  	   RpMsg_Cmd[src] <> RP_Replace &&
+  	   Dir_Pending = True }
+{
+  UniMsg_Cmd[src] := UNI_Nak;
+  UniMsg_Proc[src] := Home;
+}
+
+transition ni_Local_Get_Nak (src)
+requires {  Sync = True && Home <> src &&
+	   UniMsg_Cmd[src] = UNI_Get &&
+  	   UniMsg_Proc[src] = Home &&
+  	   RpMsg_Cmd[src] <> RP_Replace &&
+  	   Dir_Dirty = True && Dir_Local = True &&
+	   CacheState_home <> CACHE_E }
+{
+  UniMsg_Cmd[src] := UNI_Nak;
+  UniMsg_Proc[src] := Home;
+}
+
+transition ni_Local_Get_Nak_2 (src)
+requires {  Sync = True && Home <> src &&
+	   UniMsg_Cmd[src] = UNI_Get &&
+  	   UniMsg_Proc[src] = Home &&
+  	   RpMsg_Cmd[src] <> RP_Replace &&
+    	   Dir_Dirty = True && Dir_Local = False && 
+	   Dir_HeadPtr = src }
+{
+  UniMsg_Cmd[src] := UNI_Nak;
+  UniMsg_Proc[src] := Home;
+}
+
+
+(*--------------------- Muphi rule NI_Local_Get_Get ---------------------*)
+
+transition ni_Local_Get_Get (src)
+requires {  Sync = True && Home <> src &&
+  	   UniMsg_Cmd[src] = UNI_Get &&
+  	   UniMsg_Proc[src] = Home &&
+  	   RpMsg_Cmd[src] <> RP_Replace &&
+	   Dir_Pending = False &&
+	   Dir_Dirty = True && 
+	   Dir_Local = False &&
+	   Dir_HeadPtr <> src }
+{
+  Dir_Pending := True;
+  UniMsg_Cmd[src] := UNI_Get;
+  UniMsg_Proc[src] := Dir_HeadPtr;
+  Collecting := False;
+}
+
+
+(*--------------------- Muphi rule NI_Local_Get_Put ---------------------*)
+
+transition ni_Local_Get_Put1_Head (src)
+requires {  Sync = True && Home <> src &&
+	   UniMsg_Cmd[src] = UNI_Get &&
+  	   UniMsg_Proc[src] = Home &&
+  	   RpMsg_Cmd[src] <> RP_Replace &&
+  	   Dir_Pending = False &&
+  	   Dir_Dirty = False &&
+	   Dir_HeadVld = True }
+{
+	Dir_ShrVld := True;
+      	Dir_ShrSet[src] := True;
+
+	Dir_InvSet_home := Dir_ShrSet_home;
+        Dir_InvSet[p] := case 
+		      	 | p = src : True 
+			 | _ : Dir_ShrSet[p];
+
+    	UniMsg_Cmd[src] := UNI_Put;
+    	UniMsg_Proc[src] := Home;
+}
+
+transition ni_Local_Get_Put1 (src)
+requires {  Sync = True && Home <> src &&
+	   UniMsg_Cmd[src] = UNI_Get &&
+  	   UniMsg_Proc[src] = Home &&
+  	   RpMsg_Cmd[src] <> RP_Replace &&
+  	   Dir_Pending = False &&
+  	   Dir_Dirty = False &&
+	   Dir_HeadVld = False }
+{
+	Dir_HeadVld := True;
+      	Dir_HeadPtr := src;
+    	UniMsg_Cmd[src] := UNI_Put;
+    	UniMsg_Proc[src] := Home;
+}
+
+
+transition ni_Local_Get_Put2_dirty (src)
+requires {  Sync = True && Home <> src &&
+	   UniMsg_Cmd[src] = UNI_Get &&
+  	   UniMsg_Proc[src] = Home &&
+  	   RpMsg_Cmd[src] <> RP_Replace &&
+  	   Dir_Pending = False &&
+	   Dir_Dirty = True &&
+	   Dir_Local = True && CacheState_home = CACHE_E }
+{
+	Dir_Dirty := False;
+ 	Dir_HeadVld := True;
+    	Dir_HeadPtr := src;
+    	CacheState_home := CACHE_S;
+    	UniMsg_Cmd[src] := UNI_Put;
+    	UniMsg_Proc[src] := Home;
+}
+
+
+(*-------------------- Muphi rule NI_Remote_Get_Nak ---------------------*)
+
+transition ni_Remote_Get_Nak (src dst)
+requires {  Sync = True && Home <> dst &&
+  	   UniMsg_Cmd[src] = UNI_Get &&
+  	   UniMsg_Proc[src] = dst &&
+  	   CacheState[dst] <> CACHE_E }
+{
+	UniMsg_Cmd[src] := UNI_Nak;
+  	UniMsg_Proc[src] := dst;
+  	NakcMsg_Cmd := NAKC_Nakc;
+}
+
+
+(*-------------------- Muphi rule NI_Remote_Get_Put ---------------------*)
+
+transition ni_Remote_Get_Put (src dst)
+requires {  Sync = True && Home <> dst && Home <> src &&
+  	 UniMsg_Cmd[src] = UNI_Get &&
+  	 UniMsg_Proc[src] = dst &&
+  	 CacheState[dst] = CACHE_E }
+{
+	CacheState[dst] := CACHE_S;
+  	UniMsg_Cmd[src] := UNI_Put;
+  	UniMsg_Proc[src] := dst;
+    	ShWbMsg_Cmd := SHWB_ShWb;
+    	ShWbMsg_Proc := src;
+}
+
+transition ni_Remote_Get_Put_home (dst)
+requires {  Sync = True && Home <> dst &&
+  	 UniMsg_Cmd_home = UNI_Get &&
+  	 UniMsg_Proc_home = dst &&
+  	 CacheState[dst] = CACHE_E }
+{
+	CacheState[dst] := CACHE_S;
+  	UniMsg_Cmd_home := UNI_Put;
+  	UniMsg_Proc_home := dst;
+}
+
+
+(*-------------------- Muphi rule NI_Local_GetX_Nak ---------------------*)
+
+transition ni_Local_GetX_Nak1 (src)
+requires {  Sync = True && Home <> src &&
+  	   UniMsg_Cmd[src] = UNI_GetX &&
+  	   UniMsg_Proc[src] = Home &&
+  	   Dir_Pending = True }
+{
+	UniMsg_Cmd[src] := UNI_Nak;
+  	UniMsg_Proc[src] := Home;
+}
+
+transition ni_Local_GetX_Nak (src)
+requires {  Sync = True && Home <> src &&
+  	   UniMsg_Cmd[src] = UNI_GetX &&
+  	   UniMsg_Proc[src] = Home &&
+           Dir_Dirty = True && Dir_Local = True &&
+	   CacheState_home <> CACHE_E }
+{
+	UniMsg_Cmd[src] := UNI_Nak;
+  	UniMsg_Proc[src] := Home;
+}
+
+transition ni_Local_GetX_Nak_2 (src)
+requires {  Sync = True && Home <> src &&
+  	   UniMsg_Cmd[src] = UNI_GetX &&
+  	   UniMsg_Proc[src] = Home &&
+    	   Dir_Dirty = True && Dir_Local = False &&
+	   Dir_HeadPtr = src }
+{
+	UniMsg_Cmd[src] := UNI_Nak;
+  	UniMsg_Proc[src] := Home;
+}
+
+
+(*------------------- Muphi rule NI_Local_GetX_GetX ---------------------*)
+
+transition ni_Local_GetX_GetX (src)
+requires {  Sync = True && Home <> src &&
+  	   UniMsg_Cmd[src] = UNI_GetX &&
+  	   UniMsg_Proc[src] = Home &&
+  	   Dir_Pending = False &&
+	   Dir_Dirty = True &&
+	   Dir_Local = False && 
+	   Dir_HeadPtr <> src }
+{
+	Dir_Pending := True;
+  	UniMsg_Cmd[src] := UNI_GetX;
+  	UniMsg_Proc[src] := Dir_HeadPtr;
+  	Collecting := False;
+}
+
+
+(*------------------- Muphi rule NI_Local_GetX_PutX ---------------------*)
+
+transition ni_Local_GetX_PutX_1 (src)
+requires {  Sync = True && Home <> src &&
+  	   UniMsg_Cmd[src] = UNI_GetX &&
+  	   UniMsg_Proc[src] = Home &&
+	   Dir_Pending = False &&
+  	   Dir_Dirty = False &&
+	   Dir_HeadVld = False &&
+	   Dir_Local = True &&
+	   ProcCmd_home = NODE_Get }
+{
+	Dir_Local := False;
+    	Dir_Dirty := True;
+    	Dir_HeadVld := True;
+    	Dir_HeadPtr := src;
+    	Dir_ShrVld := False;
+
+	Dir_ShrSet_home := False;
+      	Dir_ShrSet[p] := case | _ : False;
+
+	Dir_InvSet_home := False;
+      	Dir_InvSet[p] := case | _ : False;
+
+    	UniMsg_Cmd[src] := UNI_PutX;
+    	UniMsg_Proc[src] := Home;
+    	CacheState_home := CACHE_I;
+        InvMarked_home := True;
+}
+
+transition ni_Local_GetX_PutX_2 (src)
+requires {  Sync = True && Home <> src &&
+  	   UniMsg_Cmd[src] = UNI_GetX &&
+  	   UniMsg_Proc[src] = Home &&
+	   Dir_Pending = False &&
+  	   Dir_Dirty = False &&
+	   Dir_HeadVld = False &&
+	   Dir_Local = True && 
+	   ProcCmd_home <> NODE_Get }
+{
+	Dir_Local := False;
+    	Dir_Dirty := True;
+    	Dir_HeadVld := True;
+    	Dir_HeadPtr := src;
+    	Dir_ShrVld := False;
+
+	Dir_ShrSet_home := False;
+      	Dir_ShrSet[p] := case | _ : False;
+
+	Dir_InvSet_home := False;
+      	Dir_InvSet[p] := case | _ : False;
+
+    	UniMsg_Cmd[src] := UNI_PutX;
+    	UniMsg_Proc[src] := Home;
+    	CacheState_home := CACHE_I;
+}
+
+transition ni_Local_GetX_PutX_3 (src)
+requires {  Sync = True && Home <> src &&
+  	   UniMsg_Cmd[src] = UNI_GetX &&
+  	   UniMsg_Proc[src] = Home &&
+	   Dir_Pending = False &&
+  	   Dir_Dirty = False &&
+	   Dir_HeadVld = False &&
+	   Dir_Local = False }
+{
+	Dir_Local := False;
+    	Dir_Dirty := True;
+    	Dir_HeadVld := True;
+    	Dir_HeadPtr := src;
+    	Dir_ShrVld := False;
+
+	Dir_ShrSet_home := False;
+      	Dir_ShrSet[p] := case | _ : False;
+
+	Dir_InvSet_home := False;
+      	Dir_InvSet[p] := case | _ : False;
+
+    	UniMsg_Cmd[src] := UNI_PutX;
+    	UniMsg_Proc[src] := Home;
+    	CacheState_home := CACHE_I;
+}
+
+transition ni_Local_GetX_PutX_4 (src)
+requires {  Sync = True &&  Home <> src &&
+  	   UniMsg_Cmd[src] = UNI_GetX &&
+  	   UniMsg_Proc[src] = Home &&
+	   Dir_Pending = False &&
+  	   Dir_Dirty = False &&
+           Dir_HeadPtr = src  &&
+	   Dir_Local = True &&
+	   ProcCmd_home = NODE_Get &&
+	   Dir_ShrSet_home = False &&
+           forall_other p. Dir_ShrSet[p] = False }
+{
+	Dir_Local := False;
+    	Dir_Dirty := True;
+    	Dir_HeadVld := True;
+    	Dir_HeadPtr := src;
+    	Dir_ShrVld := False;
+
+	Dir_ShrSet_home := False;
+      	Dir_ShrSet[p] := case | _ : False;
+
+	Dir_InvSet_home := False;
+      	Dir_InvSet[p] := case | _ : False;
+
+    	UniMsg_Cmd[src] := UNI_PutX;
+    	UniMsg_Proc[src] := Home;
+    	CacheState_home := CACHE_I;
+        InvMarked_home := True;
+}
+
+transition ni_Local_GetX_PutX_5 (src)
+requires {  Sync = True && Home <> src &&
+  	   UniMsg_Cmd[src] = UNI_GetX &&
+  	   UniMsg_Proc[src] = Home &&
+	   Dir_Pending = False &&
+  	   Dir_Dirty = False &&
+           Dir_HeadPtr = src  &&
+	   Dir_Local = True &&
+	   ProcCmd_home <> NODE_Get &&
+	   Dir_ShrSet_home = False &&
+           forall_other p. Dir_ShrSet[p] = False }
+{
+	Dir_Local := False;
+    	Dir_Dirty := True;
+    	Dir_HeadVld := True;
+    	Dir_HeadPtr := src;
+    	Dir_ShrVld := False;
+
+	Dir_ShrSet_home := False;
+      	Dir_ShrSet[p] := case | _ : False;
+
+	Dir_InvSet_home := False;
+      	Dir_InvSet[p] := case | _ : False;
+
+    	UniMsg_Cmd[src] := UNI_PutX;
+    	UniMsg_Proc[src] := Home;
+    	CacheState_home := CACHE_I;
+}
+
+transition ni_Local_GetX_PutX_6 (src)
+requires {  Sync = True && Home <> src &&
+  	   UniMsg_Cmd[src] = UNI_GetX &&
+  	   UniMsg_Proc[src] = Home &&
+	   Dir_Pending = False &&
+  	   Dir_Dirty = False &&
+           Dir_HeadPtr = src  &&
+	   Dir_Local = False &&
+	   Dir_ShrSet_home = False &&
+           forall_other p. Dir_ShrSet[p] = False }
+{
+	Dir_Local := False;
+    	Dir_Dirty := True;
+    	Dir_HeadVld := True;
+    	Dir_HeadPtr := src;
+    	Dir_ShrVld := False;
+
+	Dir_ShrSet_home := False;
+      	Dir_ShrSet[p] := case | _ : False;
+
+	Dir_InvSet_home := False;
+      	Dir_InvSet[p] := case | _ : False;
+
+    	UniMsg_Cmd[src] := UNI_PutX;
+    	UniMsg_Proc[src] := Home;
+    	CacheState_home := CACHE_I;
+}
+
+transition ni_Local_GetX_PutX_7 (src)
+requires {  Sync = True && Home <> src &&
+  	   UniMsg_Cmd[src] = UNI_GetX &&
+  	   UniMsg_Proc[src] = Home &&
+	   Dir_Pending = False &&
+  	   Dir_Dirty = False &&
+	   Dir_HeadVld = True && 
+	   Dir_HeadPtr <> src &&
+	   Dir_Local = True &&
+      	   ProcCmd_home <> NODE_Get }
+{
+	Dir_Pending := True;
+    	Dir_Local := False;
+    	Dir_Dirty := True;
+    	Dir_HeadVld := True;
+    	Dir_HeadPtr := src;
+    	Dir_ShrVld := False;
+	
+	Dir_ShrSet_home := False;
+      	Dir_ShrSet[p] := case | _ : False;
+
+	Dir_InvSet_home := False;
+	Dir_InvSet[p] := case
+		      	 | p = src : False
+		      	 | Dir_ShrVld = True && Dir_ShrSet[p] = True : True
+			 | Dir_HeadVld = True && Dir_HeadPtr = p : True
+			 | _ : False;
+	
+	InvMsg_Cmd_home := INV_None;
+	InvMsg_Cmd[p] := case
+		      	 | p = src : INV_None
+		      	 | Dir_ShrVld = True && Dir_ShrSet[p] = True : INV_Inv
+			 | Dir_HeadVld = True && Dir_HeadPtr = p : INV_Inv
+			 | _ : INV_None;
+
+    	UniMsg_Cmd[src] := UNI_PutX;
+    	UniMsg_Proc[src] := Home;
+      	CacheState_home := CACHE_I;
+    
+    	Collecting := True;
+}
+
+transition ni_Local_GetX_PutX_8 (src pp)
+requires {  Sync = True && Home <> src &&
+  	   UniMsg_Cmd[src] = UNI_GetX &&
+  	   UniMsg_Proc[src] = Home &&
+	   Dir_Pending = False &&
+  	   Dir_Dirty = False &&
+	   Dir_HeadVld = True && 
+	   Dir_HeadPtr = src &&
+	   Dir_ShrSet[pp] = True &&
+	   Dir_Local = True &&
+      	   ProcCmd_home <> NODE_Get }
+{
+	Dir_Pending := True;
+    	Dir_Local := False;
+    	Dir_Dirty := True;
+    	Dir_HeadVld := True;
+    	Dir_HeadPtr := src;
+    	Dir_ShrVld := False;
+	
+	Dir_ShrSet_home := False;
+      	Dir_ShrSet[p] := case | _ : False;
+
+	Dir_InvSet_home := False;
+	Dir_InvSet[p] := case
+		      	 | p = src : False
+		      	 | Dir_ShrVld = True && Dir_ShrSet[p] = True : True
+			 | Dir_HeadVld = True && Dir_HeadPtr = p : True
+			 | _ : False;
+	
+	InvMsg_Cmd_home := INV_None;
+	InvMsg_Cmd[p] := case
+		      	 | p = src : INV_None
+		      	 | Dir_ShrVld = True && Dir_ShrSet[p] = True : INV_Inv
+			 | Dir_HeadVld = True && Dir_HeadPtr = p : INV_Inv
+			 | _ : INV_None;
+
+    	UniMsg_Cmd[src] := UNI_PutX;
+    	UniMsg_Proc[src] := Home;
+      	CacheState_home := CACHE_I;
+    
+    	Collecting := True;
+}
+
+
+transition ni_Local_GetX_PutX_8_home (src)
+requires {  Sync = True && Home <> src &&
+  	   UniMsg_Cmd[src] = UNI_GetX &&
+  	   UniMsg_Proc[src] = Home &&
+	   Dir_Pending = False &&
+  	   Dir_Dirty = False &&
+	   Dir_HeadVld = True && 
+	   Dir_HeadPtr = src &&
+	   Dir_ShrSet_home = True &&
+	   Dir_Local = True &&
+      	   ProcCmd_home <> NODE_Get }
+{
+	Dir_Pending := True;
+    	Dir_Local := False;
+    	Dir_Dirty := True;
+    	Dir_HeadVld := True;
+    	Dir_HeadPtr := src;
+    	Dir_ShrVld := False;
+	
+	Dir_ShrSet_home := False;
+      	Dir_ShrSet[p] := case | _ : False;
+
+	Dir_InvSet_home := False;
+	Dir_InvSet[p] := case
+		      	 | p = src : False
+		      	 | Dir_ShrVld = True && Dir_ShrSet[p] = True : True
+			 | Dir_HeadVld = True && Dir_HeadPtr = p : True
+			 | _ : False;
+	
+	InvMsg_Cmd_home := INV_None;
+	InvMsg_Cmd[p] := case
+		      	 | p = src : INV_None
+		      	 | Dir_ShrVld = True && Dir_ShrSet[p] = True : INV_Inv
+			 | Dir_HeadVld = True && Dir_HeadPtr = p : INV_Inv
+			 | _ : INV_None;
+
+    	UniMsg_Cmd[src] := UNI_PutX;
+    	UniMsg_Proc[src] := Home;
+      	CacheState_home := CACHE_I;
+    
+    	Collecting := True;
+}
+
+
+transition ni_Local_GetX_PutX_9 (src)
+requires {  Sync = True && Home <> src &&
+  	   UniMsg_Cmd[src] = UNI_GetX &&
+  	   UniMsg_Proc[src] = Home &&
+	   Dir_Pending = False &&
+  	   Dir_Dirty = False &&
+	   Dir_HeadVld = True && 
+	   Dir_HeadPtr <> src &&
+	   Dir_Local = False }
+{
+	Dir_Pending := True;
+    	Dir_Local := False;
+    	Dir_Dirty := True;
+    	Dir_HeadVld := True;
+    	Dir_HeadPtr := src;
+    	Dir_ShrVld := False;
+	
+	Dir_ShrSet_home := False;
+      	Dir_ShrSet[p] := case | _ : False;
+
+	Dir_InvSet_home := False;
+	Dir_InvSet[p] := case
+		      	 | p = src : False
+		      	 | Dir_ShrVld = True && Dir_ShrSet[p] = True : True
+			 | Dir_HeadVld = True && Dir_HeadPtr = p : True
+			 | _ : False;
+	
+	InvMsg_Cmd_home := INV_None;
+	InvMsg_Cmd[p] := case
+		      	 | p = src : INV_None
+		      	 | Dir_ShrVld = True && Dir_ShrSet[p] = True : INV_Inv
+			 | Dir_HeadVld = True && Dir_HeadPtr = p : INV_Inv
+			 | _ : INV_None;
+
+    	UniMsg_Cmd[src] := UNI_PutX;
+    	UniMsg_Proc[src] := Home;
+
+    	Collecting := True;
+}
+
+
+transition ni_Local_GetX_PutX_10 (src pp)
+requires {  Sync = True && Home <> src &&
+  	   UniMsg_Cmd[src] = UNI_GetX &&
+  	   UniMsg_Proc[src] = Home &&
+	   Dir_Pending = False &&
+  	   Dir_Dirty = False &&
+	   Dir_HeadVld = True && 
+	   Dir_HeadPtr = src &&
+	   Dir_ShrSet[pp] = True &&
+	   Dir_Local = False }
+{
+	Dir_Pending := True;
+    	Dir_Local := False;
+    	Dir_Dirty := True;
+    	Dir_HeadVld := True;
+    	Dir_HeadPtr := src;
+    	Dir_ShrVld := False;
+	
+	Dir_ShrSet_home := False;
+      	Dir_ShrSet[p] := case | _ : False;
+
+	Dir_InvSet_home := False;
+	Dir_InvSet[p] := case
+		      	 | p = src : False
+		      	 | Dir_ShrVld = True && Dir_ShrSet[p] = True : True
+			 | Dir_HeadVld = True && Dir_HeadPtr = p : True
+			 | _ : False;
+	
+	InvMsg_Cmd_home := INV_None;
+	InvMsg_Cmd[p] := case
+		      	 | p = src : INV_None
+		      	 | Dir_ShrVld = True && Dir_ShrSet[p] = True : INV_Inv
+			 | Dir_HeadVld = True && Dir_HeadPtr = p : INV_Inv
+			 | _ : INV_None;
+
+    	UniMsg_Cmd[src] := UNI_PutX;
+    	UniMsg_Proc[src] := Home;
+
+    	Collecting := True;
+}
+
+transition ni_Local_GetX_PutX_10_home (src)
+requires {  Sync = True && Home <> src &&
+  	   UniMsg_Cmd[src] = UNI_GetX &&
+  	   UniMsg_Proc[src] = Home &&
+	   Dir_Pending = False &&
+  	   Dir_Dirty = False &&
+	   Dir_HeadVld = True && 
+	   Dir_HeadPtr = src &&
+	   Dir_ShrSet_home = True &&
+	   Dir_Local = False }
+{
+	Dir_Pending := True;
+    	Dir_Local := False;
+    	Dir_Dirty := True;
+    	Dir_HeadVld := True;
+    	Dir_HeadPtr := src;
+    	Dir_ShrVld := False;
+	
+	Dir_ShrSet_home := False;
+      	Dir_ShrSet[p] := case | _ : False;
+
+	Dir_InvSet_home := False;
+	Dir_InvSet[p] := case
+		      	 | p = src : False
+		      	 | Dir_ShrVld = True && Dir_ShrSet[p] = True : True
+			 | Dir_HeadVld = True && Dir_HeadPtr = p : True
+			 | _ : False;
+	
+	InvMsg_Cmd_home := INV_None;
+	InvMsg_Cmd[p] := case
+		      	 | p = src : INV_None
+		      	 | Dir_ShrVld = True && Dir_ShrSet[p] = True : INV_Inv
+			 | Dir_HeadVld = True && Dir_HeadPtr = p : INV_Inv
+			 | _ : INV_None;
+
+    	UniMsg_Cmd[src] := UNI_PutX;
+    	UniMsg_Proc[src] := Home;
+
+    	Collecting := True;
+}
+
+
+transition ni_Local_GetX_PutX_11 (src)
+requires {  Sync = True && Home <> src &&
+  	   UniMsg_Cmd[src] = UNI_GetX &&
+  	   UniMsg_Proc[src] = Home &&
+	   Dir_Pending = False &&
+	   Dir_Dirty = True &&
+  	   Dir_Local = True && CacheState_home = CACHE_E }
+{
+	Dir_Local := False;
+    	Dir_Dirty := True;
+    	Dir_HeadVld := True;
+    	Dir_HeadPtr := src;
+    	Dir_ShrVld := False;
+    
+	Dir_ShrSet_home := False;
+	Dir_ShrSet[p] := case | _ : False;
+	
+	Dir_InvSet_home := False;
+      	Dir_InvSet[p] := case | _ : False;
+    
+	UniMsg_Cmd[src] := UNI_PutX;
+    	UniMsg_Proc[src] := Home;
+    	CacheState_home := CACHE_I;
+}
+
+
+
+
+(*-------------------- Muphi rule NI_Local_GetX_Nak ---------------------*)
+
+transition ni_Remote_GetX_Nak (src dst)
+requires {  Sync = True && Home <> dst &&
+  	   UniMsg_Cmd[src] = UNI_GetX &&
+  	   UniMsg_Proc[src] = dst &&
+  	   CacheState[dst] <> CACHE_E }
+{
+	UniMsg_Cmd[src] := UNI_Nak;
+  	UniMsg_Proc[src] := dst;
+  	NakcMsg_Cmd := NAKC_Nakc;
+}
+
+transition ni_Remote_GetX_Nak_home (dst)
+requires {  Sync = True && Home <> dst &&
+  	   UniMsg_Cmd_home = UNI_GetX &&
+  	   UniMsg_Proc_home = dst &&
+  	   CacheState[dst] <> CACHE_E }
+{
+	UniMsg_Cmd_home := UNI_Nak;
+  	UniMsg_Proc_home := dst;
+  	NakcMsg_Cmd := NAKC_Nakc;
+}
+
+
+(*------------------- Muphi rule NI_Remote_GetX_PutX --------------------*)
+
+transition ni_Remote_GetX_PutX_home (dst)
+requires {  Sync = True && Home <> dst &&
+  	   UniMsg_Cmd_home = UNI_GetX &&
+  	   UniMsg_Proc_home = dst &&
+  	   CacheState[dst] = CACHE_E }
+{
+	CacheState[dst] := CACHE_I;
+  	UniMsg_Cmd_home := UNI_PutX;
+  	UniMsg_Proc_home := dst;
+}
+
+transition ni_Remote_GetX_PutX (src dst)
+requires {  Sync = True && Home <> dst && Home <> src &&
+  	   UniMsg_Cmd[src] = UNI_GetX &&
+  	   UniMsg_Proc[src] = dst &&
+  	   CacheState[dst] = CACHE_E }
+{
+	CacheState[dst] := CACHE_I;
+  	UniMsg_Cmd[src] := UNI_PutX;
+  	UniMsg_Proc[src] := dst;
+    	ShWbMsg_Cmd := SHWB_FAck;
+    	ShWbMsg_Proc := src;
+}
+
+
+(*----------------------- Muphi rule NI_Local_Put -----------------------*)
+
+transition ni_Local_Put_inv ()
+requires {  Sync = True && UniMsg_Cmd_home = UNI_Put && InvMarked_home = True }
+{
+	UniMsg_Cmd_home := UNI_None;
+  	Dir_Pending := False;
+  	Dir_Dirty := False;
+  	Dir_Local := True;
+  	ProcCmd_home := NODE_None;
+    	InvMarked_home := False;
+    	CacheState_home := CACHE_I;
+}
+
+transition ni_Local_Put ()
+requires {  Sync = True && UniMsg_Cmd_home = UNI_Put && InvMarked_home = False }
+{
+	UniMsg_Cmd_home := UNI_None;
+  	Dir_Pending := False;
+  	Dir_Dirty := False;
+  	Dir_Local := True;
+  	ProcCmd_home := NODE_None;
+    	CacheState_home := CACHE_S;
+}
+
+
+(*----------------------- Muphi rule NI_Remote_Put ----------------------*)
+
+transition ni_Remote_Put_inv (dst)
+requires {  Sync = True && Home <> dst &&
+  	   UniMsg_Cmd[dst] = UNI_Put &&
+	   InvMarked[dst] = True }
+{
+	UniMsg_Cmd[dst] := UNI_None;
+  	ProcCmd[dst] := NODE_None;
+    	InvMarked[dst] := False;
+    	CacheState[dst] := CACHE_I;
+}
+
+transition ni_Remote_Put (dst)
+requires {  Sync = True && Home <> dst &&
+  	   UniMsg_Cmd[dst] = UNI_Put &&
+	   InvMarked[dst] = False }
+{
+	UniMsg_Cmd[dst] := UNI_None;
+  	ProcCmd[dst] := NODE_None;
+    	CacheState[dst] := CACHE_S;
+}
+
+
+(*----------------- Muphi rule NI_Local_PutXAcksDone -------------------*)
+
+transition ni_Local_PutXAcksDone ()
+requires {  Sync = True && UniMsg_Cmd_home = UNI_PutX }
+{
+	UniMsg_Cmd_home := UNI_None;
+  	Dir_Pending := False;
+  	Dir_Local := True;
+  	Dir_HeadVld := False;
+  	ProcCmd_home := NODE_None;
+  	InvMarked_home := False;
+  	CacheState_home := CACHE_E;
+}
+
+
+(*---------------------- Muphi rule NI_Remote_PutX ----------------------*)
+
+transition ni_Remote_PutX (dst)
+requires {  Sync = True && Home <> dst &&
+  	 UniMsg_Cmd[dst] = UNI_PutX &&
+  	 ProcCmd[dst] = NODE_GetX }
+{
+	UniMsg_Cmd[dst] := UNI_None;
+  	ProcCmd[dst] := NODE_None;
+  	InvMarked[dst] := False;
+  	CacheState[dst] := CACHE_E;
+}
+
+
+(*-------------------------- Muphi rule NI_Inv --------------------------*)
+
+transition ni_Inv_get (dst)
+requires {  Sync = True && Home <> dst &&
+  	   InvMsg_Cmd[dst] = INV_Inv &&
+	   ProcCmd[dst] = NODE_Get }
+{
+	InvMsg_Cmd[dst] := INV_InvAck;
+ 	CacheState[dst] := CACHE_I;
+    	InvMarked[dst] := True;
+}
+
+transition ni_Inv (dst)
+requires {  Sync = True && Home <> dst &&
+  	   InvMsg_Cmd[dst] = INV_Inv &&
+	   ProcCmd[dst] <> NODE_Get }
+{
+	InvMsg_Cmd[dst] := INV_InvAck;
+ 	CacheState[dst] := CACHE_I;
+}
+
+
+(*------------------------- Muphi rule NI_InvAck ------------------------*)
+
+transition ni_InvAck_exists (src pp)
+requires {  Sync = True && Home <> src &&
+  	   InvMsg_Cmd[src] = INV_InvAck &&
+  	   Dir_Pending = True && 
+	   Dir_InvSet[src] = True &&
+	   Dir_InvSet[pp] = True }
+{
+	InvMsg_Cmd[src] := INV_None;
+  	Dir_InvSet[src] := False;
+}
+
+transition ni_InvAck_exists_home (src)
+requires {  Sync = True && Home <> src &&
+  	   InvMsg_Cmd[src] = INV_InvAck &&
+  	   Dir_Pending = True && 
+	   Dir_InvSet[src] = True &&
+	   Dir_InvSet_home = True }
+{
+	InvMsg_Cmd[src] := INV_None;
+  	Dir_InvSet[src] := False;
+}
+
+transition ni_InvAck_done_1 (src)
+requires {  Sync = True && Home <> src &&
+  	   InvMsg_Cmd[src] = INV_InvAck &&
+  	   Dir_Pending = True && 
+	   Dir_InvSet[src] = True &&
+	   Dir_Local = True && Dir_Dirty = False &&
+	   Dir_InvSet_home = False &&
+	   forall_other p. Dir_InvSet[p] = False }
+{
+	InvMsg_Cmd[src] := INV_None;
+  	Dir_InvSet[src] := False;
+    	Dir_Pending := False;
+      	Dir_Local := False;
+    	Collecting := False;
+}
+
+transition ni_InvAck_done_2 (src)
+requires {  Sync = True && Home <> src &&
+  	   InvMsg_Cmd[src] = INV_InvAck &&
+  	   Dir_Pending = True && 
+	   Dir_InvSet[src] = True &&
+	   Dir_Local = False &&
+	   Dir_InvSet_home = False &&
+	   forall_other p. Dir_InvSet[p] = False }
+{
+	InvMsg_Cmd[src] := INV_None;
+  	Dir_InvSet[src] := False;
+    	Dir_Pending := False;
+    	Collecting := False;
+}
+
+transition ni_InvAck_done_3 (src)
+requires {  Sync = True && Home <> src &&
+  	   InvMsg_Cmd[src] = INV_InvAck &&
+  	   Dir_Pending = True && 
+	   Dir_InvSet[src] = True &&
+	   Dir_Dirty = True &&
+	   Dir_InvSet_home = False &&
+	   forall_other p. Dir_InvSet[p] = False }
+{
+	InvMsg_Cmd[src] := INV_None;
+  	Dir_InvSet[src] := False;
+    	Dir_Pending := False;
+    	Collecting := False;
+}
+
+
+(*--------------------------- Muphi rule NI_Wb --------------------------*)
+
+transition ni_Wb ()
+requires {  Sync = True && WbMsg_Cmd = WB_Wb }
+{
+	WbMsg_Cmd := WB_None;
+  	Dir_Dirty := False;
+  	Dir_HeadVld := False;
+}
+
+
+(*-------------------------- Muphi rule NI_FAck -------------------------*)
+
+transition ni_FAck_dirty ()
+requires {  Sync = True && ShWbMsg_Cmd = SHWB_FAck && Dir_Dirty = True }
+{
+	ShWbMsg_Cmd := SHWB_None;
+  	Dir_Pending := False;
+    	Dir_HeadPtr := ShWbMsg_Proc;
+}
+
+transition ni_FAck ()
+requires {  Sync = True && ShWbMsg_Cmd = SHWB_FAck && Dir_Dirty = False }
+{
+	ShWbMsg_Cmd := SHWB_None;
+  	Dir_Pending := False;
+}
+
+
+(*-------------------------- Muphi rule NI_ShWb -------------------------*)
+
+transition ni_ShWb_home ()
+requires {  Sync = True && ShWbMsg_Cmd = SHWB_ShWb && ShWbMsg_Proc = Home }
+{
+	ShWbMsg_Cmd := SHWB_None;
+  	Dir_Pending := False;
+  	Dir_Dirty := False;
+  	Dir_ShrVld := True;
+	
+
+	Dir_ShrSet_home := True;
+	Dir_InvSet_home := True;
+
+    	Dir_InvSet[p] := case | _ : Dir_ShrSet[p];
+
+}
+
+transition ni_ShWb ()
+requires {  Sync = True && ShWbMsg_Cmd = SHWB_ShWb && ShWbMsg_Proc <> Home }
+{
+	ShWbMsg_Cmd := SHWB_None;
+  	Dir_Pending := False;
+  	Dir_Dirty := False;
+  	Dir_ShrVld := True;
+	
+
+    	Dir_ShrSet[p] := case 
+		      	 | p = ShWbMsg_Proc : True
+	  	      	 | _ : Dir_ShrSet[p];
+
+	Dir_InvSet_home := Dir_ShrSet_home;
+    	Dir_InvSet[p] := case 
+		      	 | p = ShWbMsg_Proc : True
+	  	      	 | _ : Dir_ShrSet[p];
+
+}
+
+
+(*------------------------- Muphi rule NI_Replace -----------------------*)
+
+transition ni_Replace_shrvld (src)
+requires {  Sync = True && RpMsg_Cmd[src] = RP_Replace && Dir_ShrVld = True }
+{
+	RpMsg_Cmd[src] := RP_None;
+    	Dir_ShrSet[src] := False;
+    	Dir_InvSet[src] := False;
+}
+
+transition ni_Replace_shrvld_home ()
+requires {  Sync = True && RpMsg_Cmd_home = RP_Replace && Dir_ShrVld = True }
+{
+	RpMsg_Cmd_home := RP_None;
+    	Dir_ShrSet_home := False;
+    	Dir_InvSet_home := False;
+}
+
+transition ni_Replace (src)
+requires {  Sync = True && RpMsg_Cmd[src] = RP_Replace && Dir_ShrVld = False }
+{
+	RpMsg_Cmd[src] := RP_None;
+}
+
+transition ni_Replace_home ()
+requires {  Sync = True && RpMsg_Cmd_home = RP_Replace && Dir_ShrVld = False }
+{
+	RpMsg_Cmd_home := RP_None;
+}
+
+(*-----------------------------------------------------------------------*)

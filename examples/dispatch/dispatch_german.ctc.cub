@@ -1,0 +1,421 @@
+(*number_procs 3*)
+
+type t = A1 | A2 | A3 | A4 | None
+type d = Z | One | Two | Three | Four | Five
+
+type pc = Empty | L2_1 | L2_2 | L2_3 | L3_1 | L3_2 | L3_3 | L4_1 | L4_2 | L4_3 |  L5_1 | L5_2 | L5_3 | L2_1_1
+
+(*---- German CTC ----*)
+type state = Invalid | Shared | Exclusive
+type msg = Empty2 | Reqs | Reqe | Inv | Invack | Gnts | Gnte
+type data
+
+(*------------------*)
+
+
+array Cmd[proc] : t
+array Data[proc] : d
+array PC1[proc] : pc
+array PC2[proc] : pc
+
+var C : t
+var P : proc
+
+var Sync : bool
+
+(*---- German CTC ----*)
+
+var Exgntd : bool
+var Curcmd : msg
+var CurClient : proc
+
+var MemData : data
+var AuxData : data
+var Store_data : data
+
+array Chan1Cmd[proc] : msg
+array Chan1Data[proc] : data
+
+array Chan2Cmd[proc] : msg
+array Chan2Data[proc] : data
+
+array Chan3Cmd[proc] : msg
+array Chan3Data[proc] : data
+
+array CacheState[proc] : state
+array CacheData[proc] : data
+
+array Invset[proc] : bool
+array Shrset[proc] : bool
+
+
+(*------------------*)
+
+(*
+(1)  Sync = @MFalse && Exgntd = @MTrue
+(2)  Chan2Cmd[#1] = Gnts && Chan2Data[#1] <> AuxData
+(3)  Exgntd = @MFalse && CacheState[#1] = Exclusive
+(4)  CacheState[#1] <> Invalid && Shrset[#1] = @MFalse
+(5)  Chan2Cmd[#1] = Gnts && CacheState[#1] = Exclusive
+(6)  Chan2Cmd[#1] = Gnte && CacheState[#1] = Exclusive
+(7)  Exgntd = @MFalse && Chan2Cmd[#1] = Gnte
+(8)  Chan2Cmd[#1] = Gnts && Shrset[#1] = @MFalse
+(9)  Chan3Cmd[#1] = Invack && CacheState[#1] = Exclusive
+(10)  Chan3Cmd[#1] = Invack && CacheState[#1] <> Invalid
+(11)  Chan2Cmd[#1] = Gnte && Shrset[#1] = @MFalse
+(12)  Chan2Cmd[#1] = Gnte && Chan3Cmd[#1] = Invack
+(13)  Chan2Cmd[#1] = Gnts && Chan3Cmd[#1] = Invack
+(14)  Chan3Cmd[#1] = Invack && Shrset[#1] = @MFalse
+(15)  Chan2Cmd[#1] = Inv && Shrset[#1] = @MFalse
+(16)  Curcmd = Empty2 && Chan3Cmd[#1] = Invack
+(17)  Chan2Cmd[#1] = Inv && Chan3Cmd[#1] = Invack
+(18)  Invset[#1] = @MTrue && Shrset[#1] = @MFalse
+(19)  Curcmd = Empty2 && Chan2Cmd[#1] = Inv
+(20)  Chan3Cmd[#1] = Invack && Invset[#1] = @MTrue
+(21)  Chan2Cmd[#1] = Inv && Invset[#1] = @MTrue
+(22)  Sync = @MFalse && Chan2Cmd[#1] = Gnte
+(23)  Exgntd = @MTrue && Chan2Cmd[#1] = Gnts
+(24)  Exgntd = @MFalse && Curcmd = Reqs && Chan3Cmd[#1] = Invack
+(25)  Exgntd = @MFalse && Curcmd = Reqs && Chan2Cmd[#1] = Inv
+(26)  Exgntd = @MTrue && Chan2Cmd[#1] = Inv && CacheState[#1] <> Exclusive
+(27)  Chan2Cmd[#2] = Gnts && CacheState[#1] = Exclusive
+(28)  Chan2Cmd[#2] = Gnte && CacheState[#1] = Exclusive
+(29)  Chan2Cmd[#1] = Gnte && CacheState[#2] <> Invalid
+(30)  Chan2Cmd[#1] = Gnte && Chan2Cmd[#2] = Gnts
+(31)  Chan2Cmd[#1] = Gnte && Chan2Cmd[#2] = Gnte
+(32)  Chan2Cmd[#1] = Gnte && Chan3Cmd[#2] = Invack
+(33)  Chan3Cmd[#2] = Invack && CacheState[#1] = Exclusive
+(34)  Chan2Cmd[#1] = Gnte && Chan2Cmd[#2] = Inv
+(35)  Chan2Cmd[#2] = Inv && CacheState[#1] = Exclusive
+(36)  Chan2Cmd[#1] = Gnte && Invset[#2] = @MTrue
+(37)  CacheState[#1] = Exclusive && Invset[#2] = @MTrue
+(38)  Chan2Cmd[#1] = Gnte && Shrset[#2] = @MTrue
+(39)  CacheState[#1] = Exclusive && Shrset[#2] = @MTrue
+(40)  Curcmd = Reqs && Chan2Cmd[#1] = Inv && Chan3Cmd[#2] = Invack
+(41)  Curcmd = Reqs && Chan3Cmd[#1] = Invack && Chan3Cmd[#2] = Invack
+(42)  Curcmd = Reqs && Chan3Cmd[#2] = Invack && Invset[#1] = @MTrue
+(43)  Curcmd = Reqs && Chan2Cmd[#1] = Inv && Chan2Cmd[#2] = Inv
+(44)  Curcmd = Reqs && Chan2Cmd[#2] = Inv && Invset[#1] = @MTrue
+*)
+
+
+init (i j) { C = None && Cmd[i] = None && Data[i] = Z && PC1[i] = Empty && PC2[i] = Empty && Sync = False &&
+
+     Chan1Cmd[i] = Empty2 &&
+     Chan2Cmd[i] = Empty2 &&
+     Chan3Cmd[i] = Empty2 &&
+     CacheState[i] = Invalid &&
+     Invset[i] = False &&
+     Shrset[i] = False &&
+     Curcmd = Empty2 &&
+     Exgntd = False &&
+     MemData = AuxData
+
+}
+
+
+
+
+	  
+
+unsafe (z1 z2) { CacheState[z1] = Exclusive && CacheState[z2] <> Invalid }
+unsafe () { Exgntd = False && MemData <> AuxData }
+unsafe (z) { CacheState[z] <> Invalid && CacheData[z] <> AuxData }
+
+
+
+transition choix1(i)
+requires { Cmd[i] = None }
+{
+ Cmd[i] := A1
+}
+
+
+transition choix2(i)
+requires { Cmd[i] = None }
+{
+ Cmd[i] := A2
+}
+
+
+transition choix3(i)
+requires { Cmd[i] = None }
+{
+ Cmd[i] := A3
+}
+
+
+transition choix4(i)
+requires { Cmd[i] = None }
+{
+ Cmd[i] := A4
+}
+
+
+(*
+transition data1(i)
+requires { PC1[i] <> Empty ||  PC2[i] <> Empty }
+{
+ Data[i] := One
+}
+
+
+transition data2_1(i)
+requires { PC1[i] <> Empty ||  PC2[i] <> Empty }
+{
+ Data[i] := Two
+}
+
+transition data3(i)
+requires { PC1[i] <> Empty  ||  PC2[i] <> Empty }
+{
+ Data[i] := Three
+}
+
+
+transition data4(i)
+requires { PC1[i] <> Empty ||  PC2[i] <> Empty }
+{
+ Data[i] := Four;
+}
+
+transition data5(i)
+requires { PC1[i] <> Empty  ||  PC2[i] <> Empty }
+{
+ Data[i] := Five;
+}
+*)
+transition cmd1(i)
+requires { Cmd[i] = A1 && C = None }
+{
+ C := A1;
+ Cmd[i] := None;
+ P := i;
+}
+
+
+transition cmd2(i)
+requires { Cmd[i] = A2 && C = None}
+{
+ C := A2;
+ Cmd[i] := None;
+ P := i;
+}
+
+
+transition cmd3(i)
+requires { Cmd[i] = A3 && C = None}
+{
+ C := A3;
+ Cmd[i] := None;
+ P := i;
+}
+
+transition cmd4(i)
+requires { Cmd[i] = A4 && C = None}
+{
+ C := A4;
+ Cmd[i] := None;
+ P := i;
+}
+
+transition process_A1(i)
+requires { C = A1 && P = i && PC1[i] = Empty }
+{ PC1[i] := L2_1 ; C := None; P := ?;  }
+
+
+transition process_A2(i)
+requires { C = A2 && P = i && PC1[i] = Empty }
+{ PC1[i] := L3_1 ; C := None; P := ?; }
+
+transition process_A3(i)
+requires { C = A3 && P = i && PC1[i] = Empty }
+{ PC1[i] := L4_1 ; C := None; P := ?; }
+
+transition process_A4(i)
+requires { C = A4 && P = i && PC1[i] = Empty }
+{ PC1[i] := L5_1 ; C := None; P := ?; }
+
+transition seq2_1(i)
+requires { PC1[i] = L2_1 }
+{ PC1[i] := L2_1_1; }
+
+transition seq2_1_1(i)
+requires { PC1[i] = L2_1_1 }
+{ PC1[i] := L2_2; }
+
+transition seq2_2(i)
+requires { PC1[i] = L2_2 }
+{ PC1[i] := Empty;
+  PC2[i] := L2_3; }
+
+transition seq2_3(i)
+requires { PC2[i] = L2_3 }
+{ PC2[i] := Empty; }
+
+transition seq3_1(i)
+requires { PC1[i] = L3_1 }
+{ PC1[i] := L3_2; }
+
+transition seq3_2(i)
+requires { PC1[i] = L3_2 }
+{ PC1[i] := Empty;
+  PC2[i] := L3_3; }
+
+transition seq3_3(i)
+requires { PC2[i] = L3_3 }
+{ PC2[i] := Empty; }
+
+
+transition seq4_1(i)
+requires { PC1[i] = L4_1 }
+{ PC1[i] := L4_2; }
+
+transition seq4_2(i)
+requires { PC1[i] = L4_2 }
+{ PC1[i] := Empty;
+  PC2[i] := L4_3; }
+
+transition seq4_3(i)
+requires { PC2[i] = L4_3 }
+{ PC2[i] := Empty; }
+
+
+transition seq5_1(i)
+requires { PC1[i] = L5_1 }
+{ PC1[i] := L5_2; }
+
+transition seq5_2(i)
+requires { PC1[i] = L5_2 }
+{ PC1[i] := Empty;
+  PC2[i] := L5_3; }
+
+transition seq5_3(i)
+requires { PC2[i] = L5_3 }
+{ PC2[i] := Empty; }
+
+transition sync(i j m)
+requires {Sync = False && PC2[i] = L5_3 && PC1[j] = L5_1 && PC2[m] = L4_3 && forall_other k. PC2[k] = L5_3}
+{ PC2[l] := case | _ : Empty;
+  Sync := True } 
+
+
+(*--------- German CTC ---------*)
+
+
+transition store (n)
+requires { Sync = True && CacheState[n] = Exclusive }
+{
+  AuxData := Store_data;
+  CacheData[j] := case 
+    	       	  | j = n : Store_data
+	       	  | _  : CacheData[j];
+  Store_data := .;
+}
+
+
+
+transition sendReqs (i)
+requires { Sync = True && Chan1Cmd[i] = Empty2 && CacheState[i] = Invalid }
+{
+  Chan1Cmd[i] := Reqs;
+}
+
+transition sendReqe (i)
+requires { Sync = True && Chan1Cmd[i] = Empty2 && CacheState[i] <> Exclusive }
+{
+  Chan1Cmd[i] := Reqe;
+}
+
+
+transition recvReqs (i)
+requires { Sync = True && Curcmd = Empty2 && Chan1Cmd[i] = Reqs }
+{
+  Curcmd := Reqs;
+  CurClient := i;
+  Chan1Cmd[i] := Empty2;
+  Invset[j] := case | _ : Shrset[j];
+}
+
+
+transition recvReqe (i)
+requires { Sync = True && Curcmd = Empty2 && Chan1Cmd[i] = Reqe }
+{
+  Curcmd := Reqe;
+  CurClient := i;
+  Chan1Cmd[i] := Empty2;
+  Invset[j] := case | _ : Shrset[j];
+}
+
+transition sendInv_1 (i)
+requires {  Sync = True && Chan2Cmd[i] = Empty2 && Invset[i] = True && Curcmd = Reqe }
+{
+  Chan2Cmd[i] := Inv;
+  Invset[i] := False;
+}
+
+transition sendInv_2 (i)
+requires {  Sync = True &&  Chan2Cmd[i] = Empty2 && Invset[i] = True && Curcmd = Reqs &&
+            Exgntd = True }
+{
+  Chan2Cmd[i] := Inv;
+  Invset[i] := False;
+}
+
+
+
+transition sendInvack (i)
+requires { Sync = True && Chan2Cmd[i] = Inv && Chan3Cmd[i] = Empty2 }
+{
+  Chan2Cmd[i] := Empty2;
+  Chan3Cmd[i] := Invack;
+  Chan3Data[j] := case
+                  | j = i && CacheState[i] = Exclusive : CacheData[i]
+                  | _ : Chan3Data[j];
+  CacheState[i] := Invalid;
+}
+
+transition recvInvack (i)
+requires { Sync = True && Chan3Cmd[i] = Invack && Curcmd <> Empty2 } 
+{
+  Chan3Cmd[i] := Empty2;
+  Shrset[i] := False;
+  Exgntd := False;
+  MemData := case | Exgntd = True : Chan3Data[i] | _ : MemData;
+}
+
+transition sendGnts (i)
+requires { Sync = True && Curcmd = Reqs && CurClient = i && Chan2Cmd[i] = Empty2 && Exgntd = False }
+{
+  Chan2Cmd[i] := Gnts;
+  Chan2Data[i] := MemData;
+  Shrset[i] := True;
+  Curcmd := Empty2;
+}
+
+transition sendGnte (i)
+requires { Sync = True && Curcmd = Reqe && CurClient = i && Chan2Cmd[i] = Empty2 && Exgntd = False &&
+           Shrset[i] = False && forall_other j. Shrset[j] = False }
+{
+  Chan2Cmd[i] := Gnte;
+  Chan2Data[i] := MemData;
+  Shrset[i] := True;
+  Curcmd := Empty2;
+  Exgntd := True;
+}
+
+transition recvGnts (i)
+requires { Sync = True && Chan2Cmd[i] = Gnts }
+{
+  CacheState[i] := Shared;
+  CacheData[i] := Chan2Data[i];
+  Chan2Cmd[i] := Empty2;
+}
+
+transition recvGnte (i)
+requires { Sync = True && Chan2Cmd[i] = Gnte }
+{
+  CacheState[i] := Exclusive;
+  CacheData[i] := Chan2Data[i];
+  Chan2Cmd[i] := Empty2;
+}

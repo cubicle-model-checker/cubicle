@@ -1,0 +1,24 @@
+type t = A | B
+
+var X : t
+var Y : t 
+
+
+init() { X = A && Y = A }
+
+unsafe { X = B }
+
+livelock[t1]{t2}
+
+
+transition t1()
+requires { Y = A }
+{ Y := B }
+
+transition t2()
+requires { Y = B && X = A }
+{ X := B }
+
+transition t3()
+{ Y := A }
+

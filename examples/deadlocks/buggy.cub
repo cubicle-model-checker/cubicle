@@ -1,0 +1,22 @@
+type t = Req | Ent | Idle
+
+array PC[proc] : t
+
+
+(*init(i) { PC[i] = Idle }*)
+
+init(i j) { PC[i] = Idle }
+
+unsafe(i j) { PC[i] = Ent && PC[j] = Ent }
+
+transition t1(i)
+requires { PC[i] = Idle }
+{ PC[i] := Req }
+
+transition t2(i)
+requires { PC[i] = Req && forall_other j. PC[j] = Idle }
+{ PC[i] := Ent; }
+
+transition t3(i)
+requires { PC[i] = Ent }
+{ PC[i] := Idle; } 

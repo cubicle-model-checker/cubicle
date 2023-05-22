@@ -1,0 +1,107 @@
+var Proposal : int
+
+array Proposal_flag[proc] : bool
+
+var GlobalClock : int
+
+
+array Level[proc] : int
+
+array PEndorse[proc,proc] : bool
+array Endorse[proc,proc] : bool
+
+
+array Done[proc] : bool 
+
+array Tick[proc] : int
+array Timeout[proc] : bool
+
+var Proposer : proc
+
+
+init(i j) { Proposal = 0 &&
+            Proposal_flag[i] = False &&
+	    GlobalClock = 0 &&
+	    Level[i] = 0 &&
+	    PEndorse[i,j] = False &&
+	    Endorse[i,j] = True &&
+	    Tick[i] = 0 &&
+	    Done[i]  = True &&
+	    Timeout[i] = False}
+
+
+unsafe(i j) { Level[i] > Level[j] + 1}
+unsafe(i) { Level[i] > GlobalClock + 1 }
+unsafe(i) { GlobalClock > Level[i] + 1 }
+(*
+unsafe { GlobalTick = True }  *)
+
+(*
+transition t(i)
+{ Level[i] := Level[i] + 1 }*)
+
+(*
+transition global_tick()
+requires { forall i. Proposal_flag[i] = False }
+{ GlobalTick := True }*)
+(*
+transition global_tick()
+requires {forall i. (Endorse[i,i] = True && (forall_other j. Endorse[i,j] = True)) }
+{ Endorse[k,l] := case | _ : False }*)
+
+
+transition global_tick()
+requires { forall i. (Done[i] = True && Timeout[i] = True ) }
+{ GlobalClock := GlobalClock + 1;
+  Proposer := ?;
+  Done[k] := case | _ : False;
+  Endorse[a,b] := case | _ : False
+}
+(*
+transition round(i)
+requires { NextRound[i] = False && Done[i] = True }
+{ NextRound[i] := True;
+  Endorse[i, k] := case | _ : False; }*)
+
+transition timeout(i)
+requires { Done[i] = True && Timeout[i] = False && Tick[i] <= GlobalClock && forall_other j . Tick[j] <= GlobalClock }
+{ Timeout[i] := True;
+   }
+
+
+transition not_prop(i)
+requires { Done[i] = False && Proposer <> i && Timeout[i] = True }
+{ Timeout[i] := False;
+  Tick[i] := Tick[i] + 1 }
+
+
+transition prop(i)
+requires { Done[i] = False && Proposer = i && Timeout[i] = True}
+{ Timeout[i] := False;
+  Tick[i] := Tick[i] + 1;
+  Proposal := Level[i] + 1;
+  Proposal_flag[k] := case | _ : True }
+
+
+transition accept_prop(i)
+requires{Done[i] = False && Proposal_flag[i] = True && Timeout[i] = False && Level[i] < Proposal}
+{ Level[i] := Proposal;
+  PEndorse[a,b] := case | a = i : True
+                        | _ : PEndorse[a,b];
+  Proposal_flag[i] := False}
+
+transition preendorse_quorum(i)
+requires { Done[i] = False && Timeout[i] = False && PEndorse[i,i] = True && forall_other j. PEndorse[j,i] = True}
+{ Endorse[a,b] := case | a = i : True
+                       | _ : Endorse[a,b];
+		       
+  PEndorse[a,b] := case | b= i : False
+                        | _ : PEndorse[a,b]; }
+
+
+transition endorse_quorum(i)
+requires { Done[i] = False && Timeout[i] = False && Endorse[i,i] = True && forall_other j. Endorse[j, i] = True}
+{ Done[i] := True;
+  Endorse[a, b] := case | b = i : False
+                        | _ : Endorse[a,b]
+} 

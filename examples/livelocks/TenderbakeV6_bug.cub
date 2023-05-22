@@ -1,0 +1,277 @@
+type st = NP | CP | CE | Idle 
+
+type content = G | X | Y | Z 
+
+array B[proc] : int
+array P[proc] : int
+array C[proc] : int
+
+array Round[proc] : int
+
+array ContentB[proc] : content
+array ContentP[proc] : content 
+array ContentC[proc] : content 
+
+
+var Proposer : proc
+var Proposed : bool
+
+var ProposalB : int
+var ProposalP : int
+var ProposalC : int
+var ProposalContentB : content
+var ProposalContentP : content
+var ProposalContentC : content
+
+
+var ProposalRound : int
+
+array Proposal_flag[proc] : bool 
+
+array State[proc] : st
+
+array PEndorse[proc,proc] : bool
+array Endorse[proc,proc] : bool
+
+array EQ[proc] : bool 
+
+array Barrier[proc] : bool
+
+array Mempool[proc] : bool
+
+array Random[proc,proc] : bool
+
+array RandCont[proc] : content 
+
+
+init(i j) {
+          Proposal_flag[i] = False &&
+	  B[i] = 0 &&
+	  P[i] = 0 &&
+	  C[i] = 0 &&
+	  Round[i] = 0 &&
+	  State[i] = CE &&
+	  Barrier[i] = True &&
+	  PEndorse[i,j] = False &&
+	  Endorse[i,j] = True &&
+	  EQ[i] = True &&
+	  Mempool[i] = False &&
+	  ProposalRound = 0 &&
+	  Proposed = True &&
+	  ContentB[i] = G &&
+	  ContentP[i] = G &&
+	  ContentC[i] = G }
+
+
+(*
+unsafe(i j) {  B[i] = B[j] && C[j] <> C[i] }
+unsafe(i j) {  B[i] = B[j] + 1 && B[i] = P[j] && C[j] <> P[i] }*)
+
+
+(*unsafe(i j) { B[i] = B[j] && ContentC[i] <> ContentC[j] }*)
+
+
+unsafe(i j) { B[i] = B[j] && C[i] = C[j] && ContentC[i] <> ContentC[j] }
+unsafe(i j) { B[i] = B[j] + 1 && B[i] = P[j] && C[j] <> P[i] }
+
+
+(*invariant(i) { Proposal_flag[i] = True && Mempool[i] = False }
+invariant(i) { EQ[i] = False && Mempool[i] = False }
+invariant(i) { Proposed = True && State[i] = Idle && Mempool[i] = False }*)
+
+invariant(i) { B[i] < 0 }
+invariant(i) { P[i] < 0 }
+invariant(i) { C[i] < 0 }
+invariant(i) { Round[i] < 0 }
+invariant(i) { ProposalB < 0 }
+invariant(i) { ProposalP < 0 }
+invariant(i) { ProposalC < 0 }
+
+
+
+(*
+(1)  Proposal_flag[#1] = @MTrue && Mempool[#1] = @MFalse
+(2)  ProposalContentB = G && Proposal_flag[#1] = @MTrue
+(3)  State[#1] = Idle && EQ[#1] = @MFalse
+(4)  EQ[#1] = @MFalse && Mempool[#1] = @MFalse
+(5)  State[#1] = CP && Mempool[#1] = @MFalse
+(6)  ContentB[#1] = G && State[#1] = CP
+(7)  State[#1] = NP && EQ[#1] = @MFalse
+(8)  ContentB[#1] = G && ContentP[#1] <> ContentB[#1]
+(9)  ProposalContentB = X && ContentB[#1] = Y
+(10)  ProposalContentB = Y && ContentB[#1] = Z
+(11)  ProposalContentB = Z && ContentB[#1] = X
+(12)  Proposal_flag[#1] = @MTrue && State[#1] = CE
+(13)  Proposal_flag[#1] = @MTrue && State[#1] = CP
+(14)  ProposalContentB = X && ContentB[#1] = X && ContentP[#1] <> ProposalContentP
+(15)  ProposalContentB = Y && ContentB[#1] = Y && ContentP[#1] <> ProposalContentP
+(16)  ProposalContentB = Z && ContentB[#1] = Z && ContentP[#1] <> ProposalContentP
+(17)  ProposalContentB = Z && ContentB[#1] = Y && ContentB[#1] <> ProposalContentP
+(18)  ProposalContentB = Y && ContentB[#1] = X && ContentB[#1] <> ProposalContentP
+(19)  ProposalContentB = X && ContentB[#1] = Z && ContentB[#1] <> ProposalContentP
+(20)  ProposalContentB = Y && ContentB[#1] = X && State[#1] = CP
+(21)  ProposalContentB = X && ContentB[#1] = Z && State[#1] = CP
+(22)  ProposalContentB = Z && ContentB[#1] = Y && State[#1] = CP
+(23)  ContentB[#2] = G && ContentC[#1] <> ContentP[#2]
+(24)  ContentB[#2] = G && ContentP[#2] <> ContentP[#1]
+(25)  State[#1] = CE && State[#2] = NP
+(26)  ContentB[#1] = G && PEndorse[#1, #2] = @MTrue
+(27)  ContentB[#1] = Y && ContentB[#2] = G
+(28)  ContentB[#1] = Z && ContentB[#2] = G
+(29)  State[#1] = CE && State[#2] = Idle
+(30)  State[#2] = NP && PEndorse[#2, #1] = @MTrue
+(31)  State[#2] = Idle && PEndorse[#2, #1] = @MTrue
+(32)  State[#1] = CE && PEndorse[#2, #1] = @MTrue
+(33)  ProposalContentB = Y && ContentB[#2] = G && Proposal_flag[#1] = @MTrue
+(34)  ProposalContentB = Z && ContentB[#2] = G && Proposal_flag[#1] = @MTrue
+*)
+
+transition round()
+requires { Proposed = True && forall i. Mempool[i] = False }
+{ State[k] := case | _ : Idle;
+  Proposer := ?;
+  Proposed := False;
+}
+(*
+transition round(i)
+requires { Mempool[i] = False && State[i] <> Idle && Tick[i] = False && forall_other j. Tick[i] = False }
+{ State[i] := Idle;
+  Proposer := ?;}
+  *)
+
+transition not_prop(i)
+requires { Proposer <> i && State[i] = Idle  }
+{ State[i] := NP;
+  Round[i] := Round[i] + 1;
+  }
+
+transition prop_no_quorum(i)
+requires { Proposer = i && State[i] = Idle  && EQ[i] = False }
+{ State[i] := NP;
+  Proposed := True;
+  ProposalB := B[i];
+  ProposalP := P[i];
+  ProposalC := C[i];
+  ProposalContentB := ContentB[i];
+  ProposalContentP := ContentP[i];
+  ProposalContentC := ContentC[i];
+  ProposalRound := Round[i] + 1;
+  Round[i] := Round[i] + 1; 
+  Proposal_flag[k] := case | _ : True (*Random[k,i]*);
+  Mempool[k] := case | _ : True (*Random[k,i]*) }
+
+
+transition prop_quorum_G(i)
+requires { Proposer = i && State[i] = Idle && EQ[i] = True && ContentB[i] = G }
+{ State[i] := NP;
+  Proposed := True;
+  ProposalContentB := X;
+  ProposalContentP := ContentB[i];
+  ProposalContentC := ContentP[i];
+  ProposalB := B[i] + 1;
+  ProposalP := B[i];
+  ProposalC := P[i];
+  ProposalRound := 0;
+  Proposal_flag[k] := case | _ : True (*Random[k,i]*);
+  Mempool[k] := case | _ : True (*Random[k,i]*)}
+
+
+transition prop_quorum_A(i)
+requires { Proposer = i && State[i] = Idle && EQ[i] = True && ContentB[i] = X }
+{ State[i] := NP;
+  Proposed := True;
+  ProposalContentB := Y;
+  ProposalContentP := ContentB[i];
+  ProposalContentC := ContentP[i];
+  ProposalB := B[i] + 1;
+  ProposalP := B[i];
+  ProposalC := P[i];
+  ProposalRound := 0;
+  Proposal_flag[k] := case | _ : True (*Random[k,i]*);
+  Mempool[k] := case | _ : True (*Random[k,i]*)}
+
+transition prop_quorum_B(i)
+requires { Proposer = i && State[i] = Idle && EQ[i] = True && ContentB[i] = Y}
+{ State[i] := NP;
+  Proposed := True;
+  ProposalContentB := Z;
+  ProposalContentP := ContentB[i];
+  ProposalContentC := ContentP[i];
+  ProposalB := B[i] + 1;
+  ProposalP := B[i];
+  ProposalC := P[i];
+  ProposalRound := 0;
+  Proposal_flag[k] := case | _ : True (*Random[k,i]*);
+  Mempool[k] := case | _ : True (*Random[k,i]*)}
+
+transition prop_quorum_C(i)
+requires { Proposer = i && State[i] = Idle && EQ[i] = True && ContentB[i] = Z}
+{ State[i] := NP;
+  Proposed := True;
+  ProposalContentB := X;
+  ProposalContentP := ContentB[i];
+  ProposalContentC := ContentP[i];
+  ProposalB := B[i] + 1;
+  ProposalP := B[i];
+  ProposalC := P[i];
+  ProposalRound := 0;
+  Proposal_flag[k] := case | _ : True(*Random[k,i]*);
+  Mempool[k] := case | _ : True (*Random[k,i]*)}
+
+
+transition accept_prop_level(i)
+requires { State[i] = NP && Proposal_flag[i] = True && B[i] < ProposalB  }
+{ Proposal_flag[i] := False;
+  State[i] := CP;
+  B[i] := ProposalB;
+  P[i] := ProposalP;
+  C[i] := ProposalC;
+  ContentB[i] := ProposalContentB;
+  ContentP[i] := ProposalContentP;
+  ContentC[i] := ProposalContentC; 
+  EQ[i] := False;
+  Round[i] := ProposalRound;
+  PEndorse[j,k] := case | j = i : True
+                        | _ : PEndorse[j,k] }
+
+transition accept_prop_round(i)
+requires { State[i] = NP && Proposal_flag[i] = True && B[i] = ProposalB && Round[i] = ProposalRound  }
+{ Proposal_flag[i] := False;
+  State[i] := CP;
+  B[i] := ProposalB;
+  P[i] := ProposalP;
+  C[i] := ProposalC;
+  ContentB[i] := ProposalContentB;
+  ContentP[i] := ProposalContentP;
+  ContentC[i] := ProposalContentC;
+  EQ[i] := False;
+  Round[i] := ProposalRound;
+  (*PEndorse[j,k] := case | j = i : True
+                        | _ : PEndorse[j,k]*) }
+
+
+transition reject_prop(i)
+requires { State[i] = NP && Proposal_flag[i] = True && B[i] > ProposalB  }
+{ Proposal_flag[i] := False;
+ Mempool[i] := False; }
+
+transition pre_quorum(i u)
+requires { State[i] = CP && 
+	   PEndorse[u,i] = (*False*) True &&
+	   forall_other k. PEndorse[k,i] = True }
+{ State[i] := CE;
+  PEndorse[j,k] := case | k = i : False
+                        | _ : PEndorse[j,k]
+			;
+  Endorse[j,k] := case | j = i : True
+                       | _ : Endorse[j,k] }
+
+
+transition endorse_quorum(i u)
+requires { State[i] = CE && Endorse[u,i] = (*False*) True  &&
+	   forall_other k. Endorse[k,i] = True }
+{ Endorse[j,k] := case | k = i : False
+                       | _ : Endorse[j,k];
+  EQ[i] := True;
+  Mempool[i] := False
+}

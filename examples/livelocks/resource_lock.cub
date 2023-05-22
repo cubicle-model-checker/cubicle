@@ -1,0 +1,37 @@
+var R1 : proc
+var R2 : proc
+
+var R1Lock : bool
+var R2Lock : bool
+
+init() { R1Lock = False && R2Lock = False }
+
+
+transition get_r1(i)
+requires { R1Lock = False }
+{ R1Lock := True;
+  R1 := i }
+
+transition get_r2(i)
+requires { R2Lock = False }
+{ R2Lock := True;
+  R2 := i }
+
+transition release_r1(i)
+requires { R1Lock = True && R1 = i}
+{ R1Lock := False; }
+
+transition release_r2(i)
+requires { R2Lock = True && R2 = i }
+{ R2Lock := False; }
+
+(*Process i releases R1 if has R2 and can't get R1*)
+transition try_r1(i j)
+requires { R1Lock = True && R2Lock = True && R1 = j && R2 = i }
+{ R2Lock := False; }
+
+
+(*Process i releases R2 if has R1 and can't get R2*)
+transition try_r2(i j)
+requires { R1Lock = True && R2Lock = True && R1 = i && R2 = j }
+{ R1Lock := False; }

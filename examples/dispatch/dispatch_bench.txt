@@ -1,0 +1,168 @@
+Dekker
+Forward
+Options: -brab 3 -forward-depth 17
+Nodes: 4
+States: 2 134 259
+Invs: 1
+Fuzz
+Options: -int-brab 3 -fuzz-limit 50000 5 5
+Nodes: 4
+States: 50 000
+Invs: 1
+Notes: -
+
+Germanish
+Forward
+Options: -brab 3 -forward-depth 17
+Nodes: 4
+States: 2 133 968
+Invs: 3
+Fuzz
+Options: -int-brab 3 -fuzz-limit 50000 2 2
+Nodes: 4
+States: 50 000
+Invs: 3
+Notes: -
+
+Germanish2
+Forward
+Options: -brab 3 -forward-depth 19
+Nodes: 4
+States: 4 818 074
+Invs: 3
+Fuzz
+Options: -int-brab 3 -fuzz-limit 50000 5 5
+Nodes: 4
+States: 50 000
+Invs: 3
+Notes: -
+
+Germanish3
+Forward
+Options: -brab 3 -forward-depth 20
+Nodes: Stopped at 21
+States: 7 158 986
+Invs: -
+Fuzz
+Options: -int-brab 3 -fuzz-limit 700000 5 5
+Nodes: 20
+States: Stopped at 628 358
+Invs: 19
+Notes: [X](1)(*)
+
+Germanish4
+Forward
+Options: -brab 3 -forward-depth 20
+Nodes: Stopped at 23
+States: 7 158 986
+Invs: -
+Fuzz
+Options: -int-brab 3 -fuzz-limit 50000 2 2
+Nodes: 20
+States: 50 000
+Invs: 19
+Notes: [X](2)(**)(♦)
+
+German
+Forward
+Options: -brab 3 -forward-depth 22
+Nodes: Stopped at 57
+States: 14 225 599
+Invs: -
+Fuzz
+Options: -int-brab 3 -fuzz-limit 70000 2 2
+Nodes: 41
+States: 70 000
+Invs: 40
+Notes: [X](3)
+
+German_Baukus
+Forward
+Options: -brab 3 -forward-depth 22
+Nodes: Stopped at 46
+States: 14 225 599
+Invs: -
+Fuzz
+Options: -int-brab 3 -fuzz-limit 70000 2 2
+Nodes: 41
+States: 70 000
+Invs: 40
+Notes: [X](4)
+
+German_CTC --HERE
+Forward
+Options: -brab 3 -forward-depth 22
+Nodes: Stopped at
+States: 14 225 599
+Invs: -
+Fuzz
+Options: -int-brab 3 -fuzz-limit 200000 2 2
+Nodes: 60
+States: 200 000
+Invs: 44
+Notes: -
+
+German_pfs
+Forward
+Options: -brab 3 -forward-depth 22
+Nodes: TO
+States: 14 225 599
+Invs: -
+Fuzz
+Options: -int-brab 3 -fuzz-limit 70000 2 2
+Nodes: 44
+States: 70 000
+Invs: 43
+Notes: -
+
+Szymanski_at
+Forward
+Options: -brab 3 -forward-depth 23
+Nodes: Stopped at 50
+States: 18 048 972
+Invs: -
+Fuzz
+Options: -int-brab 3 -fuzz-limit 80000 2 2
+Nodes: 33
+States: 80 000
+Invs: 30
+Notes: [X]
+
+Szymanski_na
+Forward
+Options: -brab 3 -forward-depth ???
+Nodes: Stopped at 51
+States: 18 109 102
+Invs: -
+Fuzz
+Options: -int-brab 3 -fuzz-limit 100000 2 2
+Nodes: 43
+States: 100 000
+Invs: 32
+Notes: [X]
+
+Bakery_lamport
+Forward
+Options: -brab 3 -forward-depth ???
+Nodes: ???
+States: 10
+Invs: 5
+Fuzz
+Options: -int-brab 3 -fuzz-limit 190000 5 5
+Nodes: 190 000
+States: 10
+Invs: 5
+Notes: ???
+
+Flash_no_data
+Forward
+Options: -brab 3 -forward-depth ???
+Nodes: ???
+States: 10
+Invs: 5
+Fuzz
+Options: -int-brab 3 -fuzz-limit 100000 5 5
+Nodes: 37
+States: 100 000
+Invs: 35
+Notes: ???

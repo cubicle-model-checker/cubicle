@@ -1,0 +1,15 @@
+array X[proc] : int
+
+var Y : int
+
+init(i) { X[i] = 0 && Y = 0 }
+
+
+transition t1(i)
+{ X[i] := X[i] + 8}
+
+transition t3(i)
+{ X[i] := Y + 1}
+
+transition t2(i)
+{ Y := X[i] + 1 }
