@@ -89,31 +89,31 @@ States: 70 000
 Invs: 40
 Notes: [X](4)
 
-German_CTC --HERE
+German_CTC 
 Forward
 Options: -brab 3 -forward-depth 22
-Nodes: Stopped at
+Nodes: Stopped at 79 nodes
 States: 14 225 599
 Invs: -
 Fuzz
-Options: -int-brab 3 -fuzz-limit 200000 2 2
+Options: -int-brab 3 -fuzz-limit 300000 2 2
 Nodes: 60
-States: 200 000
+States: 300 000
 Invs: 44
-Notes: -
+Notes: [X]
 
 German_pfs
 Forward
 Options: -brab 3 -forward-depth 22
-Nodes: TO
-States: 14 225 599
+Nodes: Stopped at 55 nodes
+States: 14 406 230
 Invs: -
 Fuzz
 Options: -int-brab 3 -fuzz-limit 70000 2 2
 Nodes: 44
 States: 70 000
 Invs: 43
-Notes: -
+Notes: [X]
 
 Szymanski_at
 Forward
@@ -143,16 +143,16 @@ Notes: [X]
 
 Bakery_lamport
 Forward
-Options: -brab 3 -forward-depth ???
-Nodes: ???
-States: 10
-Invs: 5
+Options: -brab 3 -forward-depth 20
+Nodes: Stopped at 29
+States: 7 104 771
+Invs: -
 Fuzz
-Options: -int-brab 3 -fuzz-limit 190000 5 5
-Nodes: 190 000
-States: 10
-Invs: 5
-Notes: ???
+Options: -int-brab 3 -fuzz-limit 250000 2 2
+Nodes: 16
+States: 250 000
+Invs: 10
+Notes: [X]
 
 Flash_no_data
 Forward
