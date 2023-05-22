@@ -1,0 +1,8 @@
+var A : real
+const B : real
+
+init () { A < 0 }
+
+transition up () {
+	A := A * B;
+}

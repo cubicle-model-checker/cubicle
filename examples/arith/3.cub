@@ -1,0 +1,8 @@
+var A : real
+
+init () { A < 0 }
+
+transition up () {
+	A := A + 1.5;
+
+}

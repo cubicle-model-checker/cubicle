@@ -1,0 +1,11 @@
+var A : int 
+var B : int
+const C : int
+
+init () { A > 0 && B > 0 && C > 0 }
+
+transition up ()
+{
+	A := C * A;
+	B := B * C;
+}
