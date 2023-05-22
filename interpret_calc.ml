@@ -909,7 +909,8 @@ let update_vals env assigns sigma =
 	      end 
 	    | Arith(t', cs) ->
 	      let i_cs = int_of_consts cs in
-	      let {value = v; typ = typ} = Env.find elem !env in
+	      let t_sub = Term.subst sigma t' in 
+	      let {value = v; typ = typ} = Env.find t_sub !env in
 	      let v' = match v with
 		| VInt vi -> VInt (vi + i_cs) |  _ -> assert false in	      
 	      Env.add elem {value = v';  typ = typ} acc
@@ -959,8 +960,23 @@ let upd_arr_direct sigma orig upd tname =
 			in
 			t, t2, more
 	  | ProcManip ([tpm], addsub) -> let tt = Term.subst sigma tpm in
-			   t, (to_interpret (ProcManip([tt],addsub))), None 
-
+					 t, (to_interpret (ProcManip([tt],addsub))), None
+	  | Arith(t', cs) ->
+	    begin
+	      
+	      try
+		let i_cs = int_of_consts cs in
+		let t_sub = Term.subst sigma t' in
+		let {value = v; typ = typ} = Env.find t_sub orig in
+		let v' = match v with
+		  | VInt vi -> VInt (vi + i_cs) |  _ -> assert false in
+		let new_el = { value = v'; typ = typ }
+		in
+		t, new_el, Some(t_sub,new_el)
+	      with
+		  Not_found ->
+		    assert false
+	    end 
 	    
 	  | _ -> t, (to_interpret (Term.subst sigma upt)), None
       end 
