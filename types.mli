@@ -36,6 +36,8 @@ module MConst : sig
 end
 
 val compare_constants : int MConst.t -> int MConst.t -> int
+val add_const_const : const -> const -> const option
+val add_constant : MConst.key -> int -> int MConst.t -> int MConst.t 
 val add_constants : int MConst.t -> int MConst.t -> int MConst.t
 val const_sign : int MConst.t -> int option
 val const_nul : int MConst.t -> bool
@@ -43,16 +45,15 @@ val mult_const : int -> int MConst.t -> int MConst.t
 
 module Var : sig
     type t =
-      | V of Hstring.t * sort
-      | T of Hstring.t * Variable.t list
+      | Elem    of Hstring.t * sort
+      | Access  of Hstring.t * Variable.t list
 
     val compare : t -> t -> int
 end
 
 module VMap : Map.S with type key = Var.t
 
-type cst = CInt of Num.num | CReal of Num.num | CName of Hstring.t
-type poly = cst VMap.t * cst
+type constmap = int MConst.t 
 
 (** the type of terms *)
 type term =
@@ -64,8 +65,7 @@ type term =
   (** an access to an array *)
   | Arith of term * int MConst.t
   (** arithmetic term: [Arith (t, c)] is the term [t + c] *)
-(*  | NArith of cst VMap.t * cst*)
-			   
+  | Poly  of constmap * const VMap.t
 (** Module interface for terms *)
 module Term : sig
 

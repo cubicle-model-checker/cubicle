@@ -65,15 +65,11 @@
   let sort s = 
     if Constructors.mem s then Constr
     else if Globals.mem s then Glob
-    else
-      begin
-        (* assert (not (Arrays.mem s)); *)
-        Var
-      end
+    else Var
 
   let hproc = Hstring.make "proc"
   let hreal = Hstring.make "real"
-  let hint = Hstring.make "int"
+  let hint  = Hstring.make "int"
 
   let set_from_list = List.fold_left (fun sa a -> SAtom.add a sa) SAtom.empty 
 
@@ -330,28 +326,96 @@ switch:
   | expr COLON term { $1, TTerm $3 }
 ;
 
-  
+sterm:
+  | INT TIMES INT  
+    { Poly (MConst.add (ConstInt (Num.mult_num $1 $3)) 1 MConst.empty, VMap.empty) }
+  | REAL TIMES REAL
+    { Poly (MConst.add (ConstReal (Num.mult_num $1 $3)) 1 MConst.empty, VMap.empty) }
+  | mident TIMES INT
+    {
+      if Consts.mem $1 then Poly(MConst.add (ConstName $1) (Num.int_of_num $3) MConst.empty, VMap.empty)
+                       else Poly(MConst.empty, VMap.add (Elem ($1, sort $1))
+                       (ConstInt $3) VMap.empty) 
+    }
+ | INT TIMES mident
+    {
+      if Consts.mem $3 then Poly(MConst.add (ConstName $3) (Num.int_of_num $1) MConst.empty, VMap.empty)
+                       else Poly(MConst.empty, VMap.add (Elem ($3, sort $3))
+                       (ConstInt $1) VMap.empty) 
+    }
+  | mident TIMES mident
+    {
+      let c, v = 
+        match Consts.mem $1, Consts.mem $3 with
+        | true, false  -> $1, $3
+        | false, true  -> $3, $1
+        | _ -> assert false
+      in
+      Poly (MConst.empty, VMap.add (Elem (v, sort v)) (ConstName c) VMap.empty)
+    }
+;
 
 term:
-  | REAL { Const (MConst.add (ConstReal $1) 1 MConst.empty) }
-  | INT { Const (MConst.add (ConstInt $1) 1 MConst.empty) }
-  | proc_name { Elem ($1, Var) }
-  | mident {
-    let t = if Consts.mem $1 then Const (MConst.add (ConstName $1) 1 MConst.empty)
-      else Elem ($1, sort $1) in  t
-      }
-  | mident LEFTSQ proc_name_list_plus RIGHTSQ { Access ($1, $3) }
-
-    /*| MINUS term { UnOp(UMinus, $2) }
-  | term PLUS term { BinOp($1, Addition, $3) }
-  | term MINUS term { BinOp($1, Subtraction, $3) }
-  | term TIMES term {  BinOp($1, Multiplication, $3) }*/
-      
-  | term PLUS INT { Arith($1, MConst.add (ConstInt $3) 1 MConst.empty) }
-  | term PLUS mident { Arith($1, MConst.add (ConstName $3) 1 MConst.empty) }
-  | term MINUS INT { Arith($1, MConst.add (ConstInt $3) (-1) MConst.empty) }
-  | term MINUS mident { Arith($1, MConst.add (ConstName $3) (-1) MConst.empty) }
+  | REAL { Poly (MConst.add (ConstReal $1) 1 MConst.empty, VMap.empty) }
+  | INT  { Poly (MConst.add (ConstInt  $1) 1 MConst.empty, VMap.empty) }
+  | proc_name { Poly(MConst.empty, VMap.add (Elem ($1, Var)) (ConstInt
+  (Num.num_of_int 1)) VMap.empty) }
+  | sterm     { $1 }
+  | mident 
+    {
+    if Consts.mem $1 then Poly(MConst.add (ConstName $1) 1 MConst.empty, VMap.empty)
+                     else Poly(MConst.empty, VMap.add (Elem ($1, sort $1))
+                     (ConstInt (Num.num_of_int 1)) VMap.empty) 
+    }
+  | term PLUS INT 
+    { 
+      match $1 with 
+      | Poly(cs, ts) -> Poly(add_constant (ConstInt $3) 1 cs, ts)
+      | _ -> assert false
+    }
+  | term PLUS REAL
+    {
+      match $1 with
+      | Poly(cs, ts) -> Poly(add_constant (ConstReal $3) 1 cs, ts)
+      | _ -> assert false
+    }
+  | term PLUS mident  
+    {
+      let cs, ts = 
+        match $1 with 
+        | Poly(cs, ts) -> cs, ts
+        | _ -> assert false
+      in
+      if Consts.mem $3 then Poly(add_constant (ConstName $3) (-1) cs, ts)
+      else if VMap.mem (Elem ($3, sort $3)) ts then assert false 
+      else Poly(cs, VMap.add (Elem ($3, sort $3)) (ConstInt (Num.num_of_int (-1))) ts)
+    }
+  | term PLUS sterm 
+    {
+      match $1, $3 with 
+      | Poly(cs1, ts1), Poly(cs2, ts2) ->
+          Poly(add_constants cs1 cs2, VMap.union (fun k -> add_const_const) ts1 ts2)
+      | _ -> assert false
+    }
+  | term MINUS INT 
+    { 
+      match $1 with 
+      | Poly(cs, ts) -> Poly(add_constant (ConstInt $3) (-1) cs, ts)
+      | _ -> assert false
+    }
+  | term MINUS mident  
+    {
+      let cs, ts = 
+        match $1 with 
+        | Poly(cs, ts) -> cs, ts
+        | _ -> assert false
+      in
+      if Consts.mem $3 then Poly(add_constant (ConstName $3) (-1) cs, ts)
+      else if VMap.mem (Elem ($3, sort $3)) ts then assert false 
+      else Poly(cs, VMap.add (Elem ($3, sort $3)) (ConstInt (Num.num_of_int 1)) ts)
+    }
 ;
+
 
 lident:
   | LIDENT { Hstring.make $1 }

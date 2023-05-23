@@ -58,37 +58,41 @@ end
 
 module Var = struct
     type t = 
-      | V of Hstring.t * sort
-      | T of Hstring.t * Variable.t list
+      | Elem   of Hstring.t * sort             
+      | Access of Hstring.t * Variable.t list  
 
     let compare x y =
       match x, y with
-      | V(a1,s1), V(a2, s2) ->
-	 let c = Stdlib.compare s1 s2 in
-	 if c <> 0 then c
-	 else Hstring.compare a1 a2
-
-      | T(t1,l1), T(t2,l2) ->
-	 let c = Hstring.compare t1 t2 in
-	 if c<>0 then c
-	 else Variable.compare_list l1 l2
-      | V(_,_), T(_,_) -> -1
-      | T(_,_), V(_,_) -> 1
+      | Elem(a1,s1), Elem(a2, s2) ->
+         let c = Stdlib.compare s1 s2 in
+         if c <> 0 then c
+         else Hstring.compare a1 a2
+      | Access(t1,l1), Access(t2,l2) ->
+         let c = Hstring.compare t1 t2 in
+         if c<>0 then c
+         else Variable.compare_list l1 l2
+      | Elem(_,_), Access(_,_) -> -1
+      | Access(_,_), Elem(_,_) -> 1
 	 
   end
 
 module VMap = Map.Make(Var)
 
-type cst = CInt of Num.num | CReal of Num.num | CName of Hstring.t
-type poly = cst VMap.t * cst
-		  
-type term =
-  | Const of int MConst.t
-  | Elem of Hstring.t * sort
-  | Access of Hstring.t * Variable.t list
-  | Arith of term * int MConst.t
-(*  | NArith of cst VMap.t * cst*)
+type constmap = int MConst.t
 
+type term =
+  | Const   of constmap
+  | Elem    of Hstring.t * sort             
+  | Access  of Hstring.t * Variable.t list 
+  | Arith   of term  * int MConst.t
+  | Poly    of constmap * const VMap.t (* todo : replace int VMap.t with int
+  MConst.t VMap.t *)
+
+let add_const_const c1 c2 =
+  match c1, c2 with 
+  | ConstInt i1, ConstInt i2    -> Some(ConstInt(Num.add_num i1 i2))
+  | ConstReal r1, ConstReal r2  -> Some(ConstReal(Num.add_num r1 r2))
+  | _ -> assert false
 
 let is_int_const = function
   | ConstInt _ -> true
@@ -96,9 +100,7 @@ let is_int_const = function
   | ConstName n -> 
      Hstring.equal (snd (Smt.Symbol.type_of n)) Smt.Type.type_int
 
-
 let compare_constants = MConst.compare Stdlib.compare
-
 
 let num_of_const = function
   | ConstInt n | ConstReal n -> n
@@ -135,18 +137,19 @@ let add_constant c i cs =
 
 let add_constants cs1 cs2 =
   let m = MConst.fold add_constant cs2 cs1 in
-  if MConst.is_empty m then 
+  if MConst.is_empty m then (
+    if MConst.is_empty cs1 then cs1 else  
     let c0 = 
       if is_int_const (fst (MConst.choose cs1)) then 
 	ConstInt (Num.Int 0) 
       else ConstReal (Num.Int 0)
     in
     MConst.add c0 1 m
+  )
   else m
 
 let mult_const a =
   MConst.map (fun i -> i * a)
-
 
 let const_sign c =
   try
