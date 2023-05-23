@@ -8,10 +8,17 @@ var Curptr : proc
 array Cache[proc] : state
 array Shrset[proc] : bool
 
-init (z) { Cache[z] = Invalid && Shrset[z] = False &&
-           Exgntd = False && Curcmd = Empty }
+var Deadlock : bool
 
-unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared }
+unsafe () { Deadlock = True }
+
+
+init (z) { Cache[z] = Invalid && Shrset[z] = False &&
+           Exgntd = False && Curcmd = Empty
+&&	   Deadlock = False
+}
+
+(*unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared }*)
 
 
 transition req_shared (n)
@@ -62,3 +69,7 @@ requires { Shrset[n] = False && Curcmd = Reqe &&
   Shrset[n] := True;
   Cache[n] := Exclusive;
 }
+
+transition deadlock(i)
+requires { Curcmd <> Empty && Curptr = i && Shrset[i] = False && Exgntd = True}
+{ Deadlock := True }

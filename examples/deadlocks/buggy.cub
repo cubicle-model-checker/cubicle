@@ -2,12 +2,13 @@ type t = Req | Ent | Idle
 
 array PC[proc] : t
 
+var Deadlock : bool
 
-(*init(i) { PC[i] = Idle }*)
+init(i) { PC[i] = Idle && Deadlock = False }
 
-init(i j) { PC[i] = Idle }
+(*unsafe(i j) { PC[i] = Ent && PC[j] = Ent }*)
 
-unsafe(i j) { PC[i] = Ent && PC[j] = Ent }
+unsafe () { Deadlock = True }
 
 transition t1(i)
 requires { PC[i] = Idle }
@@ -19,4 +20,8 @@ requires { PC[i] = Req && forall_other j. PC[j] = Idle }
 
 transition t3(i)
 requires { PC[i] = Ent }
-{ PC[i] := Idle; } 
+{ PC[i] := Idle; }
+
+transition deadlock(i)
+requires { PC[i] = Req && forall_other j. PC[j] = Req }
+{ Deadlock := True }

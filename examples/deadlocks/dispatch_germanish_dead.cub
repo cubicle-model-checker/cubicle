@@ -31,14 +31,17 @@ array Cache[proc] : state
 array Shrset[proc] : bool
 (*------------------*)
 
+var Deadlock : bool
 
 init (i) { C = None && Cmd[i] = None && Data[i] = Z && PC1[i] = Empty && PC2[i] = Empty && Sync = False &&
 	   Cache[i] = Invalid && Shrset[i] = False &&
            Exgntd = False && Curcmd = Empty2
+	   && Deadlock = False
 	  }
 
-unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared }
+(*unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Shared }*)
 
+unsafe () { Deadlock = True }
 
 
 transition choix1(i)
@@ -233,3 +236,8 @@ requires { Sync = True && Shrset[n] = False && Curcmd = Reqe &&
   Shrset[n] := True;
   Cache[n] := Exclusive;
 }
+
+
+transition deadlock(i)
+requires { Sync = True && Curcmd <> Empty2 && Curptr = i && Shrset[i] = False && Exgntd = True}
+{ Deadlock := True }
