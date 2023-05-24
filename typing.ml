@@ -41,7 +41,6 @@ type error =
   | WrongNbArgs of Hstring.t * int
   | Smt of Smt.error
       
-
 exception Error of error * loc
 
 let print_htype fmt (args, ty) =
@@ -135,36 +134,34 @@ let infer_type x1 x2 =
 
 let refinement_cycles () = (* TODO *) ()
 
-
-
 let rec term loc args t =
   match t with 
   | Const cs -> 
       let c, _ = MConst.choose cs in
       (match c with
-	| ConstInt _ -> t, ([], Smt.Type.type_int)
-	| ConstReal _ -> t, ([], Smt.Type.type_real)
-	| ConstName x -> 
-	  try t, Smt.Symbol.type_of x 
-          with Not_found -> error (UnknownName x) loc)
+      | ConstInt _ -> t, ([], Smt.Type.type_int)
+      | ConstReal _ -> t, ([], Smt.Type.type_real)
+      | ConstName x -> 
+	      try t, Smt.Symbol.type_of x 
+        with Not_found -> error (UnknownName x) loc)
   | Elem (e, Var) -> 
       if Hstring.list_mem e args then t,([], Smt.Type.type_proc)
       else begin 
-	  try t, Smt.Symbol.type_of e with Not_found ->
-	    error (UnknownName e) loc
+        try t, Smt.Symbol.type_of e 
+        with Not_found -> error (UnknownName e) loc
       end
   | Elem (e, _) ->  t, Smt.Symbol.type_of e
   | Arith (x, _) ->
       begin
-	let _, (args, tx) = term loc args x in
-	if not (Hstring.equal tx Smt.Type.type_int) 
-	  && not (Hstring.equal tx Smt.Type.type_real) then 
-	  error (MustBeNum x) loc;
-	t, (args, tx)
+	      let _, (args, tx) = term loc args x in
+	      if not (Hstring.equal tx Smt.Type.type_int) 
+	      && not (Hstring.equal tx Smt.Type.type_real) then 
+	      error (MustBeNum x) loc;
+	      t, (args, tx)
       end
   | Access(a, li) -> 
     let args_a, ty_a = 
-	try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a) loc in
+	    try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a) loc in
       if List.length args_a <> List.length li then
         error (WrongNbArgs (a, List.length args_a)) loc
       else
@@ -181,10 +178,9 @@ let rec term loc args t =
           if args_a = [] then error (MustBeAnArray a) loc;
           if not (Hstring.equal ty_i Smt.Type.type_proc) then
 	    error (MustBeOfTypeProc i) loc;
-	) li;
+	    ) li;
       t,([], ty_a)
-
-
+  | Poly(cs, ts) -> failwith "todo"
 
 let rec assignment ?(init_variant=false) g x (_, ty) =
   (*Format.eprintf "GG: %a; x : %a; ty: %a@." Hstring.print g Types.Term.print x Hstring.print ty;*)

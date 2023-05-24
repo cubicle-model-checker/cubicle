@@ -24,7 +24,6 @@ type op_comp = Eq | Lt | Le | Neq
 
 type sort = Glob | Constr | Var
 
-
 type const =
     ConstInt of Num.num | ConstReal of Num.num | ConstName of Hstring.t
 
@@ -53,8 +52,9 @@ module MConst = struct
       | (ConstInt n | ConstReal n), i -> Some (Num.mult_num (Num.Int i) n)
       | _ -> None
     else None
-	   
 end
+
+(* ----------------------------------------- *)
 
 module Var = struct
     type t = 
@@ -73,10 +73,79 @@ module Var = struct
          else Variable.compare_list l1 l2
       | Elem(_,_), Access(_,_) -> -1
       | Access(_,_), Elem(_,_) -> 1
-	 
-  end
+end
+
+module Const = struct 
+
+  type t = 
+    | ConstInt  of Num.num * int Hstring.HMap.t
+    | ConstReal of Num.num * Num.num Hstring.HMap.t
+    | ConstName of int Hstring.HMap.t 
+
+  let compare c1 c2 = 
+    failwith "todo"
+
+  let to_num = function 
+    | ConstInt  (c,p) -> 
+        if Hstring.HMap.cardinal p = 0 then Some(c) else None
+    | ConstReal (c,p) ->
+        if Hstring.HMap.cardinal p = 0 then Some(c) else None 
+    | _ -> None
+
+  (* Opérations arithméthiques *)
+
+  let add_const c1 c2 =
+    match c1, c2 with 
+    | ConstInt(_,_), ConstReal(_,_) | ConstReal(_,_), ConstInt(_,_) -> None 
+    | ConstInt(c1, p1), ConstInt(c2, p2) -> 
+        let c = Num.add_num c1 c2 in 
+        let p = Hstring.HMap.union (fun _ n1 n2 -> Some(n1+n2)) p1 p2 in
+        Some(ConstInt(c,p))
+    | ConstReal(c1, p1), ConstReal(c2, p2) ->
+        let c = Num.add_num c1 c2 in 
+        let p = Hstring.HMap.union (fun _ n1 n2 -> Some(Num.add_num n1 n2)) p1 p2 in
+        Some(ConstReal(c,p))
+    | ConstName n, ConstInt(c,p) | ConstInt(c,p), ConstName n ->
+        let p = Hstring.HMap.union (fun _ n1 n2 -> Some(n1+n2)) n p in
+        Some(ConstInt(c,p))
+    | ConstName n, ConstReal(c,p) | ConstReal(c,p), ConstName n ->
+        let n = Hstring.HMap.map Num.num_of_int n in 
+        let p = Hstring.HMap.union (fun _ n1 n2 -> Some(Num.add_num n1 n2)) n p in
+        Some(ConstReal(c,p))
+    | ConstName n1, ConstName n2 ->
+        let n = Hstring.HMap.union (fun _ n1 n2 -> Some(n1+n2)) n1 n2  in
+        Some(ConstName(n))
+
+  let mult_by_int c i = 
+    match c with 
+    | ConstName n     -> 
+        ConstName (Hstring.HMap.map (Int.mul i) n)
+    | ConstInt  (c,p) -> 
+        ConstInt  (Num.mult_num c (Num.num_of_int i), Hstring.HMap.map (Int.mul i) p)
+    | ConstReal (_,_) -> (* TODO : Raise une erreur appropriée de typage *)
+        assert false 
+
+  let mult_by_real c i = 
+    match c with 
+    | ConstName n -> 
+        let nzero = Num.num_of_int 0 in
+        let nmult = fun v -> Num.mult_num (Num.num_of_int v) i in 
+        ConstReal (nzero, Hstring.HMap.map nmult n)
+    | ConstReal (c,p) ->
+        ConstReal(Num.mult_num c i, Hstring.HMap.map (Num.mult_num i) p)
+    | ConstInt(_,_)  -> (* TODO : Raise une erreur appropriée de typage *)
+        assert false
+
+end
 
 module VMap = Map.Make(Var)
+
+(* Proposition d'alternative de terme:
+  type term = 
+    | Poly of Const.t option * Const.t VMap.t 
+*)
+
+(* ----------------------------------------- *)
 
 type constmap = int MConst.t
 
@@ -85,8 +154,7 @@ type term =
   | Elem    of Hstring.t * sort             
   | Access  of Hstring.t * Variable.t list 
   | Arith   of term  * int MConst.t
-  | Poly    of constmap * const VMap.t (* todo : replace int VMap.t with int
-  MConst.t VMap.t *)
+  | Poly    of constmap * const VMap.t
 
 let add_const_const c1 c2 =
   match c1, c2 with 
@@ -165,8 +233,6 @@ let const_sign c =
 
 let const_nul c = const_sign c = Some 0
 
-
-
 module Term = struct
 
   type t = term
@@ -186,12 +252,16 @@ module Term = struct
     | Arith (t1, cs1), Arith (t2, cs2) ->
        let c = compare t1 t2 in
        if c<>0 then c else compare_constants cs1 cs2
+    | Arith(_,_), _ -> -1 | _ , Arith(_,_) -> 1
+    | Poly(cs1, ts1), Poly(cs2, ts2) ->
+        let cc = compare_constants cs1 cs2 in
+        if cc = 0 then VMap.compare compare_const ts1 ts2 else cc
 
   let hash = Hashtbl.hash_param 50 50
 
   let equal t1 t2 = compare t1 t2 = 0
 
-  let htrue = Hstring.make "True"
+  let htrue  = Hstring.make "True"
   let hfalse = Hstring.make "False"
 
   module STerm = Set.Make (struct
@@ -234,7 +304,6 @@ module Term = struct
     | Elem (x, Var) -> Smt.Type.type_proc
     | Elem (x, _) | Access (x, _) -> snd (Smt.Symbol.type_of x)
     | Arith(t, _) -> type_of t
-
 
   let rec print_strings fmt = function
     | [] -> ()
