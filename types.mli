@@ -37,8 +37,10 @@ end
 
 module Const : sig 
   type t 
+  
+  (* Constructors *)
   val empty : t
-  val const_int : Num.num -> t
+  val const_int  : Num.num -> t
   val const_real : Num.num -> t
   val const_name : Hstring.t -> t
 

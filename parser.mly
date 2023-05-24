@@ -330,20 +330,20 @@ switch:
 
 sterm:
   | INT TIMES INT  
-    { Poly (Const.add_int Const.empty (Num.mult_num $1 $3), VMap.empty) }
+    { Poly (Const.const_int (Num.mult_num $1 $3), VMap.empty) }
   | REAL TIMES REAL
-    { Poly (Const.add_real Const.empty (Num.mult_num $1 $3), VMap.empty) }
+    { Poly (Const.const_real (Num.mult_num $1 $3), VMap.empty) }
   | mident TIMES INT
     {
       if Consts.mem $1 then 
-        Poly(Const.mult_by_int (Const.add_name Const.empty $1) $3, VMap.empty)
+        Poly(Const.mult_by_int (Const.const_name $1) $3, VMap.empty)
                        else Poly(Const.empty, VMap.add (Elem ($1, sort $1))
                        (Const.const_int $3) VMap.empty) 
     }
  | INT TIMES mident
     {
       if Consts.mem $3 then 
-        Poly(Const.mult_by_int (Const.add_name Const.empty $3) $1, VMap.empty)
+        Poly(Const.mult_by_int (Const.const_name $3) $1, VMap.empty)
                        else Poly(Const.empty, VMap.add (Elem ($3, sort $3))
                        (Const.const_int $1) VMap.empty) 
     }
@@ -360,14 +360,14 @@ sterm:
 ;
 
 term:
-  | REAL { Poly (Const.add_real Const.empty $1, VMap.empty) }
-  | INT  { Poly (Const.add_int Const.empty $1, VMap.empty) }
+  | REAL { Poly (Const.const_real $1, VMap.empty) }
+  | INT  { Poly (Const.const_int  $1, VMap.empty) }
   | proc_name 
   { Poly (Const.empty, VMap.add (Elem ($1, Var)) (Const.const_int (Num.num_of_int 1)) VMap.empty) }
   | sterm     { $1 }
   | mident 
     {
-    if Consts.mem $1 then Poly(Const.add_name Const.empty $1, VMap.empty)
+    if Consts.mem $1 then Poly(Const.const_name $1, VMap.empty)
                      else Poly(Const.empty, VMap.add (Elem ($1, sort $1))
                      (Const.const_int (Num.num_of_int 1)) VMap.empty) 
     }
