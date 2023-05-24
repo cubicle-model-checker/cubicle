@@ -1,15 +1,24 @@
-array X[proc] : int
+var P1 : bool
+var P2 : bool
 
-var Y : int
+init {
+    P1 = False && P2 = False
+}
 
-init(i) { X[i] = 0 && Y = 0 }
+transition t1 ()
+requires { P1 = False }
+{ P1 := True; }
 
 
-transition t1(i)
-{ X[i] := X[i] + 8}
+transition t2()
+requires { P2 = False }
+{ P2 := True; }   
 
-transition t3(i)
-{ X[i] := Y + 1}
+transition t3 ()
+requires { P1 = True && P2 = False }
+{ P1 := False; }
 
-transition t2(i)
-{ Y := X[i] + 1 }
+
+transition t4 ()
+requires { P2 = True && P1 = False }
+{ P2 := False; }

@@ -1,0 +1,21 @@
+Dekker1:
+Dekker1 deadlocks because it only allows someone to enter when no one
+else has requested (essentially this is like the forall_other version,
+except w/o a forall_other).
+
+Fuzzer comments: if you let the fuzzer try to decide how many
+processes are needed to fuzz this example, it will yell at you that it
+has tried 6 different values of procs and they all deadlock.
+
+Dekker2:
+This one does not actually deadlock - at first glance it appears to
+deadlock because once someone has req-ed, the previous person is
+blocked. Except that the last person who did something will never be
+blocked. So this version kills everyone except the last requester.
+
+Buggy:
+The original example with a forall that blocks the system as soon as
+there are 2 reqs
+
+Dekker_bug2:
+Deadlocks for the dumbass reason that Req is never reset to false

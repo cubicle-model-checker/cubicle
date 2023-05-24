@@ -1,0 +1,26 @@
+type t = A | B
+
+var X : int
+array Arr[proc] : t
+
+init (i) {
+  Arr[i] = A && X = 0
+}
+
+transition t1(i)
+requires {
+  Arr[i] = A && X = 0
+}
+{
+  X := X + 1;
+  Arr[i] := B
+}
+
+transition t2(i)
+requires {
+  Arr[i] = B && X = 1
+}
+{
+  X := X - 1;
+  Arr[i] := A
+}
