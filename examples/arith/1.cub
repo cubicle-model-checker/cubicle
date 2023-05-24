@@ -1,9 +1,0 @@
-var A : int
-var B : int 
-
-init () { A > 0 && B > 0 }
-
-transition up () {
-	A := 5 * A + B + 1;
-	B := A + 5 * B;
-}

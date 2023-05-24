@@ -1,0 +1,9 @@
+var A : int
+const B : int 
+
+init () { A > 0 }
+
+transition up ()
+{
+	A := (B + 5) * A;
+}

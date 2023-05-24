@@ -109,8 +109,6 @@ let rec unique error = function
   | [] -> ()
   | x :: l -> if Hstring.list_mem x l then error x; unique error l
 
-
-    
 let unify loc (args_1, ty_1) (args_2, ty_2) =
   if not (Hstring.equal ty_1 ty_2) || Hstring.compare_list args_1 args_2 <> 0
     then error (IncompatibleType (args_1, ty_1, args_2, ty_2)) loc

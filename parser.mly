@@ -234,19 +234,21 @@ transition_name:
 
 transition:
   | TRANSITION transition_name LEFTPAR lidents RIGHTPAR 
-      require
-      LEFTBR let_assigns_nondets_updates RIGHTBR
-      { let lets, (assigns, nondets, upds) = $8 in
-	{   ptr_lets = lets;
-	    ptr_name = $2;
-            ptr_args = $4; 
-	    ptr_reqs = $6;
-	    ptr_assigns = assigns; 
-	    ptr_nondets = nondets; 
-	    ptr_upds = upds;
-            ptr_loc = loc ();
-          }
+    require
+    LEFTBR let_assigns_nondets_updates RIGHTBR
+    { 
+      let lets, (assigns, nondets, upds) = $8 in
+	    {   
+        ptr_lets = lets;
+	      ptr_name = $2;
+        ptr_args = $4; 
+	      ptr_reqs = $6;
+	      ptr_assigns = assigns; 
+	      ptr_nondets = nondets; 
+	      ptr_upds = upds;
+        ptr_loc = loc ();
       }
+    }
 ;
 
 let_assigns_nondets_updates:
@@ -260,18 +262,18 @@ assigns_nondets_updates:
   |  { [], [], [] }
   | assign_nondet_update 
       {  
-	match $1 with
-	  | Assign (x, y) -> [x, y,loc()], [], []
-	  | Nondet x -> [], [x], []
-	  | Upd x -> [], [], [x]
+	      match $1 with
+	      | Assign (x, y) -> [x, y,loc()], [], []
+	      | Nondet x -> [], [x], []
+	      | Upd x -> [], [], [x]
       }
   | assign_nondet_update PV assigns_nondets_updates 
       { 
-	let assigns, nondets, upds = $3 in
-	match $1 with
-	  | Assign (x, y) -> (x, y, loc()) :: assigns, nondets, upds
-	  | Nondet x -> assigns, x :: nondets, upds
-	  | Upd x -> assigns, nondets, x :: upds
+	      let assigns, nondets, upds = $3 in
+	      match $1 with
+	      | Assign (x, y) -> (x, y, loc()) :: assigns, nondets, upds
+        | Nondet x -> assigns, x :: nondets, upds
+        | Upd x -> assigns, nondets, x :: upds
       }
 ;
 
@@ -328,20 +330,22 @@ switch:
 
 sterm:
   | INT TIMES INT  
-    { Poly (MConst.add (ConstInt (Num.mult_num $1 $3)) 1 MConst.empty, VMap.empty) }
+    { Poly (Const.add_int Const.empty (Num.mult_num $1 $3), VMap.empty) }
   | REAL TIMES REAL
-    { Poly (MConst.add (ConstReal (Num.mult_num $1 $3)) 1 MConst.empty, VMap.empty) }
+    { Poly (Const.add_real Const.empty (Num.mult_num $1 $3), VMap.empty) }
   | mident TIMES INT
     {
-      if Consts.mem $1 then Poly(MConst.add (ConstName $1) (Num.int_of_num $3) MConst.empty, VMap.empty)
-                       else Poly(MConst.empty, VMap.add (Elem ($1, sort $1))
-                       (ConstInt $3) VMap.empty) 
+      if Consts.mem $1 then 
+        Poly(Const.mult_by_int (Const.add_name Const.empty $1) $3, VMap.empty)
+                       else Poly(Const.empty, VMap.add (Elem ($1, sort $1))
+                       (Const.const_int $3) VMap.empty) 
     }
  | INT TIMES mident
     {
-      if Consts.mem $3 then Poly(MConst.add (ConstName $3) (Num.int_of_num $1) MConst.empty, VMap.empty)
-                       else Poly(MConst.empty, VMap.add (Elem ($3, sort $3))
-                       (ConstInt $1) VMap.empty) 
+      if Consts.mem $3 then 
+        Poly(Const.mult_by_int (Const.add_name Const.empty $3) $1, VMap.empty)
+                       else Poly(Const.empty, VMap.add (Elem ($3, sort $3))
+                       (Const.const_int $1) VMap.empty) 
     }
   | mident TIMES mident
     {
@@ -351,32 +355,32 @@ sterm:
         | false, true  -> $3, $1
         | _ -> assert false
       in
-      Poly (MConst.empty, VMap.add (Elem (v, sort v)) (ConstName c) VMap.empty)
+      Poly (Const.empty, VMap.add (Elem (v, sort v)) (Const.const_name c) VMap.empty)
     }
 ;
 
 term:
-  | REAL { Poly (MConst.add (ConstReal $1) 1 MConst.empty, VMap.empty) }
-  | INT  { Poly (MConst.add (ConstInt  $1) 1 MConst.empty, VMap.empty) }
-  | proc_name { Poly(MConst.empty, VMap.add (Elem ($1, Var)) (ConstInt
-  (Num.num_of_int 1)) VMap.empty) }
+  | REAL { Poly (Const.add_real Const.empty $1, VMap.empty) }
+  | INT  { Poly (Const.add_int Const.empty $1, VMap.empty) }
+  | proc_name 
+  { Poly (Const.empty, VMap.add (Elem ($1, Var)) (Const.const_int (Num.num_of_int 1)) VMap.empty) }
   | sterm     { $1 }
   | mident 
     {
-    if Consts.mem $1 then Poly(MConst.add (ConstName $1) 1 MConst.empty, VMap.empty)
-                     else Poly(MConst.empty, VMap.add (Elem ($1, sort $1))
-                     (ConstInt (Num.num_of_int 1)) VMap.empty) 
+    if Consts.mem $1 then Poly(Const.add_name Const.empty $1, VMap.empty)
+                     else Poly(Const.empty, VMap.add (Elem ($1, sort $1))
+                     (Const.const_int (Num.num_of_int 1)) VMap.empty) 
     }
   | term PLUS INT 
     { 
       match $1 with 
-      | Poly(cs, ts) -> Poly(add_constant (ConstInt $3) 1 cs, ts)
+      | Poly(cs, ts) -> Poly(Const.add_int cs $3, ts)
       | _ -> assert false
     }
   | term PLUS REAL
     {
       match $1 with
-      | Poly(cs, ts) -> Poly(add_constant (ConstReal $3) 1 cs, ts)
+      | Poly(cs, ts) -> Poly(Const.add_real cs $3, ts)
       | _ -> assert false
     }
   | term PLUS mident  
@@ -386,21 +390,23 @@ term:
         | Poly(cs, ts) -> cs, ts
         | _ -> assert false
       in
-      if Consts.mem $3 then Poly(add_constant (ConstName $3) (-1) cs, ts)
+      if Consts.mem $3 then Poly(Const.sub_name cs $3, ts)
       else if VMap.mem (Elem ($3, sort $3)) ts then assert false 
-      else Poly(cs, VMap.add (Elem ($3, sort $3)) (ConstInt (Num.num_of_int (-1))) ts)
+      else Poly(cs, VMap.add (Elem ($3, sort $3)) (Const.const_int (Num.num_of_int (-1))) ts)
     }
   | term PLUS sterm 
     {
       match $1, $3 with 
       | Poly(cs1, ts1), Poly(cs2, ts2) ->
-          Poly(add_constants cs1 cs2, VMap.union (fun k -> add_const_const) ts1 ts2)
+          Poly(Const.add_const cs1 cs2, VMap.union (fun k c1 c2 ->
+            Some(Const.add_const c1 c2)) ts1 ts2)
       | _ -> assert false
     }
   | term MINUS INT 
     { 
       match $1 with 
-      | Poly(cs, ts) -> Poly(add_constant (ConstInt $3) (-1) cs, ts)
+      | Poly(cs, ts) -> 
+          Poly(Const.add_int cs (Num.mult_num $3 (Num.num_of_int (-1))), ts)
       | _ -> assert false
     }
   | term MINUS mident  
@@ -410,9 +416,9 @@ term:
         | Poly(cs, ts) -> cs, ts
         | _ -> assert false
       in
-      if Consts.mem $3 then Poly(add_constant (ConstName $3) (-1) cs, ts)
+      if Consts.mem $3 then Poly(Const.sub_name cs $3, ts)
       else if VMap.mem (Elem ($3, sort $3)) ts then assert false 
-      else Poly(cs, VMap.add (Elem ($3, sort $3)) (ConstInt (Num.num_of_int 1)) ts)
+      else Poly(cs, VMap.add (Elem ($3, sort $3)) (Const.const_int (Num.num_of_int 1)) ts)
     }
 ;
 

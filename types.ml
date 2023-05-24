@@ -63,27 +63,40 @@ module Var = struct
 
     let compare x y =
       match x, y with
-      | Elem(a1,s1), Elem(a2, s2) ->
+      | Elem (a1,s1), Elem(a2, s2) ->
          let c = Stdlib.compare s1 s2 in
          if c <> 0 then c
          else Hstring.compare a1 a2
       | Access(t1,l1), Access(t2,l2) ->
          let c = Hstring.compare t1 t2 in
-         if c<>0 then c
+         if c <> 0 then c
          else Variable.compare_list l1 l2
-      | Elem(_,_), Access(_,_) -> -1
-      | Access(_,_), Elem(_,_) -> 1
+      | Elem (_,_), Access(_,_) -> -1
+      | Access (_,_), Elem(_,_) -> 1
 end
 
 module Const = struct 
 
   type t = 
-    | ConstInt  of Num.num * int Hstring.HMap.t
+    | ConstInt  of Num.num * Num.num Hstring.HMap.t
     | ConstReal of Num.num * Num.num Hstring.HMap.t
-    | ConstName of int Hstring.HMap.t 
+    | ConstName of Num.num Hstring.HMap.t 
 
   let compare c1 c2 = 
     failwith "todo"
+
+  let equal c1 c2 = compare c1 c2 = 0
+  
+  let is_empty = function
+    | ConstName n -> Hstring.HMap.cardinal n = 0
+    | _ -> false
+
+  let type_of = function 
+    | ConstInt  (_,_) -> Smt.Type.type_int 
+    | ConstReal (_,_) -> Smt.Type.type_real
+    | ConstName n     -> snd (Smt.Symbol.type_of (fst (Hstring.HMap.choose n)))
+
+  (* Conversions *)
 
   let to_num = function 
     | ConstInt  (c,p) -> 
@@ -92,50 +105,68 @@ module Const = struct
         if Hstring.HMap.cardinal p = 0 then Some(c) else None 
     | _ -> None
 
+  (* Constructeurs *)
+
+  let empty = ConstName(Hstring.HMap.empty)
+  let const_int  n = ConstInt(n, Hstring.HMap.empty)
+  let const_real n = ConstReal(n, Hstring.HMap.empty)
+  let const_name n = 
+    ConstName(Hstring.HMap.add n (Num.num_of_int 1) Hstring.HMap.empty)
+
   (* Opérations arithméthiques *)
 
   let add_const c1 c2 =
+    let addk k v1 v2 = Some(Num.add_num v1 v2) in
     match c1, c2 with 
-    | ConstInt(_,_), ConstReal(_,_) | ConstReal(_,_), ConstInt(_,_) -> None 
+    | ConstInt(_,_), ConstReal(_,_) | ConstReal(_,_), ConstInt(_,_) -> 
+        assert false 
     | ConstInt(c1, p1), ConstInt(c2, p2) -> 
         let c = Num.add_num c1 c2 in 
-        let p = Hstring.HMap.union (fun _ n1 n2 -> Some(n1+n2)) p1 p2 in
-        Some(ConstInt(c,p))
+        let p = Hstring.HMap.union addk p1 p2 in
+        ConstInt(c,p)
     | ConstReal(c1, p1), ConstReal(c2, p2) ->
         let c = Num.add_num c1 c2 in 
-        let p = Hstring.HMap.union (fun _ n1 n2 -> Some(Num.add_num n1 n2)) p1 p2 in
-        Some(ConstReal(c,p))
+        let p = Hstring.HMap.union addk p1 p2 in
+        ConstReal(c,p)
     | ConstName n, ConstInt(c,p) | ConstInt(c,p), ConstName n ->
-        let p = Hstring.HMap.union (fun _ n1 n2 -> Some(n1+n2)) n p in
-        Some(ConstInt(c,p))
+        let p = Hstring.HMap.union addk n p in
+        ConstInt(c,p)
     | ConstName n, ConstReal(c,p) | ConstReal(c,p), ConstName n ->
-        let n = Hstring.HMap.map Num.num_of_int n in 
-        let p = Hstring.HMap.union (fun _ n1 n2 -> Some(Num.add_num n1 n2)) n p in
-        Some(ConstReal(c,p))
+        let p = Hstring.HMap.union addk n p in
+        ConstReal(c,p)
     | ConstName n1, ConstName n2 ->
-        let n = Hstring.HMap.union (fun _ n1 n2 -> Some(n1+n2)) n1 n2  in
-        Some(ConstName(n))
+        let n = Hstring.HMap.union addk n1 n2 in
+        ConstName(n)
+ 
+  let add_name c v =
+    add_const c (ConstName(Hstring.HMap.add v (Num.num_of_int 1) Hstring.HMap.empty))
 
-  let mult_by_int c i = 
+  let add_int c i = 
+    add_const c (ConstInt(i, Hstring.HMap.empty))
+
+  let add_real c i =
+    add_const c (ConstReal(i, Hstring.HMap.empty))
+
+  let sub_name c v = 
+    add_const c (ConstName(Hstring.HMap.add v (Num.num_of_int (-1)) Hstring.HMap.empty))
+
+  let mult_by_int c i =
     match c with 
-    | ConstName n     -> 
-        ConstName (Hstring.HMap.map (Int.mul i) n)
+    | ConstName n ->
+      ConstInt(Num.num_of_int 0, Hstring.HMap.map (Num.mult_num i) n) 
     | ConstInt  (c,p) -> 
-        ConstInt  (Num.mult_num c (Num.num_of_int i), Hstring.HMap.map (Int.mul i) p)
-    | ConstReal (_,_) -> (* TODO : Raise une erreur appropriée de typage *)
-        assert false 
-
-  let mult_by_real c i = 
-    match c with 
-    | ConstName n -> 
-        let nzero = Num.num_of_int 0 in
-        let nmult = fun v -> Num.mult_num (Num.num_of_int v) i in 
-        ConstReal (nzero, Hstring.HMap.map nmult n)
+        ConstInt  (Num.mult_num c i, Hstring.HMap.map (Num.mult_num i) p)
     | ConstReal (c,p) ->
-        ConstReal(Num.mult_num c i, Hstring.HMap.map (Num.mult_num i) p)
-    | ConstInt(_,_)  -> (* TODO : Raise une erreur appropriée de typage *)
         assert false
 
+  let mult_by_real c i =  
+    match c with 
+    | ConstName n ->
+      ConstReal(Num.num_of_int 0, Hstring.HMap.map (Num.mult_num i) n) 
+    | ConstReal  (c,p) -> 
+        ConstReal  (Num.mult_num c i, Hstring.HMap.map (Num.mult_num i) p)
+    | ConstInt (c,p) ->
+        assert false
 end
 
 module VMap = Map.Make(Var)
@@ -149,21 +180,21 @@ module VMap = Map.Make(Var)
 
 type constmap = int MConst.t
 
-type term =
-  | Const   of constmap
-  | Elem    of Hstring.t * sort             
-  | Access  of Hstring.t * Variable.t list 
-  | Arith   of term  * int MConst.t
-  | Poly    of constmap * const VMap.t
-
 let add_const_const c1 c2 =
   match c1, c2 with 
   | ConstInt i1, ConstInt i2    -> Some(ConstInt(Num.add_num i1 i2))
   | ConstReal r1, ConstReal r2  -> Some(ConstReal(Num.add_num r1 r2))
   | _ -> assert false
 
+type term =
+  | Const   of constmap
+  | Elem    of Hstring.t  * sort             
+  | Access  of Hstring.t  * Variable.t list 
+  | Arith   of term       * int MConst.t
+  | Poly    of Const.t    * Const.t VMap.t
+
 let is_int_const = function
-  | ConstInt _ -> true
+  | ConstInt  _ -> true
   | ConstReal _ -> false
   | ConstName n -> 
      Hstring.equal (snd (Smt.Symbol.type_of n)) Smt.Type.type_int
@@ -253,9 +284,6 @@ module Term = struct
        let c = compare t1 t2 in
        if c<>0 then c else compare_constants cs1 cs2
     | Arith(_,_), _ -> -1 | _ , Arith(_,_) -> 1
-    | Poly(cs1, ts1), Poly(cs2, ts2) ->
-        let cc = compare_constants cs1 cs2 in
-        if cc = 0 then VMap.compare compare_const ts1 ts2 else cc
 
   let hash = Hashtbl.hash_param 50 50
 

@@ -1,0 +1,9 @@
+var A : int
+const B : int
+const C : int
+
+init () { A > 0 }
+
+transition up () {
+	A := B + C * A;
+}

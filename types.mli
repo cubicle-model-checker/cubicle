@@ -35,8 +35,30 @@ module MConst : sig
   val is_num : int t -> Num.num option
 end
 
-val compare_constants : int MConst.t -> int MConst.t -> int
+module Const : sig 
+  type t 
+  val empty : t
+  val const_int : Num.num -> t
+  val const_real : Num.num -> t
+  val const_name : Hstring.t -> t
+
+  val to_num : t -> Num.num option
+  val is_empty : t -> bool
+
+  val add_const : t -> t -> t 
+  val add_name : t -> Hstring.t -> t
+  val add_int : t -> Num.num -> t
+  val add_real : t -> Num.num -> t
+
+  val sub_name : t -> Hstring.t -> t
+
+  val mult_by_int : t -> Num.num -> t
+  val mult_by_real : t -> Num.num -> t
+end
+
+
 val add_const_const : const -> const -> const option
+val compare_constants : int MConst.t -> int MConst.t -> int
 val add_constant : MConst.key -> int -> int MConst.t -> int MConst.t 
 val add_constants : int MConst.t -> int MConst.t -> int MConst.t
 val const_sign : int MConst.t -> int option
@@ -65,7 +87,7 @@ type term =
   (** an access to an array *)
   | Arith of term * int MConst.t
   (** arithmetic term: [Arith (t, c)] is the term [t + c] *)
-  | Poly  of constmap * const VMap.t
+  | Poly  of Const.t * Const.t VMap.t
 (** Module interface for terms *)
 module Term : sig
 
