@@ -71,7 +71,6 @@ module Var : sig
     type t =
       | Elem    of Hstring.t * sort
       | Access  of Hstring.t * Variable.t list
-
     val compare : t -> t -> int
 end
 

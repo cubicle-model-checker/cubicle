@@ -61,6 +61,10 @@ module Var = struct
       | Elem   of Hstring.t * sort             
       | Access of Hstring.t * Variable.t list  
 
+    let to_string = function
+      | Elem   (t,_) -> Hstring.view t
+      | Access (t,_) -> Hstring.view t
+
     let compare x y =
       match x, y with
       | Elem (a1,s1), Elem(a2, s2) ->
@@ -153,7 +157,7 @@ module Const = struct
   let mult_by_int c i =
     match c with 
     | ConstName n ->
-      ConstInt(Num.num_of_int 0, Hstring.HMap.map (Num.mult_num i) n) 
+        ConstInt(Num.num_of_int 0, Hstring.HMap.map (Num.mult_num i) n)
     | ConstInt  (c,p) -> 
         ConstInt  (Num.mult_num c i, Hstring.HMap.map (Num.mult_num i) p)
     | ConstReal (c,p) ->
@@ -169,8 +173,7 @@ module Const = struct
         assert false
 
   let mult_by_const c1 c2 =
-    if is_empty c1 then c2
-    else if is_empty c2 then c1
+    if is_empty c1 || is_empty c2 then empty
     else
     match c1, c2 with 
     | ConstName n, ConstInt (c,p) | ConstInt(c,p), ConstName n ->
@@ -189,7 +192,7 @@ module Const = struct
         else if Hstring.HMap.cardinal p1 = 0 then ConstReal(Num.mult_num c1 c2, p2)
         else assert false
     | _ -> assert false
-
+  
   let neg = function 
     | ConstName n -> ConstName(Hstring.HMap.map Num.minus_num n)
     | ConstReal (c,p) -> ConstReal(Num.minus_num c, Hstring.HMap.map
