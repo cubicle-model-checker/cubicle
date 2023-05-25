@@ -45,17 +45,17 @@ module Const : sig
   val mult_by_real : t -> Num.num -> t
 end
 
-module Var : sig
+module Vea : sig
     type t =
       | Elem    of Hstring.t * sort
       | Access  of Hstring.t * Variable.t list
     val compare : t -> t -> int
 end
 
-module VMap : Map.S with type key = Var.t
+module VMap : Map.S with type key = Vea.t
 
 type term = 
-  | Var of Var.t
+  | Vea of Vea.t
   | Poly  of Const.t * Const.t VMap.t
 
 val term_add : term -> term -> term
@@ -67,11 +67,6 @@ val term_neg : term -> term
 module Term : sig
 
   type t = term 
-
-  (* op *)
-
-
-  (* -- *)
 
   val compare : t -> t -> int
   val equal : t -> t -> bool

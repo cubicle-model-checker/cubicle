@@ -24,7 +24,7 @@ type op_comp = Eq | Lt | Le | Neq
 
 type sort = Glob | Constr | Var
 
-module Var = struct
+module Vea = struct
     type t = 
       | Elem   of Hstring.t * sort             
       | Access of Hstring.t * Variable.t list  
@@ -141,7 +141,7 @@ module Const = struct
 
 end
 
-module VMap = Map.Make(Var)
+module VMap = Map.Make(Vea)
 
 let vmap_add = 
   VMap.union (fun _ c1 c2 -> Some(Const.add_const c1 c2)) 
@@ -161,21 +161,21 @@ let vmap_neg =
 (* -- *)
 
 type term = 
-  | Var   of Var.t
+  | Vea   of Vea.t
   | Poly  of Const.t * Const.t VMap.t
 
 let term_mult_by_int t1 i = 
   match t1 with
   | Poly(cs, ts) -> 
     Poly(Const.mult_by_int cs i, vmap_mult_int ts i)
-  | Var(v) ->
+  | Vea(v) ->
     Poly(Const.const_int (Num.num_of_int 0), VMap.add v (Const.const_int i) VMap.empty )
 
 let term_mult_by_real t i =
   match t with
   | Poly(cs, ts) -> 
     Poly(Const.mult_by_real cs i, vmap_mult_real ts i)
-  | Var(v) -> 
+  | Vea(v) -> 
     Poly(Const.const_real (Num.num_of_int 0), VMap.add v (Const.const_int i) VMap.empty)
 
 let term_neg = function
@@ -184,15 +184,14 @@ let term_neg = function
 
 let term_add t1 t2 = 
   match t1, t2 with
-  | Var(v1), Var(v2) ->
+  | Vea(v1), Vea(v2) ->
     failwith "todo"
-  | Var(v), Poly(cs, ts) | Poly(cs,ts), Var(v) ->
+  | Vea(v), Poly(cs, ts) | Poly(cs,ts), Vea(v) ->
     failwith "todo"
   | Poly(cs1, ts1), Poly(cs2, ts2) -> 
       let cs' = Const.add_const cs1 cs2 in 
       let ts' = vmap_add ts1 ts2 in
       Poly(cs', ts')
-
 
 module Term = struct
 
@@ -200,10 +199,10 @@ module Term = struct
  
   let rec compare t1 t2 = 
     match t1, t2 with
-    | Var v1, Var v2 -> Var.compare v1 v2
-    | Var v, Poly(cs, ts) ->
+    | Vea v1, Vea v2 -> Vea.compare v1 v2
+    | Vea v, Poly(cs, ts) ->
         if VMap.cardinal ts = 0 then Const.compare v cs else 1
-    | Poly(cs, ts), Var v ->
+    | Poly(cs, ts), Vea v ->
         if VMap.cardinal ts = 0 then Const.compare v cs else -1
     | Poly(cs1, ts1), Poly(cs2, ts2) ->
         let c = Const.compare cs1 cs2 in 
@@ -254,7 +253,7 @@ module Term = struct
 
   let rec type_of = 
     function
-    | Var(v) ->
+    | Vea(v) ->
         begin match v with
         | Elem (x, Var) -> Smt.Type.type_proc
         | Elem (x, _) | Access (x, _) -> snd (Smt.Symbol.type_of x)
@@ -292,7 +291,7 @@ module Term = struct
   *)
 
   let rec print fmt = function
-    | Var(v) -> 
+    | Vea(v) -> 
         begin match v with 
         | Elem (s, _) -> fprintf fmt "%a" Hstring.print s
         | Access (a, li) ->
@@ -400,13 +399,13 @@ end = struct
     | _ -> a
 
   let rec has_vars_term vs = function
-    | Var v -> 
+    | Vea v -> 
         begin match v with 
         | Elem (x, Var) -> Hstring.list_mem x vs
         | Access (_, lx) -> List.exists (fun z -> Hstring.list_mem z lx) vs
         | _ -> false
         end 
-    (*
+    (* TODO G
     | Arith (x, _) ->  has_vars_term vs x
     *)
     | _ -> false
@@ -418,7 +417,6 @@ end = struct
        SAtom.exists (has_vars vs) sa || has_vars vs a1 || has_vars vs a2
 
   let has_var v = has_vars [v]
-
 
   let rec variables = function
     | True | False -> Variable.Set.empty
