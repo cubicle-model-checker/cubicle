@@ -342,10 +342,10 @@ sterm:
         | CReal r -> Term.Poly(Const.const_real r, VMap.empty)
       else Var(Elem ($1, sort $1))
     }
-  | sterm TIMES INT { Term.mult_by_int $1 $3 }
-  | sterm TIMES REAL { Term.mult_by_real $1 $3 }
-  | sterm MINUS sterm { Term.add $1 (Term.neg $3) }
-  | MINUS sterm { Term.neg $2 }
+  | sterm TIMES INT { term_mult_by_int $1 $3 }
+  | sterm TIMES REAL { term_mult_by_real $1 $3 }
+  | sterm MINUS sterm { term_add $1 (Term.neg $3) }
+  | MINUS sterm { term_neg $2 }
   | LEFTPAR term RIGHTPAR { $2 }
 ;
 
@@ -353,7 +353,7 @@ term:
   | proc_name 
     { Var (Elem ($1, Var)) }
   | sterm     { $1 }
-  | term PLUS sterm { Term.add $1 $3 }
+  | term PLUS sterm { term_add $1 $3 }
 ;
 
 lident:

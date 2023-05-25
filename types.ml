@@ -160,44 +160,44 @@ let vmap_neg =
 
 (* -- *)
 
+type term = 
+  | Var   of Var.t
+  | Poly  of Const.t * Const.t VMap.t
+
+let term_mult_by_int t1 i = 
+  match t1 with
+  | Poly(cs, ts) -> 
+    Poly(Const.mult_by_int cs i, vmap_mult_int ts i)
+  | Var(v) ->
+    Poly(Const.const_int (Num.num_of_int 0), VMap.add v (Const.const_int i) VMap.empty )
+
+let term_mult_by_real t i =
+  match t with
+  | Poly(cs, ts) -> 
+    Poly(Const.mult_by_real cs i, vmap_mult_real ts i)
+  | Var(v) -> 
+    Poly(Const.const_real (Num.num_of_int 0), VMap.add v (Const.const_int i) VMap.empty)
+
+let term_neg = function
+  | Poly(cs,ts) -> Poly(Const.neg cs, vmap_neg ts)
+  | _ -> assert false
+
+let term_add t1 t2 = 
+  match t1, t2 with
+  | Var(v1), Var(v2) ->
+    failwith "todo"
+  | Var(v), Poly(cs, ts) | Poly(cs,ts), Var(v) ->
+    failwith "todo"
+  | Poly(cs1, ts1), Poly(cs2, ts2) -> 
+      let cs' = Const.add_const cs1 cs2 in 
+      let ts' = vmap_add ts1 ts2 in
+      Poly(cs', ts')
+
+
 module Term = struct
 
-  type t = 
-    | Var   of Var.t
-    | Poly  of Const.t * Const.t VMap.t
+  type t = term
  
-  (* -- Composition -- *)
-  let add t1 t2 = 
-    match t1, t2 with
-    | Var(v1), Var(v2) ->
-      failwith "todo"
-    | Var(v), Poly(cs, ts) | Poly(cs,ts), Var(v) ->
-      failwith "todo"
-    | Poly(cs1, ts1), Poly(cs2, ts2) -> 
-        let cs' = Const.add_const cs1 cs2 in 
-        let ts' = vmap_add ts1 ts2 in
-        Poly(cs', ts')
-
-  let mult_by_int t1 i = 
-    match t1 with
-    | Poly(cs, ts) -> 
-        Poly(Const.mult_by_int cs i, vmap_mult_int ts i)
-    | Var(v) ->
-        Poly(Const.const_int (Num.num_of_int 0), VMap.add v (Const.const_int i) VMap.empty )
-
-  let mult_by_real t i =
-    match t with
-    | Poly(cs, ts) -> 
-        Poly(Const.mult_by_real cs i, vmap_mult_real ts i)
-    | Var(v) -> 
-        Poly(Const.const_real (Num.num_of_int 0), VMap.add v (Const.const_int i) VMap.empty)
-
-  let neg = function
-    | Poly(cs,ts) -> Poly(Const.neg cs, vmap_neg ts)
-    | _ -> assert false
-
-  (* -- *)
-
   let rec compare t1 t2 = 
     match t1, t2 with
     | Var v1, Var v2 -> Var.compare v1 v2
@@ -217,8 +217,8 @@ module Term = struct
   let hfalse = Hstring.make "False"
 
   module STerm = Set.Make (struct
-                            type t = Term.t
-                            let compare = Term.compare
+                            type t = term
+                            let compare = compare
                           end)
 
   module Set = STerm
@@ -400,7 +400,7 @@ end = struct
     | _ -> a
 
   let rec has_vars_term vs = function
-    | Term.Var v -> 
+    | Var v -> 
         begin match v with 
         | Elem (x, Var) -> Hstring.list_mem x vs
         | Access (_, lx) -> List.exists (fun z -> Hstring.list_mem z lx) vs

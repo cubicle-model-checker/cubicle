@@ -21,9 +21,9 @@
 
 (** sort of single symbol *)
 type sort =
-  | Glob (** global variable *)
-  | Constr (** constructor *)
-  | Var (** variable of the paramterized domain *)
+  | Glob    (** global variable *)
+  | Constr  (** constructor *)
+  | Var     (** variable of the paramterized domain *)
 
 module Const : sig 
   type t 
@@ -54,19 +54,22 @@ end
 
 module VMap : Map.S with type key = Var.t
 
+type term = 
+  | Var of Var.t
+  | Poly  of Const.t * Const.t VMap.t
+
+val term_add : term -> term -> term
+val term_mult_by_int  : term -> Num.num  -> term
+val term_mult_by_real : term -> Num.num -> term
+val term_neg : term -> term
 
 (** Module interface for terms *)
 module Term : sig
 
-  type t = 
-    | Var   of Var.t
-    | Poly  of Const.t * Const.t VMap.t
+  type t = term 
 
   (* op *)
-  val add : t -> t -> t
-  val mult_by_int : t -> Num.num  -> t 
-  val mult_by_real : t -> Num.num -> t
-  val neg : t -> t
+
 
   (* -- *)
 
@@ -92,7 +95,7 @@ module Term : sig
   val print : Format.formatter -> t -> unit
   (** prints a term *)
 
-  module Set : Set.S with type elt = Term.t
+  module Set : Set.S with type elt = t
   (** set of terms *)
 
 end
