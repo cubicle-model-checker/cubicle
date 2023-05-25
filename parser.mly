@@ -56,10 +56,13 @@
     let mem x = S.mem x !s
   end
 
+
+  type c = | CInt of Num.num | CReal of Num.num
   module Consts = struct
-    let s = ref S.empty
-    let add x = s := S.add x !s
-    let mem x = S.mem x !s
+    let s       = ref Hstring.HMap.empty
+    let add x n = s := Hstring.HMap.add x n !s
+    let mem x   = Hstring.HMap.mem x !s
+    let get x   = Hstring.HMap.find x !s
   end
 
   let sort s = 
@@ -147,8 +150,6 @@ decl :
 
 symbold_decls :
   | { [], [], [] }
-  | const_decl symbold_decls
-      { let consts, vars, arrays = $2 in ($1::consts), vars, arrays }
   | var_decl symbold_decls
       { let consts, vars, arrays = $2 in consts, ($1::vars), arrays }
   | array_decl symbold_decls
@@ -169,10 +170,8 @@ var_decl:
 ;
 
 const_decl:
-  | CONST mident COLON lident { 
-    if Hstring.equal $4 hint || Hstring.equal $4 hreal then Smt.set_arith true;
-    Consts.add $2;
-    loc (), $2, $4 }
+  | CONST mident EQ INT  { Consts.add $2 (CInt $4) }
+  | CONST mident EQ REAL { Consts.add $2 (CReal $4) } 
 ;
 
 array_decl:
@@ -306,16 +305,20 @@ update:
         ) $3;
         Upd { pup_loc = loc (); pup_arr = $1; pup_arg = $3; pup_swts = $7} }
   | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term
-      { let cube, rjs =
-          List.fold_left (fun (cube, rjs) i ->
-            let j = fresh_var () in
-            let c = PAtom (AEq (TVar j, TVar i)) in
-            c :: cube, j :: rjs) ([], []) $3 in
-        let a = PAnd cube in
-        let js = List.rev rjs in
-	let sw = [(a, TTerm $6); (PAtom (AAtom Atom.True), TTerm (Access($1, js)))] in
-	Upd { pup_loc = loc (); pup_arr = $1; pup_arg = js; pup_swts = sw}  }
-
+    { 
+      let cube, rjs =
+        List.fold_left (fun (cube, rjs) i ->
+          let j = fresh_var () in
+          let c = PAtom (AEq (TVar j, TVar i))  in
+          c :: cube, j :: rjs) ([], []) $3      
+      in
+      let a = PAnd cube in
+      let js = List.rev rjs in
+	    let sw = [(a, TTerm $6); (PAtom (AAtom Atom.True), TTerm
+      (Term.Var(Access($1, js))))] in
+	    Upd { pup_loc = loc (); pup_arr = $1; pup_arg = js; pup_swts = sw
+    }  
+  }
 ;
 
 switchs:
@@ -328,27 +331,29 @@ switch:
   | expr COLON term { $1, TTerm $3 }
 ;
 
-
 sterm:
-  | REAL { Poly (Const.const_real $1, VMap.empty) }
+  | REAL { Term.Poly (Const.const_real $1, VMap.empty) }
   | INT  { Poly (Const.const_int  $1, VMap.empty) }
   | mident 
     {
-    if Consts.mem $1 then Poly(Const.const_name $1, VMap.empty)
-                     else Poly(Const.empty, VMap.add (Elem ($1, sort $1))
-                     (Const.const_int (Num.num_of_int 1)) VMap.empty) 
+      if Consts.mem $1 then 
+        match Consts.get $1 with
+        | CInt i  -> Term.Poly(Const.const_int i, VMap.empty)
+        | CReal r -> Term.Poly(Const.const_real r, VMap.empty)
+      else Var(Elem ($1, sort $1))
     }
-  | sterm TIMES sterm { mult_term_by_term $1 $3 }
-  | sterm MINUS sterm { add_term $1 (neg_term $3) }
-  | MINUS sterm { neg_term $2 }
+  | sterm TIMES INT { Term.mult_by_int $1 $3 }
+  | sterm TIMES REAL { Term.mult_by_real $1 $3 }
+  | sterm MINUS sterm { Term.add $1 (Term.neg $3) }
+  | MINUS sterm { Term.neg $2 }
   | LEFTPAR term RIGHTPAR { $2 }
 ;
 
 term:
   | proc_name 
-    { Poly (Const.empty, VMap.add (Elem ($1, Var)) (Const.const_int (Num.num_of_int 1)) VMap.empty) }
+    { Var (Elem ($1, Var)) }
   | sterm     { $1 }
-  | term PLUS sterm { add_term $1 $3 }
+  | term PLUS sterm { Term.add $1 $3 }
 ;
 
 lident:

@@ -25,47 +25,25 @@ type sort =
   | Constr (** constructor *)
   | Var (** variable of the paramterized domain *)
 
-(** constant: it can be an integer, a real or a constant name *)
-type const =
-    ConstInt of Num.num | ConstReal of Num.num | ConstName of Hstring.t
-                                                                
-module MConst : sig 
-  include Map.S with type key = const
-  val choose : int t -> key * int
-  val is_num : int t -> Num.num option
-end
-
 module Const : sig 
   type t 
   
   (* Constructors *)
-  val empty : t
   val const_int  : Num.num -> t
   val const_real : Num.num -> t
-  val const_name : Hstring.t -> t
-
+ 
+  val is_int : t -> bool 
+  val sign : t -> int option 
   val to_num : t -> Num.num option
-  val is_empty : t -> bool
+  val type_of : t -> Smt.Type.t
 
   val add_const : t -> t -> t 
-  val add_name : t -> Hstring.t -> t
   val add_int : t -> Num.num -> t
   val add_real : t -> Num.num -> t
-
-  val sub_name : t -> Hstring.t -> t
 
   val mult_by_int : t -> Num.num -> t
   val mult_by_real : t -> Num.num -> t
 end
-
-(* -- *)
-val compare_constants : int MConst.t -> int MConst.t -> int
-val add_constant : MConst.key -> int -> int MConst.t -> int MConst.t 
-val add_constants : int MConst.t -> int MConst.t -> int MConst.t
-val const_sign : int MConst.t -> int option
-val const_nul : int MConst.t -> bool
-val mult_const : int -> int MConst.t -> int MConst.t
-(* -- *)
 
 module Var : sig
     type t =
@@ -76,30 +54,21 @@ end
 
 module VMap : Map.S with type key = Var.t
 
-type constmap = int MConst.t 
-
-(** the type of terms *)
-type term =
-  | Const of int MConst.t
-  (** constant given as a map. [1*2 + 3*c] is the map [[2 -> 1; c -> 3]] *)
-  | Elem of Hstring.t * sort
-  (** element, can be a variable or a process *)
-  | Access of Hstring.t * Variable.t list
-  (** an access to an array *)
-  | Arith of term * int MConst.t
-  (** arithmetic term: [Arith (t, c)] is the term [t + c] *)
-  | Poly  of Const.t * Const.t VMap.t
-
-val add_term : term -> term -> term
-val mult_term_by_int : term -> Num.num  -> term 
-val mult_term_by_real : term -> Num.num -> term
-val mult_term_by_term : term -> term -> term
-val neg_term : term -> term
 
 (** Module interface for terms *)
 module Term : sig
 
-  type t = term
+  type t = 
+    | Var   of Var.t
+    | Poly  of Const.t * Const.t VMap.t
+
+  (* op *)
+  val add : t -> t -> t
+  val mult_by_int : t -> Num.num  -> t 
+  val mult_by_real : t -> Num.num -> t
+  val neg : t -> t
+
+  (* -- *)
 
   val compare : t -> t -> int
   val equal : t -> t -> bool
@@ -123,7 +92,7 @@ module Term : sig
   val print : Format.formatter -> t -> unit
   (** prints a term *)
 
-  module Set : Set.S with type elt = t
+  module Set : Set.S with type elt = Term.t
   (** set of terms *)
 
 end
