@@ -6,9 +6,11 @@ var Deadlock : bool
 
 init(i) { PC[i] = Idle && Deadlock = False }
 
-(*unsafe(i j) { PC[i] = Ent && PC[j] = Ent }*)
+unsafe(i j) { PC[i] = Ent && PC[j] = Ent }
 
-unsafe () { Deadlock = True }
+(*unsafe () { Deadlock = True }*)
+
+(*unsafe (i j) { PC[i] = Req && PC[j] = Req }*)
 
 transition t1(i)
 requires { PC[i] = Idle }
@@ -22,6 +24,6 @@ transition t3(i)
 requires { PC[i] = Ent }
 { PC[i] := Idle; }
 
-transition deadlock(i)
+(*transition deadlock(i)
 requires { PC[i] = Req && forall_other j. PC[j] = Req }
-{ Deadlock := True }
+{ Deadlock := True }*)

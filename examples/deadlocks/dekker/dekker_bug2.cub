@@ -3,9 +3,13 @@ var Req : bool
 array Want[proc] : bool
 array Crit[proc] : bool
 
-init (z) { Want[z] = False && Crit[z] = False && Req = False  }
+var Deadlock : bool
+
+init (z) { Want[z] = False && Crit[z] = False && Req = False && Deadlock = False  }
 
 unsafe (z1 z2) { Crit[z1] = True && Crit[z2] = True }
+
+unsafe (i) { Deadlock = True }
 
 transition req (i)
 requires { Want[i] = False && Req = False }
@@ -23,4 +27,7 @@ requires { Crit[i] = True }
   Want[i] := False
 }
 
-
+(*
+transition deadlock(i)
+requires { Req = True && Want[i] = False && forall_other j. Want[i] = False }
+{ Deadlock := True }*)

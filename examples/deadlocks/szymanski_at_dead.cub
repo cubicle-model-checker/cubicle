@@ -1,0 +1,61 @@
+type location = L0 | L1 | L2 | L3 | L4 | L5 | L6 | L7 
+
+array A[proc] : location
+array B[proc] : bool
+array S[proc] : bool
+array W[proc] : bool 
+
+init (x) { A[x] = L0 && S[x] = False && W[x] = False && B[x] = False }
+ 
+(*DEADLOCK*)
+
+(*this state is reachable and Cubicle says unsafe -- however with 3 processes you cannot repeat the path to reach this*)
+(*unsafe(i j) { A[i] = L1 && A[j] = L6 && S[j] = True }?*)
+
+transition t0 (x)
+requires { A[x] = L0 }
+{ A[x] := L1; B[x] := True }
+
+transition t1 (x)
+requires { A[x] = L1 && forall_other y. S[y] = False }
+{ A[x] := L2; B[x] := False }
+
+transition t2 (x)
+requires { A[x] = L2 }
+{ A[x] := L3; S[x] := True; W[x] := True }
+
+transition t3_then (x y)
+requires { A[x] = L3 && B[y] = False && W[y] = False }
+{ A[x] := L4; S[x] := False }
+
+transition t3_else_1 (x)
+requires { A[x] = L3 && forall_other y. ( B[y] =  True ) }
+{ A[x] := L5; W[x] := False }
+
+transition t3_else_2 (x)
+requires { A[x] = L3 && forall_other y. ( W[y] = True ) }
+{ A[x] := L5; W[x] := False }
+
+transition t4 (x y)
+requires { A[x] = L4 && S[y] = True && W[y] = False }
+{ A[x] := L5; S[x] := True; W[x] := False }
+
+transition t5 (x)
+requires { A[x] = L5 && forall_other y. W[y] = False }
+{ A[x] := L6 }
+(*
+transition t6 (x)
+requires { A[x] = L6 && forall_other j. (x <= j || S[j] = False) }
+{ A[x] := L7 }*)
+
+transition t6 (x)
+requires { Sync = True && A[x] = L6 && forall_other j. (x <= j) }
+{ A[x] := L7 }
+
+transition t6_or (x)
+requires { Sync = True && A[x] = L6 && forall_other j. (S[j] = False) }
+{ A[x] := L7 }
+
+transition t7 (x)
+requires { A[x] = L7 }
+{ A[x] := L0; (* S[x] := False *)}

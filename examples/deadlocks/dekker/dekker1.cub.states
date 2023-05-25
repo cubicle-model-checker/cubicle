@@ -1,0 +1,352 @@
+[39782323774577735]
+#1 : process active
+#2 : process active
+Want[#1] : @MTrue
+Want[#2] : @MTrue
+Crit[#1] : @MFalse
+Crit[#2] : @MTrue
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[756465296038954243]
+#1 : process active
+#2 : process active
+Turn : #1
+Want[#1] : @MTrue
+Want[#2] : @MTrue
+Crit[#1] : @MTrue
+Crit[#2] : @MFalse
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[756465296039815817]
+#1 : process active
+#2 : process active
+Turn : #2
+Want[#1] : @MFalse
+Want[#2] : @MFalse
+Crit[#1] : @MFalse
+Crit[#2] : @MFalse
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[39782323774529722]
+#1 : process active
+#2 : process active
+Want[#1] : @MFalse
+Want[#2] : @MTrue
+Crit[#1] : @MFalse
+Crit[#2] : @MTrue
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[756465296038951583]
+#1 : process active
+#2 : process active
+Turn : #1
+Want[#1] : @MTrue
+Want[#2] : @MFalse
+Crit[#1] : @MFalse
+Crit[#2] : @MFalse
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[39782323774527188]
+#1 : process active
+#2 : process active
+Want[#1] : @MFalse
+Want[#2] : @MFalse
+Crit[#1] : @MFalse
+Crit[#2] : @MFalse
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[756465296038954117]
+#1 : process active
+#2 : process active
+Turn : #1
+Want[#1] : @MTrue
+Want[#2] : @MTrue
+Crit[#1] : @MFalse
+Crit[#2] : @MTrue
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[756465296038954110]
+#1 : process active
+#2 : process active
+Turn : #1
+Want[#1] : @MTrue
+Want[#2] : @MTrue
+Crit[#1] : @MFalse
+Crit[#2] : @MFalse
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[756465296038906104]
+#1 : process active
+#2 : process active
+Turn : #1
+Want[#1] : @MFalse
+Want[#2] : @MTrue
+Crit[#1] : @MFalse
+Crit[#2] : @MTrue
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[756465296039863963]
+#1 : process active
+#2 : process active
+Turn : #2
+Want[#1] : @MTrue
+Want[#2] : @MFalse
+Crit[#1] : @MTrue
+Crit[#2] : @MFalse
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[39782323774575334]
+#1 : process active
+#2 : process active
+Want[#1] : @MTrue
+Want[#2] : @MFalse
+Crit[#1] : @MTrue
+Crit[#2] : @MFalse
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[756465296038906097]
+#1 : process active
+#2 : process active
+Turn : #1
+Want[#1] : @MFalse
+Want[#2] : @MTrue
+Crit[#1] : @MFalse
+Crit[#2] : @MFalse
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[756465296039818351]
+#1 : process active
+#2 : process active
+Turn : #2
+Want[#1] : @MFalse
+Want[#2] : @MTrue
+Crit[#1] : @MFalse
+Crit[#2] : @MTrue
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[39782323774577728]
+#1 : process active
+#2 : process active
+Want[#1] : @MTrue
+Want[#2] : @MTrue
+Crit[#1] : @MFalse
+Crit[#2] : @MFalse
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[756465296039818344]
+#1 : process active
+#2 : process active
+Turn : #2
+Want[#1] : @MFalse
+Want[#2] : @MTrue
+Crit[#1] : @MFalse
+Crit[#2] : @MFalse
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[756465296039866364]
+#1 : process active
+#2 : process active
+Turn : #2
+Want[#1] : @MTrue
+Want[#2] : @MTrue
+Crit[#1] : @MFalse
+Crit[#2] : @MTrue
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[756465296039863830]
+#1 : process active
+#2 : process active
+Turn : #2
+Want[#1] : @MTrue
+Want[#2] : @MFalse
+Crit[#1] : @MFalse
+Crit[#2] : @MFalse
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[756465296038903570]
+#1 : process active
+#2 : process active
+Turn : #1
+Want[#1] : @MFalse
+Want[#2] : @MFalse
+Crit[#1] : @MFalse
+Crit[#2] : @MFalse
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[756465296039866357]
+#1 : process active
+#2 : process active
+Turn : #2
+Want[#1] : @MTrue
+Want[#2] : @MTrue
+Crit[#1] : @MFalse
+Crit[#2] : @MFalse
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[756465296038951716]
+#1 : process active
+#2 : process active
+Turn : #1
+Want[#1] : @MTrue
+Want[#2] : @MFalse
+Crit[#1] : @MTrue
+Crit[#2] : @MFalse
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[756465296039866490]
+#1 : process active
+#2 : process active
+Turn : #2
+Want[#1] : @MTrue
+Want[#2] : @MTrue
+Crit[#1] : @MTrue
+Crit[#2] : @MFalse
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[39782323774575201]
+#1 : process active
+#2 : process active
+Want[#1] : @MTrue
+Want[#2] : @MFalse
+Crit[#1] : @MFalse
+Crit[#2] : @MFalse
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[39782323774529715]
+#1 : process active
+#2 : process active
+Want[#1] : @MFalse
+Want[#2] : @MTrue
+Crit[#1] : @MFalse
+Crit[#2] : @MFalse
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[39782323774577861]
+#1 : process active
+#2 : process active
+Want[#1] : @MTrue
+Want[#2] : @MTrue
+Crit[#1] : @MTrue
+Crit[#2] : @MFalse
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+

@@ -16,7 +16,7 @@ def generate_html_table(entries):
       background-color: #f2f2f2;
     }
 
-    th.proves, th.nodes, th.finds, th.multiple {
+    th.fuzz, th.forward {
       text-align: center;
     }
 
@@ -24,7 +24,7 @@ def generate_html_table(entries):
       border-right: 1px solid #ddd;
     }
 
-    th.forward, th.fuzz {
+    th.normal, th.dispatch {
       text-align: center;
       padding-top: 16px;
     }
@@ -33,14 +33,12 @@ def generate_html_table(entries):
       width: 20%;
     }
 
-    colgroup.col-proves,
-    colgroup.col-nodes,
-    colgroup.col-finds,
-    colgroup.col-multiple {
+    colgroup.col-fuzz,
+    colgroup.col-forward {
       width: 10%;
     }
 
-    td.proves, td.nodes, td.finds, td.multiple {
+    td.fuzz, td.forward {
       text-align: center;
     }
 
@@ -84,24 +82,24 @@ def generate_html_table(entries):
     <table>
       <colgroup>
         <col class="col-model">
-        <col class="col-proves">
-        <col class="col-nodes">
-        <col class="col-finds">
-       <col class="col-multiple">
+        <col class="col-forward">
+        <col class="col-fuzz">
+        <col class="col-forward">
+       <col class="col-fuzz">
         <col>
       </colgroup>
       <tr>
         <th class="model"><div>Model</div></th>
-        <th colspan="2" class="forward">Forward</th>
-        <th colspan="2" class="fuzz">Fuzz</th>
+        <th colspan="2" class="normal">Normal</th>
+        <th colspan="2" class="Dispatch">Dispatch</th>
         <th class="invariants"><div>Notes</div></th>
       </tr>
       <tr>
         <th></th>
-        <th class="proves">Proves</th>
-        <th class="nodes">Nodes</th>
-        <th class="finds">Finds</th>
-        <th class="multiple">Multiple</th>
+        <th class="forward">Forward</th>
+        <th class="fuzz">Fuzz</th>
+        <th class="forward">Forward</th>
+        <th class="fuzz">Fuzz</th>
         <th></th>
       </tr>
     '''
@@ -110,10 +108,10 @@ def generate_html_table(entries):
         fields = entry.strip().split('\n')
         table_html += "  <tr>\n"
         table_html += f"    <td style='text-align: center;'>{fields[0]}</td>\n"
-        table_html += f"    <td class='proves'>{fields[2].split(':')[1].strip()}</td>\n"
-        table_html += f"    <td class='nodes'>{fields[3].split(':')[1].strip()}</td>\n"
-        table_html += f"    <td class='finds'>{fields[5].split(':')[1].strip()}</td>\n"
-        table_html += f"    <td class='multiple'>{fields[6].split(':')[1].strip()}</td>\n"
+        table_html += f"    <td class='forward'>{fields[2].split(':')[1].strip()}</td>\n"
+        table_html += f"    <td class='fuzz'>{fields[3].split(':')[1].strip()}</td>\n"
+        table_html += f"    <td class='forward'>{fields[5].split(':')[1].strip()}</td>\n"
+        table_html += f"    <td class='fuzz'>{fields[6].split(':')[1].strip()}</td>\n"
         table_html += f"    <td>{fields[7].split(':')[1].strip()}</td>\n"
         table_html += "  </tr>\n"
 

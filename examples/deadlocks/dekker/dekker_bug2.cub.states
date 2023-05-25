@@ -1,0 +1,116 @@
+[3622885156441042713]
+#1 : process active
+#2 : process active
+Turn : #1
+Req : @MTrue
+Deadlock : @MFalse
+Want[#1] : @MFalse
+Want[#2] : @MFalse
+Crit[#1] : @MFalse
+Crit[#2] : @MFalse
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[4091021111947191464]
+#1 : process active
+#2 : process active
+Req : @MTrue
+Deadlock : @MFalse
+Want[#1] : @MFalse
+Want[#2] : @MTrue
+Crit[#1] : @MFalse
+Crit[#2] : @MFalse
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[3622885156440994567]
+#1 : process active
+#2 : process active
+Turn : #1
+Req : @MTrue
+Deadlock : @MFalse
+Want[#1] : @MTrue
+Want[#2] : @MFalse
+Crit[#1] : @MTrue
+Crit[#2] : @MFalse
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[4091021111964526684]
+#1 : process active
+#2 : process active
+Req : @MFalse
+Deadlock : @MFalse
+Want[#1] : @MFalse
+Want[#2] : @MFalse
+Crit[#1] : @MFalse
+Crit[#2] : @MFalse
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[3622885156111721546]
+#1 : process active
+#2 : process active
+Turn : #2
+Req : @MTrue
+Deadlock : @MFalse
+Want[#1] : @MFalse
+Want[#2] : @MFalse
+Crit[#1] : @MFalse
+Crit[#2] : @MFalse
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[4091021111947145978]
+#1 : process active
+#2 : process active
+Req : @MTrue
+Deadlock : @MFalse
+Want[#1] : @MTrue
+Want[#2] : @MFalse
+Crit[#1] : @MFalse
+Crit[#2] : @MFalse
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+
+[3622885156111719012]
+#1 : process active
+#2 : process active
+Turn : #2
+Req : @MTrue
+Deadlock : @MFalse
+Want[#1] : @MFalse
+Want[#2] : @MTrue
+Crit[#1] : @MFalse
+Crit[#2] : @MTrue
+----------------------
+Lock Queues:
+----------------------
+Condition wait pools:
+----------------------
+Semaphore wait lists:
+

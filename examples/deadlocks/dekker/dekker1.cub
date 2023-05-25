@@ -6,6 +6,11 @@ init (z) { Want[z] = False && Crit[z] = False }
 
 (*Deadlocks if everyone does Req*)
 
+(*unsafe(i j) { Want[i] = True && Want[j] = True }*)
+
+unsafe (z1 z2) { Crit[z1] = True && Crit[z2] = True }
+
+
 transition req (i)
 requires { Want[i] = False }
 { 

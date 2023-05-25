@@ -15,7 +15,7 @@
       background-color: #f2f2f2;
     }
 
-    th.proves, th.nodes, th.finds, th.multiple {
+    th.fuzz, th.forward {
       text-align: center;
     }
 
@@ -23,7 +23,7 @@
       border-right: 1px solid #ddd;
     }
 
-    th.forward, th.fuzz {
+    th.normal, th.dispatch {
       text-align: center;
       padding-top: 16px;
     }
@@ -32,14 +32,12 @@
       width: 20%;
     }
 
-    colgroup.col-proves,
-    colgroup.col-nodes,
-    colgroup.col-finds,
-    colgroup.col-multiple {
+    colgroup.col-fuzz,
+    colgroup.col-forward {
       width: 10%;
     }
 
-    td.proves, td.nodes, td.finds, td.multiple {
+    td.fuzz, td.forward {
       text-align: center;
     }
 
@@ -83,32 +81,128 @@
     <table>
       <colgroup>
         <col class="col-model">
-        <col class="col-proves">
-        <col class="col-nodes">
-        <col class="col-finds">
-       <col class="col-multiple">
+        <col class="col-forward">
+        <col class="col-fuzz">
+        <col class="col-forward">
+       <col class="col-fuzz">
         <col>
       </colgroup>
       <tr>
         <th class="model"><div>Model</div></th>
-        <th colspan="2" class="forward">Forward</th>
-        <th colspan="2" class="fuzz">Fuzz</th>
+        <th colspan="2" class="normal">Normal</th>
+        <th colspan="2" class="Dispatch">Dispatch</th>
         <th class="invariants"><div>Notes</div></th>
       </tr>
       <tr>
         <th></th>
-        <th class="proves">Proves</th>
-        <th class="nodes">Nodes</th>
-        <th class="finds">Finds</th>
-        <th class="multiple">Multiple</th>
+        <th class="forward">Forward</th>
+        <th class="fuzz">Fuzz</th>
+        <th class="forward">Forward</th>
+        <th class="fuzz">Fuzz</th>
         <th></th>
       </tr>
       <tr>
-    <td style='text-align: center;'>Germanish_bug_simple</td>
-    <td class='proves'>Yes</td>
-    <td class='nodes'>5</td>
-    <td class='finds'>Yes</td>
-    <td class='multiple'>Yes</td>
-    <td>[X]</td>
+    <td style='text-align: center;'>Buggy</td>
+    <td class='forward'>Yes</td>
+    <td class='fuzz'>Yes</td>
+    <td class='forward'>Stopped at 256</td>
+    <td class='fuzz'>Yes</td>
+    <td>dispatch_dekker version, same bug different model</td>
+  </tr>
+  <tr>
+    <td style='text-align: center;'>Dekker_bug2</td>
+    <td class='forward'>?</td>
+    <td class='fuzz'>Yes</td>
+    <td class='forward'>?</td>
+    <td class='fuzz'>Yes</td>
+    <td>can't pinpoint manual deadlock</td>
+  </tr>
+  <tr>
+    <td style='text-align: center;'>Germanish</td>
+    <td class='forward'>Yes</td>
+    <td class='fuzz'>Yes</td>
+    <td class='forward'>Stopped at 1539 nodes</td>
+    <td class='fuzz'>Yes</td>
+    <td>-</td>
+  </tr>
+  <tr>
+    <td style='text-align: center;'>Germanish2</td>
+    <td class='forward'>?</td>
+    <td class='fuzz'>Yes</td>
+    <td class='forward'>?</td>
+    <td class='fuzz'>Yes</td>
+    <td>manual deadlock weird</td>
+  </tr>
+  <tr>
+    <td style='text-align: center;'>Germanish3</td>
+    <td class='forward'>?</td>
+    <td class='fuzz'>Yes</td>
+    <td class='forward'>?</td>
+    <td class='fuzz'>Yes</td>
+    <td>need to do manual</td>
+  </tr>
+  <tr>
+    <td style='text-align: center;'>Germanish4</td>
+    <td class='forward'>?</td>
+    <td class='fuzz'>Yes</td>
+    <td class='forward'>?</td>
+    <td class='fuzz'>Yes</td>
+    <td>need to do manual</td>
+  </tr>
+  <tr>
+    <td style='text-align: center;'>German</td>
+    <td class='forward'>?</td>
+    <td class='fuzz'>Yes</td>
+    <td class='forward'>?</td>
+    <td class='fuzz'>Yes</td>
+    <td>need to do manual</td>
+  </tr>
+  <tr>
+    <td style='text-align: center;'>German_Baukus</td>
+    <td class='forward'>?</td>
+    <td class='fuzz'>Yes</td>
+    <td class='forward'>?</td>
+    <td class='fuzz'>Yes</td>
+    <td>need to do manual</td>
+  </tr>
+  <tr>
+    <td style='text-align: center;'>German.CTC</td>
+    <td class='forward'>?</td>
+    <td class='fuzz'>Yes</td>
+    <td class='forward'>?</td>
+    <td class='fuzz'>Yes</td>
+    <td>need to do manual</td>
+  </tr>
+  <tr>
+    <td style='text-align: center;'>German_pfs</td>
+    <td class='forward'>?</td>
+    <td class='fuzz'>Yes</td>
+    <td class='forward'>?</td>
+    <td class='fuzz'>Yes</td>
+    <td>need to do manual</td>
+  </tr>
+  <tr>
+    <td style='text-align: center;'>Szymanski_at</td>
+    <td class='forward'>?</td>
+    <td class='fuzz'>Yes</td>
+    <td class='forward'>?</td>
+    <td class='fuzz'>Yes</td>
+    <td>need to do manual</td>
+  </tr>
+  <tr>
+    <td style='text-align: center;'>Szymanski_na</td>
+    <td class='forward'>?</td>
+    <td class='fuzz'>Yes</td>
+    <td class='forward'>?</td>
+    <td class='fuzz'>Yes</td>
+    <td>need to do manual</td>
+  </tr>
+  <tr>
+    <td style='text-align: center;'>Flash_nodata</td>
+    <td class='forward'>?</td>
+    <td class='fuzz'>Yes</td>
+    <td class='forward'>?</td>
+    <td class='fuzz'>Yes</td>
+    <td>need to do manual</td>
   </tr>
 </table>
