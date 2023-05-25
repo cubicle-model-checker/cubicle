@@ -1,9 +1,11 @@
 var A : int
-const B : int 
+const B : int
+const C : int
 
 init () { A > 0 }
 
 transition up ()
 {
-	A := A * (B + 5);
+	A := B * C;
 }
+

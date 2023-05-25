@@ -58,14 +58,14 @@ module Const : sig
   val mult_by_real : t -> Num.num -> t
 end
 
-
-val add_const_const : const -> const -> const option
+(* -- *)
 val compare_constants : int MConst.t -> int MConst.t -> int
 val add_constant : MConst.key -> int -> int MConst.t -> int MConst.t 
 val add_constants : int MConst.t -> int MConst.t -> int MConst.t
 val const_sign : int MConst.t -> int option
 val const_nul : int MConst.t -> bool
 val mult_const : int -> int MConst.t -> int MConst.t
+(* -- *)
 
 module Var : sig
     type t =
@@ -90,6 +90,13 @@ type term =
   | Arith of term * int MConst.t
   (** arithmetic term: [Arith (t, c)] is the term [t + c] *)
   | Poly  of Const.t * Const.t VMap.t
+
+val add_term : term -> term -> term
+val mult_term_by_int : term -> Num.num  -> term 
+val mult_term_by_real : term -> Num.num -> term
+val mult_term_by_term : term -> term -> term
+val neg_term : term -> term
+
 (** Module interface for terms *)
 module Term : sig
 

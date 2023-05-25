@@ -167,9 +167,54 @@ module Const = struct
         ConstReal  (Num.mult_num c i, Hstring.HMap.map (Num.mult_num i) p)
     | ConstInt (c,p) ->
         assert false
+
+  let mult_by_const c1 c2 =
+    if is_empty c1 then c2
+    else if is_empty c2 then c1
+    else
+    match c1, c2 with 
+    | ConstName n, ConstInt (c,p) | ConstInt(c,p), ConstName n ->
+        if Hstring.HMap.cardinal p = 0 then mult_by_int (ConstName n) c 
+        else 
+          assert false
+    | ConstName n, ConstReal(c,p) | ConstReal(c,p), ConstName n ->
+        if Hstring.HMap.cardinal p = 0 then mult_by_real (ConstName n) c else
+          assert false
+    | ConstInt(c1,p1), ConstInt(c2,p2) ->
+        if Hstring.HMap.cardinal p2 = 0 then ConstInt(Num.mult_num c1 c2, p1)
+        else if Hstring.HMap.cardinal p1 = 0 then ConstInt(Num.mult_num c1 c2, p2)
+        else assert false
+    | ConstReal(c1,p1), ConstReal(c2, p2) ->
+        if Hstring.HMap.cardinal p2 = 0 then ConstReal(Num.mult_num c1 c2, p1)
+        else if Hstring.HMap.cardinal p1 = 0 then ConstReal(Num.mult_num c1 c2, p2)
+        else assert false
+    | _ -> assert false
+
+  let neg = function 
+    | ConstName n -> ConstName(Hstring.HMap.map Num.minus_num n)
+    | ConstReal (c,p) -> ConstReal(Num.minus_num c, Hstring.HMap.map
+    Num.minus_num p)
+    | ConstInt (c,p) -> ConstInt(Num.minus_num c, Hstring.HMap.map Num.minus_num
+    p)
+
 end
 
 module VMap = Map.Make(Var)
+
+let vmap_add = 
+  VMap.union (fun _ c1 c2 -> Some(Const.add_const c1 c2)) 
+
+let vmap_mult_int v i = 
+  VMap.map (fun x -> Const.mult_by_int x i) v
+
+let vmap_mult_real v i = 
+  VMap.map (fun x -> Const.mult_by_real x i) v
+
+let vmap_mult_const v c = 
+  VMap.map (fun x -> Const.mult_by_const x c) v
+
+let vmap_neg =
+  VMap.map Const.neg
 
 (* Proposition d'alternative de terme:
   type term = 
@@ -180,18 +225,46 @@ module VMap = Map.Make(Var)
 
 type constmap = int MConst.t
 
-let add_const_const c1 c2 =
-  match c1, c2 with 
-  | ConstInt i1, ConstInt i2    -> Some(ConstInt(Num.add_num i1 i2))
-  | ConstReal r1, ConstReal r2  -> Some(ConstReal(Num.add_num r1 r2))
-  | _ -> assert false
-
 type term =
   | Const   of constmap
   | Elem    of Hstring.t  * sort             
   | Access  of Hstring.t  * Variable.t list 
   | Arith   of term       * int MConst.t
   | Poly    of Const.t    * Const.t VMap.t
+
+let add_term t1 t2 = 
+  match t1, t2 with 
+  | Poly(cs1, ts1), Poly(cs2, ts2) -> 
+      Poly(Const.add_const cs1 cs2, vmap_add ts1 ts2)
+  | _ -> assert false
+
+let mult_term_by_int t1 i = 
+  match t1 with
+  | Poly(cs, ts) -> 
+      Poly(Const.mult_by_int cs i, vmap_mult_int ts i)
+  | _ -> assert false
+
+let mult_term_by_real t i =
+  match t with
+  | Poly(cs, ts) -> 
+      Poly(Const.mult_by_real cs i, vmap_mult_real ts i)
+  | _ -> assert false
+
+let mult_term_by_term t1 t2 = 
+  match t1, t2 with 
+  | Poly(cs1, ts1), Poly(cs2, ts2) ->
+      begin match VMap.cardinal ts1, VMap.cardinal ts2 with
+      | 0, _ -> Poly(Const.mult_by_const cs1 cs2,vmap_mult_const ts2 cs1)
+      | _, 0 -> Poly(Const.mult_by_const cs1 cs2,vmap_mult_const ts1 cs2)
+      | _,_  -> assert false
+      end
+  | _ -> assert false
+
+let neg_term = function
+  | Poly(cs,ts) -> Poly(Const.neg cs, vmap_neg ts)
+  | _ -> assert false
+
+(* -- *)
 
 let is_int_const = function
   | ConstInt  _ -> true
