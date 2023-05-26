@@ -105,19 +105,19 @@ exception Remove_lit_var of Hstring.t
 
 let rec find_assign memo tr tt =
   match tt with 
-  | Elem (x, sx) -> 
+  | Vea(Elem (x, sx)) -> 
      let gu =
        if H.list_mem x tr.tr_nondets then 
          (*raise (Remove_lit_var x)*)
 	  try List.assoc (Hstring.view x) !memo
 	  with Not_found ->
 	    let nv =
-	      UTerm (Elem (fresh_nondet (Smt.Symbol.type_of x), sx)) in
+	      UTerm (Vea(Elem (fresh_nondet (Smt.Symbol.type_of x), sx))) in
 	    memo := (Hstring.view x,nv) :: !memo;
 	    nv
        else 
 	 try fst (H.list_assoc_triplet x tr.tr_assigns)
-         with Not_found -> UTerm (Elem (x, sx))
+         with Not_found -> UTerm (Vea(Elem (x, sx)))
      in
      begin
        match gu with
@@ -125,6 +125,8 @@ let rec find_assign memo tr tt =
        | UCase swts -> Branch swts
      end
 
+  (*
+    TODO G
   | Const i as a -> Single a
 
   | Arith (x, cs1) ->
@@ -143,7 +145,8 @@ let rec find_assign memo tr tt =
 	  Branch (List.map (fun (sa, y) -> (sa, (Arith (y, cs1))))
 		           up_swts)
      end
-  | Access (a, li) -> 
+  *)
+  | Vea(Access (a, li)) -> 
      let nli = li in
      (* List.map (fun i -> *)
      (*   if H.list_mem i tr.tr_nondets then  *)
@@ -156,7 +159,7 @@ let rec find_assign memo tr tt =
      (*   with Not_found -> i *)
      (* ) li in *)
      try find_update a nli tr.tr_upds
-     with Not_found -> Single (Access (a, nli))
+     with Not_found -> Single (Vea(Access (a, nli)))
 			      (* let na =  *)
 			      (*   try (match H.list_assoc a tr.tr_assigns with *)
 			      (* 	 | Elem (na, _) -> na *)
@@ -164,6 +167,7 @@ let rec find_assign memo tr tt =
 			      (*   with Not_found -> a *)
 			      (* in *)
 			      (* Single (Access (na, nli)) *)
+    | _ -> failwith "todo find assign"
 				
 let make_tau tr =
   let memo = ref [] in

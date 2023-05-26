@@ -40,6 +40,7 @@ type error =
   | NotATerm of Hstring.t
   | WrongNbArgs of Hstring.t * int
   | Smt of Smt.error
+  | AdditionOfIntAndReal
       
 exception Error of error * loc
 
@@ -100,7 +101,8 @@ let report fmt = function
   
   | Smt (Smt.UnknownSymb s) ->
     fprintf fmt "unknown symbol %a" Hstring.print s
-  
+  | AdditionOfIntAndReal ->
+      fprintf fmt "trying to mix int and real"
 
 
 let error e l = raise (Error (e,l))
@@ -119,45 +121,29 @@ let refinements = Hstring.H.create 17
 let infer_type x1 x2 =
   try
     let h1 = match x1 with
-      | Const _ | Arith _ -> raise Exit
-      | Elem (h1, _) | Access (h1, _) -> h1 
+      | Poly _ -> raise Exit
+      | Vea(Elem (h1, _)) | Vea(Access (h1, _)) -> h1 
     in
     let ref_ty, ref_cs =
       try Hstring.H.find refinements h1 with Not_found -> [], [] in
     match x2 with
-      | Elem (e2, Constr) -> Hstring.H.add refinements h1 (e2::ref_ty, ref_cs)
-      | Elem (e2, Glob) -> Hstring.H.add refinements h1 (ref_ty, e2::ref_cs)
+      | Vea(Elem (e2, Constr)) -> Hstring.H.add refinements h1 (e2::ref_ty, ref_cs)
+      | Vea(Elem (e2, Glob))   -> Hstring.H.add refinements h1 (ref_ty, e2::ref_cs)
       | _ -> ()
   with Exit -> ()
 
 let refinement_cycles () = (* TODO *) ()
 
-let rec term loc args t =
+let term_vea loc args t = 
   match t with 
-  | Const cs -> 
-      let c, _ = MConst.choose cs in
-      (match c with
-      | ConstInt _ -> t, ([], Smt.Type.type_int)
-      | ConstReal _ -> t, ([], Smt.Type.type_real)
-      | ConstName x -> 
-	      try t, Smt.Symbol.type_of x 
-        with Not_found -> error (UnknownName x) loc)
-  | Elem (e, Var) -> 
-      if Hstring.list_mem e args then t,([], Smt.Type.type_proc)
+  | Vea.Elem (e, Var) -> 
+      if Hstring.list_mem e args then Vea(t),([], Smt.Type.type_proc)
       else begin 
-        try t, Smt.Symbol.type_of e 
+        try Vea(t), Smt.Symbol.type_of e 
         with Not_found -> error (UnknownName e) loc
       end
-  | Elem (e, _) ->  t, Smt.Symbol.type_of e
-  | Arith (x, _) ->
-      begin
-	      let _, (args, tx) = term loc args x in
-	      if not (Hstring.equal tx Smt.Type.type_int) 
-	      && not (Hstring.equal tx Smt.Type.type_real) then 
-	      error (MustBeNum x) loc;
-	      t, (args, tx)
-      end
-  | Access(a, li) -> 
+  | Vea.Elem (e, _) ->  Vea(t), Smt.Symbol.type_of e
+  | Vea.Access(a, li) -> 
     let args_a, ty_a = 
 	    try Smt.Symbol.type_of a with Not_found -> error (UnknownArray a) loc in
       if List.length args_a <> List.length li then
@@ -177,8 +163,41 @@ let rec term loc args t =
           if not (Hstring.equal ty_i Smt.Type.type_proc) then
 	    error (MustBeOfTypeProc i) loc;
 	    ) li;
-      t,([], ty_a)
-  | Poly(cs, ts) -> failwith "todo"
+      Vea(t),([], ty_a)
+
+let rec term loc args t =
+  match t with 
+  | Vea v -> term_vea loc args v
+  (* TODO G 
+  | Const cs -> 
+      let c, _ = MConst.choose cs in
+      (match c with
+      | ConstInt _ -> t, ([], Smt.Type.type_int)
+      | ConstReal _ -> t, ([], Smt.Type.type_real)
+      | ConstName x -> 
+	      try t, Smt.Symbol.type_of x 
+        with Not_found -> error (UnknownName x) loc)
+  *)
+  (* TODO G 
+  | Arith (x, _) ->
+      begin
+	      let _, (args, tx) = term loc args x in
+	      if not (Hstring.equal tx Smt.Type.type_int) 
+	      && not (Hstring.equal tx Smt.Type.type_real) then 
+	      error (MustBeNum x) loc;
+	      t, (args, tx)
+      end
+      *)
+
+  | Poly(cs, ts) ->
+      Format.printf "typing poly\n%!";
+      let ty  = Const.type_of cs in
+      VMap.iter (fun v c ->
+        (if not (Hstring.equal (Const.type_of c) ty) then error AdditionOfIntAndReal loc);
+        let _,(_, tv) = term_vea loc args v in
+        if not (Hstring.equal tv ty) then error AdditionOfIntAndReal loc
+      ) ts;
+      t,([], ty) 
 
 let rec assignment ?(init_variant=false) g x (_, ty) =
   (*Format.eprintf "GG: %a; x : %a; ty: %a@." Hstring.print g Types.Term.print x Hstring.print ty;*)
@@ -188,9 +207,9 @@ let rec assignment ?(init_variant=false) g x (_, ty) =
   then ()
   else
     match x with
-      | Elem (n, Constr) -> 
+      | Vea(Elem (n, Constr)) -> 
 	  Smt.Variant.assign_constr g n
-      | Elem (n, _) | Access (n, _) ->
+      | Vea(Elem (n, _)) | Vea(Access (n, _)) ->
 	  Smt.Variant.assign_var g n;
 	  if init_variant then 
 	    Smt.Variant.assign_var n g
@@ -199,10 +218,10 @@ let rec assignment ?(init_variant=false) g x (_, ty) =
 let atom loc init_variant args a =
   match a with 
     | True | False -> a
-    | Comp (Elem(g, Glob) as x, Eq, y)
-    | Comp (y, Eq, (Elem(g, Glob) as x))
-    | Comp (y, Eq, (Access(g, _) as x))
-    | Comp (Access(g, _) as x, Eq, y) ->
+    | Comp (Vea(Elem(g, Glob)) as x, Eq, y)
+    | Comp (y, Eq, (Vea(Elem(g, Glob)) as x))
+    | Comp (y, Eq, (Vea(Access(g, _)) as x))
+    | Comp (Vea(Access(g, _)) as x, Eq, y) ->
       let x', tx = term loc args x in
       let y',ty = term loc args y in
       unify loc tx ty;

@@ -61,7 +61,9 @@ type term =
 val term_add : term -> term -> term
 val term_mult_by_int  : term -> Num.num  -> term
 val term_mult_by_real : term -> Num.num -> term
+val term_mult_by_vea : term -> Vea.t -> term
 val term_neg : term -> term
+
 
 (** Module interface for terms *)
 module Term : sig

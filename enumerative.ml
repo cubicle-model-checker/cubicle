@@ -222,8 +222,10 @@ let state_to_cube env st =
       if sti <> -1 then
 	let t1 = id_to_term env !i in
 	let t2 =
-          if sti = env.minf_int_abstr then Elem (Hstring.make "-oo", Constr)
-          else if sti = env.pinf_int_abstr then Elem (Hstring.make "+oo", Constr) 
+          if sti = env.minf_int_abstr then Vea(Elem (Hstring.make "-oo",
+          Constr))
+          else if sti = env.pinf_int_abstr then Vea(Elem (Hstring.make "+oo",
+          Constr))
           else id_to_term env sti in
 	SAtom.add (Atom.Comp (t1, Eq, t2)) sa
       else sa
@@ -416,15 +418,15 @@ let abstr_add env x y =
 let is_variable env id = id <= env.max_id_vars
 
 let is_int_real = function
-  | Elem (x,Glob) | Access (x, _) -> 
+  | Vea(Elem (x,Glob)) | Vea(Access (x, _)) -> 
       snd (Smt.Symbol.type_of x) = Smt.Type.type_int ||
       snd (Smt.Symbol.type_of x) = Smt.Type.type_real
   | _ -> false
 
 let all_constr_terms () =
-  List.rev_map (fun x -> Elem (x, Constr)) (Smt.Type.all_constructors ())
+  List.rev_map (fun x -> Vea(Elem (x, Constr))) (Smt.Type.all_constructors ())
 
-let terms_of_procs = List.map (fun x -> Elem (x, Var))
+let terms_of_procs = List.map (fun x -> Vea(Elem (x, Var)))
 
 
 let rec power_p i p = if p <= 0 then 1 else i * power_p i (p-1)
@@ -438,9 +440,9 @@ let table_size nb_procs nb_vars =
 let add_pos_to_proc_substate ht
     proc_substates reverse_proc_substates =
   Term.Set.iter (function
-      | Access (_, ps) as t ->
+      | Vea(Access (_, ps)) as t ->
         let i = HT.find ht t in
-        let ids_ps = List.map (fun hp -> HT.find ht (Elem (hp, Var))) ps in
+        let ids_ps = List.map (fun hp -> HT.find ht (Vea(Elem (hp, Var)))) ps in
         let sub_ps = try HLI.find proc_substates ids_ps with Not_found -> [] in
         (* List.iter (fun p -> eprintf "%d (%a), " p Term.print t) ids_ps; *)
         (* eprintf "at %d@." i; *)
@@ -453,10 +455,10 @@ let partial_order ht var_terms nb_vars =
   (* let orders = HI.create nb_vars in *)
   let map_orders =
     Term.Set.fold (fun t acc -> match t with
-        | Access (a, ps) ->
+        | Vea(Access (a, ps)) ->
           let i = HT.find ht t in
           let ups = List.rev (List.tl (List.rev ps)) in
-          let t_par = Access (a, ups) in
+          let t_par = Vea(Access (a, ups)) in
           let others = try TMap.find t_par acc with Not_found -> SI.empty in
           let pord = SI.add i others in
           TMap.add t_par pord acc
@@ -474,6 +476,8 @@ let partial_order ht var_terms nb_vars =
 
 
 let init_tables ?(alloc=true) procs s =
+  failwith "todo : init tables"
+  (*
   let var_terms = Forward.all_var_terms procs s in
   let proc_terms = terms_of_procs procs in (* constantes *)
   let constr_terms = all_constr_terms () in (* constantes *)
@@ -492,7 +496,7 @@ let init_tables ?(alloc=true) procs s =
      how many extra processes are needed *)
   let ep = List.nth Variable.procs nb_procs in
   let all_procs = procs @ [ep] in
-  HT.add ht (Elem (ep, Var)) !i;
+  HT.add ht (Vea(Elem (ep, Var))) !i;
   let extra_proc = !i in
   incr i;
 
@@ -506,9 +510,9 @@ let init_tables ?(alloc=true) procs s =
   if debug then
     HT.iter (fun t i -> eprintf "%a -> %d@." Term.print t i ) ht;
   let id_true =
-    try HT.find ht (Elem (Term.htrue, Constr)) with Not_found -> -2 in
+    try HT.find ht (Vea(Elem (Term.htrue, Constr))) with Not_found  -> -2 in
   let id_false =
-    try HT.find ht (Elem (Term.hfalse, Constr)) with Not_found -> -2 in
+    try HT.find ht (Vea(Elem (Term.hfalse, Constr))) with Not_found -> -2 in
    
   let a_low = !i in
   List.iter (fun c ->
@@ -552,12 +556,11 @@ let init_tables ?(alloc=true) procs s =
     explicit_states = HST.create (if alloc then tsize else 0);
     states = [];
   }
-
-
+  *)
 
 let abs_inf = 
   SAtom.filter (function
-    | Atom.Comp ((Elem (x, Glob) | Access (x,_)), _, _) ->
+    | Atom.Comp ((Vea(Elem (x, Glob)) | Vea(Access (x,_))), _, _) ->
 	if abstr_num then not (Smt.Symbol.has_abstract_type x)
         else not (Smt.Symbol.has_infinite_type x)
     | _ -> true)
@@ -616,15 +619,24 @@ let mkinits procs ({t_init = ia, l_init}) =
   (* add_sorts procs *) lsa
 
 
-let int_of_const = function
+let int_of_const t = (* t added to avoid failure *) 
+failwith "todo : int_of_ocnst"
+(*
+  function
   | ConstInt n -> Num.int_of_num n
   | ConstReal n -> Num.int_of_num (Num.integer_num n)
   | ConstName _ -> 1
-
+*)
 let int_of_consts cs =
+  failwith "todo : int_of_consts"
+  (* TODO
   MConst.fold (fun c i acc -> i * (int_of_const c) + acc) cs 0
+  *)
 
-let write_atom_to_states env sts = function
+let write_atom_to_states env sts =
+  failwith "todo write atom to state"
+  (*
+  function
   | Atom.Comp (t1, (Le | Lt as op), (Const _ as t2)) when abstr_num ->
       let v2 = HT.find env.id_terms t2 in
       let i1 = HT.find env.id_terms t1 in
@@ -659,7 +671,8 @@ let write_atom_to_states env sts = function
       List.iter (fun st -> st.(HT.find env.id_terms t1) <- env.extra_proc) sts;
       sts
   | _ -> sts
-  
+  *)
+
 let write_cube_to_states env st sa =
   SAtom.fold (fun a sts -> write_atom_to_states env sts a) sa [st]
 
@@ -714,6 +727,8 @@ let trivial_conds env l =
       | Exit -> Trivial false
 
 let swts_to_stites env at sigma swts =
+  failwith "todo : swts to stites" 
+  (*
   let rec sd acc = function
     | [] -> assert false
     | [d] -> acc, d
@@ -748,9 +763,11 @@ let swts_to_stites env at sigma swts =
     | Trivial false -> ites
     | Not_trivial -> St_ite (satom_to_st_req env sa, sta, ites)
   ) default swts
-
+  *)
 
 let assigns_to_actions env sigma acc tr_assigns =
+  failwith "todo assigns to action"
+  (*
   List.fold_left 
     (fun acc (h, gu, _) ->
       let nt = Elem (h, Glob) in
@@ -770,11 +787,12 @@ let assigns_to_actions env sigma acc tr_assigns =
          end
       | UCase swts -> swts_to_stites env nt sigma swts :: acc
     ) acc tr_assigns
+  *)
 
 let nondets_to_actions env sigma acc =
   List.fold_left 
     (fun acc (h) ->
-      let nt = Elem (h, Glob) in
+      let nt = Vea(Elem (h, Glob)) in
       try (St_assign (HT.find env.id_terms nt, -1)) :: acc
       with Not_found -> acc
     ) acc
@@ -784,7 +802,7 @@ let update_to_actions procs sigma env acc
   let indexes = Variable.all_arrangements_arity a procs in
   List.fold_left (fun acc li ->
     let sigma = (List.combine lj li) @ sigma in
-    let at = Access (a, li) in
+    let at = Vea(Access (a, li)) in
     swts_to_stites env at sigma swts :: acc
   ) acc indexes
 

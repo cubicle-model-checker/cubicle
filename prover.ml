@@ -64,15 +64,23 @@ let make_op_comp = function
   | Le -> F.Le
   | Neq -> F.Neq
 
-let make_const = function
+let make_const t = (* t added to avoid failure *) 
+  failwith "todo : make const"
+  (*
+  function
   | ConstInt i -> T.make_int i
   | ConstReal i -> T.make_real i
   | ConstName n -> T.make_app n []
+  *)
 
-let ty_const = function
+let ty_const t = (* t added to avoid failure *)
+  failwith "todo : ty const"
+  (* 
+  function
   | ConstInt _ -> Smt.Type.type_int
   | ConstReal _ -> Smt.Type.type_real
   | ConstName n -> snd (Smt.Symbol.type_of n)
+  *)
 
 let rec mult_const tc c i =
  match i with
@@ -85,27 +93,36 @@ let rec mult_const tc c i =
   | i when i < 0 -> T.make_arith T.Minus (mult_const tc c (i + 1)) tc
   | _ -> assert false
 
-let make_arith_cs =
+let make_arith_cs t =(* t added to avoid failure *)
+  failwith "todo make arith cs"
+  (*
   MConst.fold 
     (fun c i acc ->
       let tc = make_const c in
       let tci = mult_const tc c i in
        T.make_arith T.Plus acc tci)
+  *)
 
 let make_cs cs =
+  failwith "todo make cs"
+  (*
   let c, i = MConst.choose cs in
   let t_c = make_const c in
   let r = MConst.remove c cs in
   if MConst.is_empty r then mult_const t_c c i
   else make_arith_cs r (mult_const t_c c i)
-	 
+  *)
+
 let rec make_term = function
-  | Elem (e, _) -> T.make_app e []
+  | Vea(Elem (e, _)) -> T.make_app e []
+  | Vea(Access (a, li)) -> T.make_app a (List.map (fun i -> T.make_app i []) li)
+  | _ -> failwith "todo make term"
+  (*
   | Const cs -> make_cs cs 
-  | Access (a, li) -> T.make_app a (List.map (fun i -> T.make_app i []) li)
   | Arith (x, cs) -> 
       let tx = make_term x in
       make_arith_cs cs tx
+  *)
 
 let rec make_formula_set sa = 
   F.make F.And (SAtom.fold (fun a l -> make_literal a::l) sa [])
@@ -124,7 +141,6 @@ and make_literal = function
       let ff1 = F.make F.Imp [f; a1] in
       let ff2 = F.make F.Imp [F.make F.Not [f]; a2] in
       F.make F.And [ff1; ff2]
-
 
 let make_formula atoms =
   F.make F.And (Array.fold_left (fun l a -> make_literal a::l) [] atoms)

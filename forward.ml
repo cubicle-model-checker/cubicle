@@ -34,10 +34,10 @@ let prime_h h =
   Hstring.make ((Hstring.view h)^"@0")
 
 let rec prime_term t = match t with
-  | Elem (e, Glob) -> Elem (prime_h e, Glob)
-  | Arith (x, c) -> Arith (prime_term x, c)
+  | Vea(Elem (e, Glob)) -> Vea(Elem (prime_h e, Glob))
+  | Vea(Access (a, lx)) -> Vea(Access (prime_h a, lx))
+  (* TODO G | Arith (x, c) -> Arith (prime_term x, c) *)
   (* | Access (a, x, Glob) -> Access (prime_h a, prime_h x, Glob) *)
-  | Access (a, lx) -> Access (prime_h a, lx)
   | _ -> t
 
 let rec prime_atom a = match a with
@@ -54,10 +54,10 @@ let unprime_h h =
   Hstring.make (String.sub s 0 (String.index s '@'))
 
 let rec unprime_term t = match t with
-  | Elem (e, Glob) -> Elem (unprime_h e, Glob)
-  | Arith (x, c) -> Arith (unprime_term x, c)
+  | Vea(Elem (e, Glob)) -> Vea(Elem (unprime_h e, Glob))
   (* | Access (a, x, Glob) -> Access (unprime_h a, unprime_h x, Glob) *)
-  | Access (a, lx) -> Access (unprime_h a, lx)
+  | Vea(Access (a, lx)) -> Vea(Access (unprime_h a, lx))
+  (* TODO G | Arith (x, c) -> Arith (unprime_term x, c) *)
   | _ -> t
 
 
@@ -72,11 +72,15 @@ let is_prime s =
   | Invalid_argument _ -> false
   | Failure _ -> false
 
-let rec is_prime_term = function
+let rec is_prime_term t = (* t added to avoid failure *) 
+  failwith "todo is prime term"
+  (*
+  function
   | Const _ -> false 
   | Elem (s, _) | Access (s, _) ->
       is_prime (Hstring.view s)
   | Arith (x, _) -> is_prime_term x
+  *)
 
 let rec is_prime_atom = function
   | True | False -> false
@@ -86,10 +90,14 @@ let rec is_prime_atom = function
     is_prime_atom a1 || is_prime_atom a2 || SAtom.exists is_prime_atom sa
 
 
-let rec is_const = function
+let rec is_const t = (* t added to avoid failure *) 
+  failwith "todo is_const"
+  (*
+  function
   | Const _ | Elem (_, (Constr | Var)) -> true
   | Arith (x, _) -> is_const x
   | _ -> false
+  *)
 
 exception Found_const of (op_comp * term)
 
@@ -104,7 +112,10 @@ let find_const_value g init =
     raise Not_found
   with Found_const c -> c
 
-let find_const_value g init = match g with
+let find_const_value g init = 
+  failwith "todo find cnst value"
+  (*
+  match g with
   | Arith (g', c) -> 
       begin
 	let op, t = find_const_value g' init in
@@ -113,7 +124,7 @@ let find_const_value g init = match g with
 	  | _ -> assert false
       end
   | _ -> find_const_value g init
-
+  *)
 
 
 let rec elim_prime_atom init = function
@@ -306,7 +317,7 @@ let rec elim_prime3 init sa =
 
 let gauss_elim sa =
   SAtom.fold (fun a sa -> match a with
-    | Comp ((Elem(_,Glob) as t1), Eq, (Elem(_,Glob) as t2)) ->
+    | Comp ((Vea(Elem(_,Glob)) as t1), Eq, (Vea(Elem(_,Glob)) as t2)) ->
       let rsa = SAtom.remove a sa in
       let rsa = apply_subst_terms_atoms t1 t2 rsa in
       SAtom.add a rsa
@@ -370,7 +381,10 @@ let rec gauss_prime_elim sa =
 module MH = Map.Make (Hstring)
 
 
-let rec type_of_term = function
+let rec type_of_term t = (* t added to avoid failure *) 
+  failwith "todo type_of_term"
+  (* TODO 
+  function
   | Const m ->
       MConst.fold (fun c _ _ -> match c with
 	| ConstReal _ -> Smt.Type.type_real
@@ -383,6 +397,7 @@ let rec type_of_term = function
       let x = if is_prime (Hstring.view x) then unprime_h x else x in
       snd (Smt.Symbol.type_of x)
   | Arith (t, _) -> type_of_term t
+  *)
 
 let rec type_of_atom = function
   | True | False -> None
@@ -468,9 +483,11 @@ let swts_to_ites at swts sigma =
 
 
 let apply_assigns assigns sigma =
+  failwith "todo apply assign"
+  (*
   List.fold_left 
     (fun (nsa, terms) (h, gu, _) ->
-      let nt = Elem (h, Glob) in
+      let nt = Vea(Elem (h, Glob)) in
       let sa = 
         match gu with
         | UTerm t -> 
@@ -485,16 +502,16 @@ let apply_assigns assigns sigma =
       in
       SAtom.add sa nsa, Term.Set.add nt terms)
     (SAtom.empty, Term.Set.empty) assigns
-
+  *)
 
 let add_update (sa, st) {up_arr=a; up_arg=lj; up_swts=swts} procs sigma =
-  let at = Access (a, lj) in
+  let at = Vea(Access (a, lj)) in
   let ites = swts_to_ites at swts sigma in
   let indexes = Variable.all_arrangements_arity a procs in
   List.fold_left (fun (sa, st) li ->
     let sigma = List.combine lj li in
     SAtom.add (Atom.subst sigma ites) sa,
-    Term.Set.add (Access (a, li)) st
+    Term.Set.add (Vea(Access (a, li))) st
   ) (sa, st) indexes
 
 let apply_updates upds procs sigma =
@@ -553,10 +570,14 @@ let missing_args procs tr_args =
   aux procs tr_args Variable.procs
 
 let rec term_contains_arg z = function
-  | Elem (x, Var) -> Hstring.equal x z
-  | Access (_, lx) -> Hstring.list_mem z lx
+  | Vea(Elem (x, Var))  -> Hstring.equal x z
+  | Vea(Access (_, lx)) -> Hstring.list_mem z lx
+  | _ -> failwith "todo term contain arg"
+  (*
+  TODO G
   | Arith (x, _) -> term_contains_arg z x
   | _ -> false
+  *)
 
 let rec atom_contains_arg z = function
   | True | False -> false
@@ -696,7 +717,7 @@ let unconstrained_terms sa = Term.Set.filter (var_term_unconstrained sa)
 module MA = Map.Make (Atom)
 
 let lit_abstract = function
-  | Comp ((Elem (x, _) | Access (x,_)), _, _) ->
+  | Comp ((Vea(Elem (x, _)) | Vea(Access (x,_))), _, _) ->
       Smt.Symbol.has_abstract_type x
   | _ -> false
 
@@ -810,7 +831,7 @@ let instance_of_transition { tr_args = tr_args;
   let act = Cube.simplify_atoms (SAtom.union assi upd) in
   let act = abstract_others act tr_others in
   let nondet_terms =
-    List.fold_left (fun acc h -> Term.Set.add (Elem (h, Glob)) acc)
+    List.fold_left (fun acc h -> Term.Set.add (Vea(Elem (h, Glob))) acc)
       Term.Set.empty nondets in
   {
     i_reqs = reqs;
@@ -840,13 +861,13 @@ let all_var_terms procs {t_globals = globals; t_arrays = arrays} =
   let acc, gp = 
     List.fold_left 
       (fun (acc, gp) g ->
-	Term.Set.add (Elem (g, Glob)) acc, gp
+	Term.Set.add (Vea(Elem (g, Glob))) acc, gp
       ) (Term.Set.empty, []) globals
   in
   List.fold_left (fun acc a ->
     let indexes = Variable.all_arrangements_arity a (procs@gp) in
     List.fold_left (fun acc lp ->
-      Term.Set.add (Access (a, lp)) acc)
+      Term.Set.add (Vea(Access (a, lp))) acc)
       acc indexes)
     acc arrays
 

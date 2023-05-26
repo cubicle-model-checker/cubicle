@@ -61,6 +61,7 @@ let _ =
   let lb = from_channel cin in 
   try
     let s = Parser.system Lexer.token lb in
+    Format.printf "parsed\n%!";
     let system = Typing.system s in
     if type_only then exit 0;
     if refine_universal then

@@ -54,7 +54,7 @@ module Const = struct
     | ConstReal of Num.num * Num.num Hstring.HMap.t
 
   let compare c1 c2 = 
-    failwith "todo"
+    failwith "todo : compare const"
 
   let equal c1 c2 = compare c1 c2 = 0
   
@@ -83,6 +83,10 @@ module Const = struct
 
   let const_int  n = ConstInt(n, Hstring.HMap.empty)
   let const_real n = ConstReal(n, Hstring.HMap.empty)
+  let int_zero     = ConstInt(Num.num_of_int 0, Hstring.HMap.empty)
+  let int_one      = ConstInt(Num.num_of_int 1, Hstring.HMap.empty)
+  let real_zero    = ConstReal(Num.num_of_int 0, Hstring.HMap.empty)
+  let real_one     = ConstReal(Num.num_of_int 1, Hstring.HMap.empty)
 
   (* Opérations arithméthiques *)
 
@@ -169,25 +173,41 @@ let term_mult_by_int t1 i =
   | Poly(cs, ts) -> 
     Poly(Const.mult_by_int cs i, vmap_mult_int ts i)
   | Vea(v) ->
-    Poly(Const.const_int (Num.num_of_int 0), VMap.add v (Const.const_int i) VMap.empty )
+    Poly(Const.int_zero, VMap.add v (Const.const_int i) VMap.empty )
 
 let term_mult_by_real t i =
   match t with
   | Poly(cs, ts) -> 
     Poly(Const.mult_by_real cs i, vmap_mult_real ts i)
   | Vea(v) -> 
-    Poly(Const.const_real (Num.num_of_int 0), VMap.add v (Const.const_int i) VMap.empty)
+    Poly(Const.real_zero, VMap.add v (Const.const_real i) VMap.empty)
+
+let term_mult_by_vea t v =
+  match t with 
+  | Poly(ConstInt(_) as cs, ts) when ts = VMap.empty  ->
+      Poly(Const.int_zero, VMap.add v cs VMap.empty)
+  | Poly(ConstReal(_) as cs, ts) when ts = VMap.empty -> 
+      Poly(Const.real_zero, VMap.add v cs VMap.empty)
+  | _ -> failwith "trying to multiply two vars"
 
 let term_neg = function
   | Poly(cs,ts) -> Poly(Const.neg cs, vmap_neg ts)
-  | _ -> assert false
+  (* TODO G ? *)
+  | _ -> failwith "todo : term_neg vea"
 
 let term_add t1 t2 = 
   match t1, t2 with
-  | Vea(v1), Vea(v2) ->
-    failwith "todo"
-  | Vea(v), Poly(cs, ts) | Poly(cs,ts), Vea(v) ->
-    failwith "todo"
+  | Vea(v1), Vea(v2) -> 
+      failwith "todo: adding two vea"
+  | Vea v, Poly(cs, ts) | Poly(cs,ts), Vea v ->
+      let vtots = 
+        if Const.is_int cs then 
+          VMap.add v Const.int_one VMap.empty 
+        else 
+          VMap.add v Const.real_one VMap.empty 
+      in
+      let ts' = vmap_add vtots ts in
+      Poly(cs, ts')
   | Poly(cs1, ts1), Poly(cs2, ts2) -> 
       let cs' = Const.add_const cs1 cs2 in 
       let ts' = vmap_add ts1 ts2 in
@@ -222,8 +242,8 @@ module Term = struct
 
   module Set = STerm
 
-  let rec subst sigma t = failwith "todo"
-  (*
+  let rec subst sigma t = failwith "todo : sigma"
+  (* TODO G
     match t with
     | Elem (x, s) ->
        let nx = Variable.subst sigma x in
@@ -237,16 +257,21 @@ module Term = struct
     | _ -> t
   *)
 
-  let rec variables = failwith "todo"
-  (*
-    function
-    | Elem (x, Var) -> Variable.Set.singleton x
-    | Access (_, lx) ->
-       List.fold_left (fun acc x -> Variable.Set.add x acc)
-                      Variable.Set.empty lx
-    | Arith (t, _) -> variables t
-    | _ -> Variable.Set.empty
-  *)
+  let variables t = 
+    let variables_vea = function 
+      | Vea.Elem (x, Var) -> Variable.Set.singleton x
+      | Vea.Access (_, lx) ->
+         List.fold_left (fun acc x -> Variable.Set.add x acc)
+                        Variable.Set.empty lx
+      | _ -> Variable.Set.empty
+    in 
+    match t with 
+    | Vea v -> variables_vea v
+    | Poly(cs, ts) -> 
+        VMap.fold
+        (fun k _ s -> Variable.Set.union (variables_vea k) s)
+        ts
+        Variable.Set.empty
 
   let variables_proc t = Variable.Set.filter Variable.is_proc (variables t)
 
@@ -265,14 +290,14 @@ module Term = struct
     | [s] -> fprintf fmt "%s" s
     | s :: l -> fprintf fmt "%s %a" s print_strings l
 
-  let print_const fmt = failwith "todo"
+  let print_const fmt = failwith "todo print_const"
   (*
     function
     | ConstInt n | ConstReal n -> fprintf fmt "%s" (Num.string_of_num n)
     | ConstName n -> fprintf fmt "%a" Hstring.print n
   *)
 
-  let print_cs alone fmt cs = failwith "todo"
+  let print_cs alone fmt cs = failwith "todo print_cs"
     (*
     let first = ref true in
     MConst.iter 
@@ -298,7 +323,7 @@ module Term = struct
            fprintf fmt "%a[%a]" Hstring.print a (Hstring.print_list ", ") li
         end
     | Poly(cs, ts) -> 
-        failwith "todo"
+        failwith "todo print poly"
     (*
     | Const cs -> print_cs true fmt cs
     | Arith (x, cs) -> 
@@ -357,7 +382,7 @@ end = struct
 	    let c = compare a1 a2 in
 	    if c<>0 then c else compare b1 b2
 
-  let trivial_is_implied a1 a2 = failwith "todo"
+  let trivial_is_implied a1 a2 = failwith "todo : trivial is implied"
     (*
     match a1, a2 with
       | Comp (x1, Neq, Elem (v1, (Constr|Var))),

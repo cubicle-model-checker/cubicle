@@ -63,6 +63,7 @@
     let add x n = s := Hstring.HMap.add x n !s
     let mem x   = Hstring.HMap.mem x !s
     let get x   = Hstring.HMap.find x !s
+    let get_opt x = Hstring.HMap.find_opt x !s
   end
 
   let sort s = 
@@ -154,6 +155,8 @@ symbold_decls :
       { let consts, vars, arrays = $2 in consts, ($1::vars), arrays }
   | array_decl symbold_decls
       { let consts, vars, arrays = $2 in consts, vars, ($1::arrays) }
+  | const_decl symbold_decls
+      { $2 }
 ;
 
 function_decl :
@@ -315,7 +318,7 @@ update:
       let a = PAnd cube in
       let js = List.rev rjs in
 	    let sw = [(a, TTerm $6); (PAtom (AAtom Atom.True), TTerm
-      (Term.Var(Access($1, js))))] in
+      (Vea(Access($1, js))))] in
 	    Upd { pup_loc = loc (); pup_arr = $1; pup_arg = js; pup_swts = sw
     }  
   }
@@ -332,28 +335,35 @@ switch:
 ;
 
 sterm:
-  | REAL { Term.Poly (Const.const_real $1, VMap.empty) }
+  | REAL { Poly (Const.const_real $1, VMap.empty) }
   | INT  { Poly (Const.const_int  $1, VMap.empty) }
   | mident 
     {
-      if Consts.mem $1 then 
-        match Consts.get $1 with
-        | CInt i  -> Term.Poly(Const.const_int i, VMap.empty)
-        | CReal r -> Term.Poly(Const.const_real r, VMap.empty)
-      else Var(Elem ($1, sort $1))
+      match Consts.get_opt $1 with
+      | Some(CInt i)  -> Poly(Const.const_int i, VMap.empty)
+      | Some(CReal r) -> Poly(Const.const_real r, VMap.empty)
+      | _             -> Vea(Elem ($1, sort $1))
     }
-  | sterm TIMES INT { term_mult_by_int $1 $3 }
-  | sterm TIMES REAL { term_mult_by_real $1 $3 }
-  | sterm MINUS sterm { term_add $1 (Term.neg $3) }
+  | mident LEFTSQ proc_name_list_plus RIGHTSQ { Vea(Access ($1, $3)) }
+  | sterm TIMES INT   { term_mult_by_int $1 $3 } 
+  | sterm TIMES REAL  { term_mult_by_real $1 $3 }
+  | sterm TIMES mident 
+  {
+    match Consts.get_opt $3 with
+    | Some(CInt  i) -> term_mult_by_int $1 i 
+    | Some(CReal i) -> term_mult_by_real $1 i 
+    | None -> term_mult_by_vea $1 (Vea.Elem($3, sort $3))
+  }
   | MINUS sterm { term_neg $2 }
   | LEFTPAR term RIGHTPAR { $2 }
 ;
 
 term:
   | proc_name 
-    { Var (Elem ($1, Var)) }
+    { Vea (Elem ($1, Var)) }
   | sterm     { $1 }
   | term PLUS sterm { term_add $1 $3 }
+  | term MINUS sterm { term_add $1 (term_neg $3) }
 ;
 
 lident:

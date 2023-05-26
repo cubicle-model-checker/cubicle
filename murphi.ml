@@ -92,10 +92,10 @@ let mk_short_names =
 
 let rec get_short_term t =
   try match t with
-    | Elem(c, Constr) -> Elem(H.find short_names c, Constr) 
-    | Elem(v, Glob) -> Elem(H.find short_names v, Glob) 
-    | Access(x, xs) -> Access(H.find short_names x, xs)
-    | Arith (t', cs) -> Arith (get_short_term t', cs)
+    | Vea(Elem(c, Constr)) -> Vea(Elem(H.find short_names c, Constr))
+    | Vea(Elem(v, Glob)) -> Vea(Elem(H.find short_names v, Glob))
+    | Vea(Access(x, xs)) -> Vea(Access(H.find short_names x, xs))
+    (* TODO G | Arith (t', cs) -> Arith (get_short_term t', cs) *)
     | _ -> t
   with Not_found -> t
 
@@ -195,14 +195,15 @@ let print_access ?(prev=false) fmt (a, args) =
   List.iter (fprintf fmt "[%a]" Variable.print) args 
   
 let rec print_term' prev fmt = function
-  | Elem (b, Constr) when Hstring.equal b T.htrue ->
+  | Vea(Elem (b, Constr)) when Hstring.equal b T.htrue ->
     fprintf fmt "true"
-  | Elem (b, Constr) when Hstring.equal b T.hfalse ->
+  | Vea(Elem (b, Constr)) when Hstring.equal b T.hfalse ->
     fprintf fmt "false"
-  | Elem (v, Glob) ->
+  | Vea(Elem (v, Glob)) ->
     fprintf fmt "%s.%a" (sprefix prev) Hstring.print v
-  | Access (a, vars) -> print_access ~prev fmt (a, vars)
-  | Arith (x, cs) -> fprintf fmt "%a%a" (print_term' prev) x T.print (Const cs)
+  | Vea(Access (a, vars)) -> print_access ~prev fmt (a, vars)
+  (* TODO G | Arith (x, cs) -> fprintf fmt "%a%a" (print_term' prev) x T.print (Const
+  cs) *)
   | t -> T.print fmt t
 
 let print_term' =
@@ -220,11 +221,11 @@ let print_op fmt = function
   | Lt -> fprintf fmt "<"
 
 let state_vars_of_atom = function
-  | A.Comp ((Elem(_, Glob) | Access _ as t1), _,
-            (Elem(_, Glob) | Access _ as t2)) ->
+  | A.Comp ((Vea(Elem(_, Glob)) | Vea(Access _) as t1), _,
+            (Vea(Elem(_, Glob)) | Vea(Access _) as t2)) ->
     T.Set.add t1 @@ T.Set.singleton t2
-  | A.Comp ((Elem(_, Glob) | Access _ as t), _, _)
-  | A.Comp (_, _, (Elem(_, Glob) | Access _ as t)) ->
+  | A.Comp ((Vea(Elem(_, Glob)) | Vea(Access _) as t), _, _)
+  | A.Comp (_, _, (Vea(Elem(_, Glob)) | Vea(Access _) as t)) ->
     T.Set.singleton t
   | _ -> T.Set.empty
 
@@ -261,7 +262,7 @@ let rec print_dnf fmt = print_list print_satom "@ | " fmt
 
 let extra_procs acc sa =
   SAtom.fold (fun a acc -> match a with
-      | Atom.Comp (Elem(extra, Glob), Neq, Elem(_, Var)) ->
+      | Atom.Comp (Vea(Elem(extra, Glob)), Neq, Vea(Elem(_, Var))) ->
         (* Assume an extra process if a disequality is mentioned on
            type proc in init formula : change this to something more robust *)
         Hstring.HSet.add extra acc
@@ -272,9 +273,9 @@ let extra_procs_of_sys sys =
   |> Hstring.HSet.elements
 
 let rec is_const = function
-  | Const _ -> true
-  | Elem (_, (Var | Constr)) -> true
-  | Arith (t, _) -> is_const t
+  | Poly(cs, ts) -> VMap.is_empty ts
+  | Vea(Elem (_, (Var | Constr))) -> true
+  (* TODO G | Vea(Arith (t, _)) -> is_const t *)
   | _ -> false
 
 
@@ -282,11 +283,11 @@ module STS = Set.Make(T.Set)
 
 let mk_defined_values sa =
   SAtom.fold (fun a (defined, to_print, related) -> match a with
-      | A.Comp ((Elem(v, Glob) | Access (v, _)) as x, Eq, t) when is_const t ->
+      | A.Comp ((Vea(Elem(v, Glob)) | Vea(Access (v, _))) as x, Eq, t) when is_const t ->
         let str = asprintf "%a := %a;" print_term x print_term t in
         v :: defined, str :: to_print, related
-      | A.Comp (((Elem(_, Glob) | Access _) as x1), Eq,
-                ((Elem(_, Glob) | Access _) as x2)) ->
+      | A.Comp (((Vea(Elem(_, Glob)) | Vea(Access _)) as x1), Eq,
+                ((Vea(Elem(_, Glob)) | Vea(Access _)) as x2)) ->
         (* poor man uf *)
         let rels, related = STS.fold (fun r (rels, related) ->
             if T.Set.mem x1 r || T.Set.mem x2 r then
@@ -328,7 +329,7 @@ let mk_related_init_values =
       let defined, to_print =
         T.Set.fold (fun x (defined, to_print) ->
             match x with
-            | Elem (v, _) | Access (v, _) ->
+            | Vea(Elem (v, _)) | Vea(Access (v, _)) ->
               v :: defined,
               asprintf "%a := %s;" print_term x f :: to_print
             | _ -> assert false
@@ -351,8 +352,8 @@ let mk_undefinied_init_values qvars defined =
       else
         let args, ty = Smt.Symbol.type_of v in
         let t = match args with
-          | [] -> Elem (v, Glob)
-          | _ -> Access (v, shrink_to qvars args) in
+          | [] -> Vea(Elem (v, Glob))
+          | _  -> Vea(Access (v, shrink_to qvars args)) in
         (* if ty != Smt.Type.type_proc && Smt.Type.constructors ty <> [] then *)
         (*     asprintf "clear %a;" print_term t :: to_print, freshs *)
         (* else *)
@@ -467,17 +468,17 @@ let print_swts ot fmt swts =
 
 
 let print_assign fmt (v, up, _) =
-  let tv = Elem (v, Glob) in
+  let tv = Vea(Elem (v, Glob)) in
   match up with
   | UTerm t ->
-    fprintf fmt "%a := %a;" print_term (Elem(v,Glob)) print_term_prev t
+    fprintf fmt "%a := %a;" print_term (Vea(Elem(v,Glob))) print_term_prev t
   | UCase swts -> print_swts tv fmt swts
 
 let print_assigns fmt = List.iter (fprintf fmt "%a@ " print_assign)
 
 
 let print_update fmt { up_arr; up_arg; up_swts } =
-  let ta = Access(up_arr, up_arg) in
+  let ta = Vea(Access(up_arr, up_arg)) in
   let close_fors = print_fors fmt up_arg in
   print_swts ta fmt up_swts;
   close_fors ()
@@ -485,7 +486,7 @@ let print_update fmt { up_arr; up_arg; up_swts } =
 let print_updates fmt = List.iter (fprintf fmt "%a@ " print_update)
 
 let print_nondet cpt fmt v =
-  fprintf fmt "%a := d%d;" print_term (Elem(v,Glob)) cpt
+  fprintf fmt "%a := d%d;" print_term (Vea(Elem(v,Glob))) cpt
 
 let print_nondets ndts =
   let cpt = ref 0 in
@@ -494,9 +495,9 @@ let print_nondets ndts =
 let print_nondet_undef fmt v =
   let _, ty = Smt.Symbol.type_of v in
   if ty == Smt.Type.type_proc || Smt.Type.constructors ty = [] then
-    fprintf fmt "undefine %a;" print_term (Elem(v,Glob))
+    fprintf fmt "undefine %a;" print_term (Vea(Elem(v,Glob)))
   else
-    fprintf fmt "clear %a;" print_term (Elem(v,Glob))
+    fprintf fmt "clear %a;" print_term (Vea(Elem(v,Glob)))
 
 let print_nondets_undef = print_list print_nondet_undef "@ "
 
@@ -748,8 +749,8 @@ let remove_underscores sys =
 (* Checking if the system uses the fact that processes are ordered *)
 
 let ordered_procs_atom = function
-  | A.Comp (Elem(_, Var), (Le | Lt), _)
-  | A.Comp (_, (Le | Lt), Elem(_, Var)) -> true
+  | A.Comp (Vea(Elem(_, Var)), (Le | Lt), _)
+  | A.Comp (_, (Le | Lt), Vea(Elem(_, Var))) -> true
   | A.Comp (x, (Le | Lt), y) when
       Term.type_of x == Smt.Type.type_proc ||
       Term.type_of y == Smt.Type.type_proc -> true
@@ -803,8 +804,8 @@ let mk_encoding_table eenv nbprocs abstr sys =
   let procs = Variable.give_procs nbprocs in
   let var_terms = Forward.all_var_terms procs sys |> Term.Set.elements in
   let constr_terms =
-    List.rev_map (fun x -> Elem (x, Constr)) (Smt.Type.all_constructors ()) in
-  let proc_terms = List.map (fun x -> Elem (x, Var)) procs in
+    List.rev_map (fun x -> Vea(Elem (x, Constr))) (Smt.Type.all_constructors ()) in
+  let proc_terms = List.map (fun x -> Vea(Elem (x, Var))) procs in
   
   let imp = ref 1 in
   let mu_procs =

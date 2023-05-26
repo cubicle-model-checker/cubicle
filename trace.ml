@@ -119,16 +119,19 @@ module AltErgo = struct
     | p :: r -> fprintf fmt "%a,%a" print_proc p print_args r
 
   let rec print_term ~prime fmt = function
-    | Const cs -> print_cs fmt cs
-    | Elem (s, Var) -> print_proc fmt s
-    | Elem (s, Constr) when Hstring.equal s Term.hfalse -> fprintf fmt "false"
-    | Elem (s, Constr) when Hstring.equal s Term.htrue -> fprintf fmt "true"
-    | Elem (s, Constr) -> fprintf fmt "%a" Hstring.print s
-    | Elem (s, Glob) -> fprintf fmt "%a%s" Hstring.print s (spr prime) 
-    | Access (a, li) ->
+    (* TODO G | Const cs -> print_cs fmt cs *)
+    | Vea(Elem (s, Var)) -> print_proc fmt s
+    | Vea(Elem (s, Constr)) when Hstring.equal s Term.hfalse -> fprintf fmt "false"
+    | Vea(Elem (s, Constr)) when Hstring.equal s Term.htrue -> fprintf fmt "true"
+    | Vea(Elem (s, Constr)) -> fprintf fmt "%a" Hstring.print s
+    | Vea(Elem (s, Glob)) -> fprintf fmt "%a%s" Hstring.print s (spr prime) 
+    | Vea(Access (a, li)) ->
        fprintf fmt "%a%s(%a)" Hstring.print a (spr prime) print_args li
+    (* TODO G 
     | Arith (x, cs) -> 
        fprintf fmt "@[%a%a@]" (print_term ~prime) x print_cs cs
+    *)
+    | _ -> failwith "todo print_term"
 
   let rec print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"
@@ -247,10 +250,10 @@ module AltErgo = struct
 
   let print_assign fmt (g, gu) =
     match gu with
-    | UTerm t -> print_ite fmt (Elem(g, Glob), [], t)
+    | UTerm t -> print_ite fmt (Vea(Elem(g, Glob)), [], t)
     | UCase swts ->
        let swts, default = split_swts_default swts in
-       print_ite fmt (Elem(g, Glob), swts, default)
+       print_ite fmt (Vea(Elem(g, Glob)), swts, default)
     
   let rec add_assign_list globals fmt = function
     | [] -> globals
@@ -278,7 +281,7 @@ module AltErgo = struct
   let print_update fmt {up_arr=a; up_arg=args; up_swts=swts} =
     let swts, default = split_swts_default swts in
     fprintf fmt "forall %a:int.\n" print_args args;
-    print_ite fmt (Access (a, args), swts, default)
+    print_ite fmt (Vea(Access (a, args)), swts, default)
 
 
   let rec add_updates_list arrays fmt = function
@@ -346,7 +349,7 @@ module AltErgo = struct
     let swts = List.map (fun (cond, t) ->
 			 SAtom.subst sigma cond, Term.subst sigma t) swts in
     let swts, default = split_swts_default swts in
-    print_ite fmt (Access (a, args), swts, default)
+    print_ite fmt (Vea(Access (a, args)), swts, default)
 
   let rec add_norm_updates vars arrays fmt = function
     | [] -> arrays
@@ -625,13 +628,19 @@ module Why3 = struct
   
   let op_comp = function Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"
 
-  let print_const fmt = function
+  let print_const fmt = 
+    failwith "todo print_const"
+  (* TODO G 
+    function
     | ConstInt n -> fprintf fmt "%s" (Num.string_of_num n)
     | ConstReal n -> fprintf fmt "%F" (Num.float_of_num n)
     | ConstName n -> fprintf fmt "%a" print_name n
+  *)
 
   let print_cs ?(arith=false) fmt cs =
-    let ls = MConst.fold (fun c i acc -> (c,i) :: acc) cs [] in
+    failwith "todo print_cs"
+    (* TODO G 
+  let ls = MConst.fold (fun c i acc -> (c,i) :: acc) cs [] in
     let rec prpr arith first ls = 
       let put_sign = arith || not first in 
       match ls, put_sign with
@@ -653,6 +662,7 @@ module Why3 = struct
       | [], _ -> ()
     in
     prpr arith true ls
+    *)
 
   let print_proc fmt s = 
     try Scanf.sscanf (Hstring.view s) "#%d" (fun id -> fprintf fmt "z%d" id)
@@ -664,14 +674,18 @@ module Why3 = struct
     | p :: r -> fprintf fmt "%a %a" print_proc p print_args r
 
   let rec print_term ~prime fmt = function
-    | Const cs -> print_cs fmt cs
-    | Elem (s, Var) -> print_proc fmt s
-    | Elem (s, Constr) -> fprintf fmt "%a" Hstring.print s
-    | Elem (s, Glob) -> fprintf fmt "%a%s" print_name s (spr prime) 
-    | Access (a, li) ->
+    (* TODO G | Const cs -> print_cs fmt cs *)
+    | Vea(Elem (s, Var)) -> print_proc fmt s
+    | Vea(Elem (s, Constr)) -> fprintf fmt "%a" Hstring.print s
+    | Vea(Elem (s, Glob)) -> fprintf fmt "%a%s" print_name s (spr prime) 
+    | Vea(Access (a, li)) ->
        fprintf fmt "(%a%s %a)" print_name a (spr prime) print_args li
+    | _ -> failwith "todo print_term"
+    (*
+      TODO G 
     | Arith (x, cs) -> 
        fprintf fmt "%a%a" (print_term ~prime) x (print_cs ~arith:true) cs
+    *)
 
   let rec print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"
@@ -780,10 +794,10 @@ module Why3 = struct
 
   let print_assign fmt (g, gu) =
     match gu with
-    | UTerm t -> print_ite fmt (Elem(g, Glob), [], t)
+    | UTerm t -> print_ite fmt (Vea(Elem(g, Glob)), [], t)
     | UCase swts ->
        let swts, default = split_swts_default swts in
-       print_ite fmt (Elem(g, Glob), swts, default)
+       print_ite fmt (Vea(Elem(g, Glob)), swts, default)
 
   let rec add_assign_list globals fmt = function
     | [] -> globals
@@ -811,7 +825,7 @@ module Why3 = struct
   let print_update fmt {up_arr=a; up_arg=args; up_swts=swts} =
     let swts, default = split_swts_default swts in
     fprintf fmt "@[<hov 2>forall %a:int.@ " print_args args;
-    print_ite fmt (Access (a, args), swts, default);
+    print_ite fmt (Vea(Access (a, args)), swts, default);
     fprintf fmt "@]"
 
 
@@ -881,7 +895,7 @@ module Why3 = struct
     let swts = List.map (fun (cond, t) ->
 			 SAtom.subst sigma cond, Term.subst sigma t) swts in
     let swts, default = split_swts_default swts in
-    print_ite fmt (Access (a, args), swts, default)
+    print_ite fmt (Vea(Access (a, args)), swts, default)
 
   let rec add_norm_updates vars arrays fmt = function
     | [] -> arrays
@@ -1439,12 +1453,19 @@ module Why3_INST = struct
   
   let op_comp = function Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"
 
-  let print_const fmt = function
+  let print_const fmt =
+    failwith "todo print_const"
+    (* TODO  G
+    function
     | ConstInt n -> fprintf fmt "%s" (Num.string_of_num n)
     | ConstReal n -> fprintf fmt "%F" (Num.float_of_num n)
     | ConstName n -> fprintf fmt "%a" print_name n
+  *)
+
 
   let print_cs fmt cs =
+    failwith "todo print_cs"
+    (*
     MConst.iter 
       (fun c i ->
        fprintf fmt " %s %a" 
@@ -1452,6 +1473,7 @@ module Why3_INST = struct
 	        else if i < 0 then "- "^(string_of_int (abs i)) 
 	        else "+ "^(string_of_int (abs i)))
 	       print_const c) cs
+  *)
 
   let print_proc fmt s = 
     try Scanf.sscanf (Hstring.view s) "#%d" (fun id -> fprintf fmt "z%d" id)
@@ -1463,14 +1485,17 @@ module Why3_INST = struct
     | p :: r -> fprintf fmt "%a %a" print_proc p print_args r
 
   let rec print_term ~prime fmt = function
-    | Const cs -> print_cs fmt cs
-    | Elem (s, Var) -> print_proc fmt s
-    | Elem (s, Constr) -> fprintf fmt "%a" Hstring.print s
-    | Elem (s, Glob) -> fprintf fmt "%a%s" print_name s (spr prime) 
-    | Access (a, li) ->
+    (* TODO G | Const cs -> print_cs fmt cs *)
+    | Vea(Elem (s, Var)) -> print_proc fmt s
+    | Vea(Elem (s, Constr)) -> fprintf fmt "%a" Hstring.print s
+    | Vea(Elem (s, Glob)) -> fprintf fmt "%a%s" print_name s (spr prime) 
+    | Vea(Access (a, li)) ->
        fprintf fmt "(%a%s %a)" print_name a (spr prime) print_args li
+    | _ -> failwith "todo print_term"
+    (*
     | Arith (x, cs) -> 
        fprintf fmt "@[(%a%a)@]" (print_term ~prime) x print_cs cs
+    *)
 
   let rec print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"
@@ -1583,10 +1608,10 @@ module Why3_INST = struct
 
   let print_assign fmt (g, gu) =
     match gu with
-    | UTerm t -> print_ite fmt (Elem(g, Glob), [], t)
+    | UTerm t -> print_ite fmt (Vea(Elem(g, Glob)), [], t)
     | UCase swts ->
        let swts, default = split_swts_default swts in
-       print_ite fmt (Elem(g, Glob), swts, default)
+       print_ite fmt (Vea(Elem(g, Glob)), swts, default)
 
   let rec add_assign_list globals fmt = function
     | [] -> globals
@@ -1614,7 +1639,7 @@ module Why3_INST = struct
   let print_update fmt {up_arr=a; up_arg=args; up_swts=swts} =
     let swts, default = split_swts_default swts in
     fprintf fmt "forall %a:int.\n" print_args args;
-    print_ite fmt (Access (a, args), swts, default)
+    print_ite fmt (Vea(Access (a, args)), swts, default)
 
 
   let rec add_updates_list arrays fmt = function
@@ -1682,7 +1707,7 @@ module Why3_INST = struct
     let swts = List.map (fun (cond, t) ->
 			 SAtom.subst sigma cond, Term.subst sigma t) swts in
     let swts, default = split_swts_default swts in
-    print_ite fmt (Access (a, args), swts, default)
+    print_ite fmt (Vea(Access (a, args)), swts, default)
 
   let rec add_norm_updates vars arrays fmt = function
     | [] -> arrays
@@ -2204,5 +2229,4 @@ module Selected : S = struct
         let f = cert_file_name () in
         Stats.print_stats_certificate visited f
       end
-
 end

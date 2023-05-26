@@ -205,7 +205,7 @@ let restr_subst_to sigma vars =
   List.fold_left (fun acc -> function
       | v, PF (PAtom (AVar v'))
       | v, PT (TVar v')
-      | v, PT (TTerm (Elem(v', Var))) ->
+      | v, PT (TTerm (Vea(Elem(v', Var)))) ->
         if Variable.Set.mem v vars then
           (v, v') :: acc
         else acc
@@ -453,7 +453,7 @@ let rec up_quantifiers = function
 
 
 let conv_term = function
-  | TVar v -> Elem (v, Var)
+  | TVar v -> Vea(Elem (v, Var))
   | TTerm t -> t
 
 let conv_atom aa = match aa with
@@ -561,7 +561,7 @@ let guard_of_formula tr_args (f,loc) =
 
 let encode_term t =
   match t with 
-    | TVar v -> Elem (v, Var)
+    | TVar v -> Vea(Elem (v, Var))
     | TTerm e -> e
 
 

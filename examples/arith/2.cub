@@ -1,6 +1,6 @@
 var A : int 
 var B : int
-const C : int
+const C = 5
 
 init () { A > 0 }
 
