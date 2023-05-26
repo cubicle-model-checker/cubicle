@@ -1,0 +1,23 @@
+array A[proc] : int
+var B : int
+
+init (i) { A[i] <= B }
+
+unsafe (i) { A[i] > B }
+
+transition down (i)
+{ A[i] := B - 1 }
+
+transition upa (i)
+requires { A[i] < B }
+{ A[i] := A[i] + 1 }
+
+transition equal (i j)
+{ A[i] := A[j] }
+
+transition lower ()
+requires { forall i. A[i] < B }
+{ B := B - 1 }
+
+transition up () 
+{ B := B + 1 }

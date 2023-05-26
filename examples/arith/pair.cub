@@ -1,0 +1,12 @@
+var A : int
+var B : int
+
+init () { A = 1 && B = 0 }
+
+unsafe () { A = B }
+
+transition up ()
+{ A := A + 2 }
+
+transition down () 
+{ A := A - 2 }

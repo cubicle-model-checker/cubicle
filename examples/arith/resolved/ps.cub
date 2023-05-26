@@ -1,0 +1,21 @@
+var A : int
+var B : int
+var C : bool
+
+init () { A < B && C = True && A > 0 && B > 0} 
+
+unsafe () { A > B }
+
+transition un ()
+requires {  C = False }
+{
+	C := True;
+	A := 2*A;
+}
+
+transition deux ()
+requires { C = True }
+{
+	C := False;
+	B := 3*B;	
+}

@@ -1,0 +1,19 @@
+var A : int
+var B : int 
+
+init () 
+	{ A = 0 && B = 0}
+
+unsafe ()
+{ A < 0 || B < 0 }
+
+transition minB()
+requires {A < B}
+{ B := B - 1 }
+
+transition plusA ()
+{ A := A + 1 }
+
+transition plusB ()
+{ B := B + 1 }
+

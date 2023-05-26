@@ -190,7 +190,6 @@ let rec term loc args t =
       *)
 
   | Poly(cs, ts) ->
-      Format.printf "typing poly\n%!";
       let ty  = Const.type_of cs in
       VMap.iter (fun v c ->
         (if not (Hstring.equal (Const.type_of c) ty) then error AdditionOfIntAndReal loc);
