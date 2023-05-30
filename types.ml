@@ -305,8 +305,7 @@ module Term = struct
     | Vea  (v)      -> Vea.type_of v
     | Poly (cs, ts) -> 
         begin match Const.type_of cs with 
-        | Some t  -> Format.printf "cs is not nul, type is : %s\n" (Hstring.view
-        t);t 
+        | Some t  -> t 
         | None    -> Vea.type_of (fst(VMap.choose ts)) 
         end
 

@@ -164,7 +164,6 @@ module Symbol = struct
   let _ = 
     H.add decl_symbs htrue (Symbols.True, [], Type.type_bool);
     H.add decl_symbs hfalse (Symbols.False, [], Type.type_bool);
-    
 end
 
 
@@ -278,11 +277,11 @@ module Term = struct
   let make_arith op t1 t2 = 
     let op = 
       match op with
-	| Plus -> Symbols.Plus
-	| Minus -> Symbols.Minus
-	| Mult ->  Symbols.Mult
-	| Div -> Symbols.Div
-	| Modulo -> Symbols.Modulo
+      | Plus    -> Symbols.Plus
+      | Minus   -> Symbols.Minus
+      | Mult    -> Symbols.Mult
+      | Div     -> Symbols.Div
+      | Modulo  -> Symbols.Modulo
     in
     let ty = 
       if Term.is_int t1 && Term.is_int t2 then Ty.Tint

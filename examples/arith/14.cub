@@ -1,0 +1,9 @@
+var A : int
+var B : int 
+
+init () { A > 0 }
+
+transition up ()
+{
+	A := A + B;
+}
