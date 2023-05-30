@@ -114,9 +114,9 @@ let make_cs cs =
   *)
 
 let rec make_term = function
-  | Vea(Elem (e, _)) -> T.make_app e []
+  | Vea(Elem (e, _))    -> T.make_app e []
   | Vea(Access (a, li)) -> T.make_app a (List.map (fun i -> T.make_app i []) li)
-  | _ -> failwith "todo make term"
+  | Poly(cs, ts) -> failwith "todo make term"
   (*
   | Const cs -> make_cs cs 
   | Arith (x, cs) -> 

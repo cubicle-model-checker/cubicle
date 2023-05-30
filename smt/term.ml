@@ -67,7 +67,7 @@ let make s l ty = T.hashcons {f=s;xs=l;ty=ty;tag=0 (* dumb_value *) }
 let vrai = make (Sy.True) [] Ty.Tbool
 let faux = make (Sy.False) [] Ty.Tbool
 
-let int i = make (Sy.int i) [] Ty.Tint
+let int i  = make (Sy.int i) [] Ty.Tint
 let real r = make (Sy.real r) [] Ty.Treal
 
 let is_int t = (view t).ty= Ty.Tint

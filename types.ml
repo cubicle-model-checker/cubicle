@@ -24,6 +24,105 @@ type op_comp = Eq | Lt | Le | Neq
 
 type sort = Glob | Constr | Var
 
+type const =
+    | ConstInt  of Num.num 
+    | ConstReal of Num.num
+    | Unknown   of Num.num
+
+module Const = struct
+  type t = const
+
+  let compare c1 c2 = 
+    failwith "todo : compare const"
+
+  let equal c1 c2 = compare c1 c2 = 0
+  
+  let type_of = function 
+    | ConstInt  _ -> Some(Smt.Type.type_int)
+    | ConstReal _ -> Some(Smt.Type.type_real)
+    | Unknown   _ -> None
+
+  let is_int = function
+    | ConstInt  _ -> Some(true)
+    | ConstReal _ -> Some(false)
+    | Unknown   _ -> None
+
+  let sign = function
+    | ConstInt n | ConstReal n | Unknown n -> Num.sign_num n
+
+  let to_num = function
+    | ConstInt n | ConstReal n | Unknown n -> n
+
+  (* -- *)
+
+  let const_int  n = ConstInt   (n)
+  let const_real n = ConstReal  (n)
+  let int_zero     = ConstInt   (Num.num_of_int 0)
+  let int_one      = ConstInt   (Num.num_of_int 1)
+  let real_zero    = ConstReal  (Num.num_of_int 0)
+  let real_one     = ConstReal  (Num.num_of_int 1)
+  let unknown_one  = Unknown    (Num.num_of_int 1)
+  let unknown_zero = Unknown    (Num.num_of_int 0)
+
+  (* Opérations arithméthiques *)
+
+  let add_const c1 c2 =
+    match c1, c2 with 
+    | ConstInt i1, ConstInt i2   
+    | ConstInt i1, Unknown i2
+    | Unknown i1, ConstInt i2
+      -> ConstInt(Num.add_num i1 i2) 
+    | ConstReal r1, ConstReal r2 
+    | ConstReal r1, Unknown r2
+    | Unknown r1, ConstReal r2
+      -> ConstReal(Num.add_num r1 r2)
+    | Unknown u1, Unknown u2
+      -> Unknown (Num.add_num u1 u2)
+    | ConstInt _, ConstReal _ | ConstReal _, ConstInt _ -> 
+        assert false
+
+  let add_int c i = 
+    add_const c (ConstInt(i))
+
+  let add_real c i =
+    add_const c (ConstReal(i))
+
+  let mult_by_int c i =
+    match c with 
+    | ConstInt n | Unknown n -> 
+        ConstInt (Num.mult_num n i)
+    | ConstReal _ ->
+        assert false
+
+  let mult_by_real c i =  
+    match c with 
+    | ConstReal n | Unknown n -> 
+        ConstReal (Num.mult_num n i)
+    | ConstInt _ ->
+        assert false
+
+  let mult_by_const c1 c2 =
+    match c1, c2 with 
+    | ConstInt i1,  ConstInt i2   -> ConstInt (Num.mult_num i1 i2)
+    | ConstReal r1, ConstReal r2  -> ConstReal (Num.mult_num r1 r2)
+    | _,_ -> assert false
+
+  let neg = function 
+    | ConstReal r -> ConstReal(Num.minus_num r)
+    | ConstInt  i -> ConstInt(Num.minus_num i)
+    | Unknown   n -> Unknown(Num.minus_num n)
+
+  let cast c t =
+    let is_type = Hstring.equal t in 
+    match c with
+    | ConstInt  _ when is_type Smt.Type.type_int  -> Some c
+    | Unknown   n when is_type Smt.Type.type_int  -> Some(ConstInt n)
+    | ConstReal _ when is_type Smt.Type.type_real -> Some c
+    | Unknown   n when is_type Smt.Type.type_real -> Some(ConstReal n)
+    | _ -> None
+
+end
+
 module Vea = struct
     type t = 
       | Elem   of Hstring.t * sort             
@@ -45,104 +144,10 @@ module Vea = struct
          else Variable.compare_list l1 l2
       | Elem (_,_), Access(_,_) -> -1
       | Access (_,_), Elem(_,_) -> 1
-end
 
-module Const = struct 
-
-  type t = 
-    | ConstInt  of Num.num * Num.num Hstring.HMap.t
-    | ConstReal of Num.num * Num.num Hstring.HMap.t
-
-  let compare c1 c2 = 
-    failwith "todo : compare const"
-
-  let equal c1 c2 = compare c1 c2 = 0
-  
-  let type_of = function 
-    | ConstInt  (_,_) -> Smt.Type.type_int 
-    | ConstReal (_,_) -> Smt.Type.type_real
-
-  let is_int = function
-    | ConstInt  (_,_) -> true 
-    | ConstReal (_,_) -> false
-  
-  let sign = function
-    | ConstInt (n,p) | ConstReal(n,p) ->
-        if Hstring.HMap.cardinal p = 0 then Some (Num.sign_num n)
-        else None
-
-  (* Conversions *)
-
-  let to_num = function 
-    | ConstInt  (c,p) -> 
-        if Hstring.HMap.cardinal p = 0 then Some(c) else None
-    | ConstReal (c,p) ->
-        if Hstring.HMap.cardinal p = 0 then Some(c) else None 
-
-  (* Constructeurs *)
-
-  let const_int  n = ConstInt(n, Hstring.HMap.empty)
-  let const_real n = ConstReal(n, Hstring.HMap.empty)
-  let int_zero     = ConstInt(Num.num_of_int 0, Hstring.HMap.empty)
-  let int_one      = ConstInt(Num.num_of_int 1, Hstring.HMap.empty)
-  let real_zero    = ConstReal(Num.num_of_int 0, Hstring.HMap.empty)
-  let real_one     = ConstReal(Num.num_of_int 1, Hstring.HMap.empty)
-
-  (* Opérations arithméthiques *)
-
-  let add_const c1 c2 =
-    let addk k v1 v2 = Some(Num.add_num v1 v2) in
-    match c1, c2 with 
-    | ConstInt(_,_), ConstReal(_,_) | ConstReal(_,_), ConstInt(_,_) -> 
-        assert false 
-    | ConstInt(c1, p1), ConstInt(c2, p2) -> 
-        let c = Num.add_num c1 c2 in 
-        let p = Hstring.HMap.union addk p1 p2 in
-        ConstInt(c,p)
-    | ConstReal(c1, p1), ConstReal(c2, p2) ->
-        let c = Num.add_num c1 c2 in 
-        let p = Hstring.HMap.union addk p1 p2 in
-        ConstReal(c,p)
-
-  let add_int c i = 
-    add_const c (ConstInt(i, Hstring.HMap.empty))
-
-  let add_real c i =
-    add_const c (ConstReal(i, Hstring.HMap.empty))
-
-  let mult_by_int c i =
-    match c with 
-    | ConstInt  (c,p) -> 
-        ConstInt  (Num.mult_num c i, Hstring.HMap.map (Num.mult_num i) p)
-    | ConstReal (c,p) ->
-        assert false
-
-  let mult_by_real c i =  
-    match c with 
-    | ConstReal  (c,p) -> 
-        ConstReal  (Num.mult_num c i, Hstring.HMap.map (Num.mult_num i) p)
-    | ConstInt (c,p) ->
-        assert false
-
-  let mult_by_const c1 c2 =
-    match c1, c2 with 
-
-    | ConstInt(c1,p1), ConstInt(c2,p2) ->
-        if Hstring.HMap.cardinal p2 = 0 then ConstInt(Num.mult_num c1 c2, p1)
-        else if Hstring.HMap.cardinal p1 = 0 then ConstInt(Num.mult_num c1 c2, p2)
-        else assert false
-    | ConstReal(c1,p1), ConstReal(c2, p2) ->
-        if Hstring.HMap.cardinal p2 = 0 then ConstReal(Num.mult_num c1 c2, p1)
-        else if Hstring.HMap.cardinal p1 = 0 then ConstReal(Num.mult_num c1 c2, p2)
-        else assert false
-    | _ -> assert false
-  
-  let neg = function 
-    | ConstReal (c,p) -> ConstReal(Num.minus_num c, Hstring.HMap.map
-    Num.minus_num p)
-    | ConstInt (c,p) -> ConstInt(Num.minus_num c, Hstring.HMap.map Num.minus_num
-    p)
-
+    let type_of = function 
+        | Elem (x, Var) -> Smt.Type.type_proc
+        | Elem (x, _) | Access (x, _) -> snd (Smt.Symbol.type_of x)
 end
 
 module VMap = Map.Make(Vea)
@@ -192,26 +197,46 @@ let term_mult_by_vea t v =
 
 let term_neg = function
   | Poly(cs,ts) -> Poly(Const.neg cs, vmap_neg ts)
-  (* TODO G ? *)
-  | _ -> failwith "todo : term_neg vea"
+  | Vea v -> 
+      Poly(Const.neg (Const.unknown_zero), vmap_neg (VMap.add v Const.unknown_one VMap.empty))
 
 let term_add t1 t2 = 
   match t1, t2 with
-  | Vea(v1), Vea(v2) -> 
-      failwith "todo: adding two vea"
-  | Vea v, Poly(cs, ts) | Poly(cs,ts), Vea v ->
-      let vtots = 
-        if Const.is_int cs then 
-          VMap.add v Const.int_one VMap.empty 
-        else 
-          VMap.add v Const.real_one VMap.empty 
-      in
-      let ts' = vmap_add vtots ts in
+  | Vea(v1), Vea(v2) ->
+      let cs = Const.unknown_zero in 
+      let ts = VMap.empty in
+      let vtots1 = VMap.add v1 Const.unknown_one VMap.empty in 
+      let ts = vmap_add vtots1 ts in
+      let vtots2 = VMap.add v1 Const.unknown_one VMap.empty in 
+      let ts = vmap_add vtots2 ts in
+      Poly(cs, ts)
+  | Vea v, Poly(ConstInt(_) as cs, ts) | Poly(ConstInt(_) as cs ,ts), Vea v ->
+      let vtots = VMap.add v Const.int_one VMap.empty in 
+      let ts' = vmap_add vtots ts in 
+      Poly(cs, ts')
+  | Vea v, Poly(ConstReal(_) as cs, ts) | Poly(ConstReal(_) as cs ,ts), Vea v ->
+      let vtots = VMap.add v Const.real_one VMap.empty in 
+      let ts' = vmap_add vtots ts in 
+      Poly(cs, ts')
+  | Vea v, Poly(Unknown(_) as cs, ts) | Poly(Unknown(_) as cs ,ts), Vea v ->
+      let vtots = VMap.add v Const.unknown_one VMap.empty in 
+      let ts' = vmap_add vtots ts in 
       Poly(cs, ts')
   | Poly(cs1, ts1), Poly(cs2, ts2) -> 
       let cs' = Const.add_const cs1 cs2 in 
       let ts' = vmap_add ts1 ts2 in
       Poly(cs', ts')
+
+let term_mult_by_term t1 t2 =
+  match t1, t2 with 
+  | t, Poly(ConstInt i, ts) 
+  | Poly(ConstInt i, ts), t ->  
+      if VMap.cardinal ts = 0 then term_mult_by_int  t i
+                              else failwith "trying to multiply two vars"
+  | t, Poly(ConstReal  i, ts) | Poly(ConstReal i, ts), t ->
+      if VMap.cardinal ts = 0 then term_mult_by_real  t i
+                              else failwith "trying to multiply two vars"
+  | _ -> failwith "trying to multiply two vars" 
 
 module Term = struct
 
@@ -276,14 +301,14 @@ module Term = struct
   let variables_proc t = Variable.Set.filter Variable.is_proc (variables t)
 
 
-  let rec type_of = 
-    function
-    | Vea(v) ->
-        begin match v with
-        | Elem (x, Var) -> Smt.Type.type_proc
-        | Elem (x, _) | Access (x, _) -> snd (Smt.Symbol.type_of x)
+  let type_of = function
+    | Vea  (v)      -> Vea.type_of v
+    | Poly (cs, ts) -> 
+        begin match Const.type_of cs with 
+        | Some t  -> Format.printf "cs is not nul, type is : %s\n" (Hstring.view
+        t);t 
+        | None    -> Vea.type_of (fst(VMap.choose ts)) 
         end
-    | Poly(cs, ts) -> Const.type_of cs
 
   let rec print_strings fmt = function
     | [] -> ()

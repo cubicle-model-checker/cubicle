@@ -168,35 +168,23 @@ let term_vea loc args t =
 let rec term loc args t =
   match t with 
   | Vea v -> term_vea loc args v
-  (* TODO G 
-  | Const cs -> 
-      let c, _ = MConst.choose cs in
-      (match c with
-      | ConstInt _ -> t, ([], Smt.Type.type_int)
-      | ConstReal _ -> t, ([], Smt.Type.type_real)
-      | ConstName x -> 
-	      try t, Smt.Symbol.type_of x 
-        with Not_found -> error (UnknownName x) loc)
-  *)
-  (* TODO G 
-  | Arith (x, _) ->
-      begin
-	      let _, (args, tx) = term loc args x in
-	      if not (Hstring.equal tx Smt.Type.type_int) 
-	      && not (Hstring.equal tx Smt.Type.type_real) then 
-	      error (MustBeNum x) loc;
-	      t, (args, tx)
-      end
-      *)
-
   | Poly(cs, ts) ->
-      let ty  = Const.type_of cs in
-      VMap.iter (fun v c ->
-        (if not (Hstring.equal (Const.type_of c) ty) then error AdditionOfIntAndReal loc);
-        let _,(_, tv) = term_vea loc args v in
-        if not (Hstring.equal tv ty) then error AdditionOfIntAndReal loc
-      ) ts;
-      t,([], ty) 
+      let ty  = Term.type_of t in
+      let convert_const c = 
+        match Const.cast c ty with  
+        | Some cc -> cc 
+        | None    -> error AdditionOfIntAndReal loc
+      in
+      let cs' = convert_const cs in
+      let ts' = VMap.fold (fun v c res->
+          let c' = convert_const c in
+          let _,(_, tv) = term_vea loc args v in
+          (if not (Hstring.equal tv ty) then error AdditionOfIntAndReal loc);
+          VMap.add v c' res
+        ) ts VMap.empty
+        in
+      let t' = Poly(cs', ts') in
+      t',([], ty) 
 
 let rec assignment ?(init_variant=false) g x (_, ty) =
   (*Format.eprintf "GG: %a; x : %a; ty: %a@." Hstring.print g Types.Term.print x Hstring.print ty;*)
@@ -228,7 +216,7 @@ let atom loc init_variant args a =
       Comp(x', Eq, y')
     | Comp (x, op, y) ->
       let x', tx = term loc args x in
-      let y',ty = term loc args y in
+      let y', ty = term loc args y in
       unify loc tx ty;
       Comp (x', op, y')
     | Ite _ -> assert false

@@ -1,5 +1,5 @@
 var A : int
-const B : int 
+const B = 9 
 
 init () { A > 0 }
 

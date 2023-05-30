@@ -25,24 +25,27 @@ type sort =
   | Constr  (** constructor *)
   | Var     (** variable of the paramterized domain *)
 
+type const = 
+    | ConstInt  of Num.num 
+    | ConstReal of Num.num 
+    | Unknown   of Num.num
+
 module Const : sig 
-  type t 
-  
-  (* Constructors *)
-  val const_int  : Num.num -> t
-  val const_real : Num.num -> t
- 
-  val is_int : t -> bool 
-  val sign : t -> int option 
-  val to_num : t -> Num.num option
-  val type_of : t -> Smt.Type.t
+  type t = const
+
+  val is_int  : t -> bool option 
+  val sign    : t -> int 
+  val to_num  : t -> Num.num 
+  val type_of : t -> Smt.Type.t option
 
   val add_const : t -> t -> t 
-  val add_int : t -> Num.num -> t
-  val add_real : t -> Num.num -> t
+  val add_int   : t -> Num.num -> t
+  val add_real  : t -> Num.num -> t
 
-  val mult_by_int : t -> Num.num -> t
+  val mult_by_int  : t -> Num.num -> t
   val mult_by_real : t -> Num.num -> t
+
+  val cast : t -> Smt.Type.t -> t option
 end
 
 module Vea : sig
@@ -61,9 +64,9 @@ type term =
 val term_add : term -> term -> term
 val term_mult_by_int  : term -> Num.num  -> term
 val term_mult_by_real : term -> Num.num -> term
-val term_mult_by_vea : term -> Vea.t -> term
+val term_mult_by_vea  : term -> Vea.t -> term
 val term_neg : term -> term
-
+val term_mult_by_term : term -> term -> term
 
 (** Module interface for terms *)
 module Term : sig

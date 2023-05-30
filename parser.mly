@@ -56,8 +56,6 @@
     let mem x = S.mem x !s
   end
 
-
-  type c = | CInt of Num.num | CReal of Num.num
   module Consts = struct
     let s       = ref Hstring.HMap.empty
     let add x n = s := Hstring.HMap.add x n !s
@@ -173,8 +171,8 @@ var_decl:
 ;
 
 const_decl:
-  | CONST mident EQ INT  { Consts.add $2 (CInt $4) }
-  | CONST mident EQ REAL { Consts.add $2 (CReal $4) } 
+  | CONST mident EQ INT  { Consts.add $2 (ConstInt $4) }
+  | CONST mident EQ REAL { Consts.add $2 (ConstReal $4) } 
 ;
 
 array_decl:
@@ -335,34 +333,25 @@ switch:
 ;
 
 sterm:
-  | REAL { Poly (Const.const_real $1, VMap.empty) }
-  | INT  { Poly (Const.const_int  $1, VMap.empty) }
+  | REAL { Poly (ConstReal $1, VMap.empty) }
+  | INT  { Poly (ConstInt $1, VMap.empty) }
   | mident 
     {
       match Consts.get_opt $1 with
-      | Some(CInt i)  -> Poly(Const.const_int i, VMap.empty)
-      | Some(CReal r) -> Poly(Const.const_real r, VMap.empty)
-      | _             -> Vea(Elem ($1, sort $1))
+      | Some(ConstInt i)  -> Poly(ConstInt i, VMap.empty)
+      | Some(ConstReal r) -> Poly(ConstReal r, VMap.empty)
+      | _                 -> Vea(Elem ($1, sort $1))
     }
   | mident LEFTSQ proc_name_list_plus RIGHTSQ { Vea(Access ($1, $3)) }
-  | sterm TIMES INT   { term_mult_by_int $1 $3 } 
-  | sterm TIMES REAL  { term_mult_by_real $1 $3 }
-  | sterm TIMES mident 
-  {
-    match Consts.get_opt $3 with
-    | Some(CInt  i) -> term_mult_by_int $1 i 
-    | Some(CReal i) -> term_mult_by_real $1 i 
-    | None -> term_mult_by_vea $1 (Vea.Elem($3, sort $3))
-  }
+  | sterm TIMES sterm { term_mult_by_term $1 $3 }
   | MINUS sterm { term_neg $2 }
   | LEFTPAR term RIGHTPAR { $2 }
 ;
 
 term:
-  | proc_name 
-    { Vea (Elem ($1, Var)) }
+  | proc_name { Vea (Elem ($1, Var)) }
   | sterm     { $1 }
-  | term PLUS sterm { term_add $1 $3 }
+  | term PLUS sterm  { term_add $1 $3 }
   | term MINUS sterm { term_add $1 (term_neg $3) }
 ;
 
