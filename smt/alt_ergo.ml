@@ -152,7 +152,7 @@ module Symbol = struct
   let has_infinite_type s =
     let _, ret = type_of s in
     Hstring.equal ret Type.type_real ||
-    Hstring.equal ret Type.type_int ||
+    Hstring.equal ret Type.type_int  ||
     (* Hstring.equal ret Type.type_proc || *)
     match H.find decl_types ret with
       | Ty.Tabstract _ -> true
@@ -162,7 +162,7 @@ module Symbol = struct
     Hstring.equal (snd (type_of s)) Type.type_proc
       
   let _ = 
-    H.add decl_symbs htrue (Symbols.True, [], Type.type_bool);
+    H.add decl_symbs htrue  (Symbols.True, [], Type.type_bool);
     H.add decl_symbs hfalse (Symbols.False, [], Type.type_bool);
 end
 

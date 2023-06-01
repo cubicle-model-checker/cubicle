@@ -33,8 +33,15 @@ module Const = struct
   type t = const
 
   let compare c1 c2 = 
-    failwith "todo : compare const"
-
+    match c1, c2 with 
+    | ConstInt i1, ConstInt i2
+    | ConstReal i1, ConstReal i2
+    | Unknown i1, Unknown i2 -> Num.compare_num i1 i2 
+    | ConstReal _, _ -> 1
+    | ConstInt _, ConstReal _ -> -1
+    | Unknown _, _-> -1
+    | _, Unknown _ -> 1
+    
   let equal c1 c2 = compare c1 c2 = 0
   
   let type_of = function 
@@ -52,6 +59,8 @@ module Const = struct
 
   let to_num = function
     | ConstInt n | ConstReal n | Unknown n -> n
+
+  let is_one n = Num.compare_num (to_num n) (Num.num_of_int 1) = 0
 
   (* -- *)
 
@@ -150,22 +159,26 @@ module Vea = struct
         | Elem (x, _) | Access (x, _) -> snd (Smt.Symbol.type_of x)
 end
 
-module VMap = Map.Make(Vea)
+module VMap = struct
+  include Map.Make(Vea)
 
-let vmap_add = 
-  VMap.union (fun _ c1 c2 -> Some(Const.add_const c1 c2)) 
+  let add_vmap = 
+    union (fun _ c1 c2 -> Some(Const.add_const c1 c2)) 
 
-let vmap_mult_int v i = 
-  VMap.map (fun x -> Const.mult_by_int x i) v
+  let mult_int v i = 
+    map (fun x -> Const.mult_by_int x i) v
 
-let vmap_mult_real v i = 
-  VMap.map (fun x -> Const.mult_by_real x i) v
+  let mult_real v i = 
+    map (fun x -> Const.mult_by_real x i) v
 
-let vmap_mult_const v c = 
-  VMap.map (fun x -> Const.mult_by_const x c) v
+  let vmap_mult_const v c = 
+    map (fun x -> Const.mult_by_const x c) v
 
-let vmap_neg =
-  VMap.map Const.neg
+  let neg =
+    map Const.neg
+
+end
+
 
 (* -- *)
 
@@ -176,14 +189,14 @@ type term =
 let term_mult_by_int t1 i = 
   match t1 with
   | Poly(cs, ts) -> 
-    Poly(Const.mult_by_int cs i, vmap_mult_int ts i)
+    Poly(Const.mult_by_int cs i, VMap.mult_int ts i)
   | Vea(v) ->
     Poly(Const.int_zero, VMap.add v (Const.const_int i) VMap.empty )
 
 let term_mult_by_real t i =
   match t with
   | Poly(cs, ts) -> 
-    Poly(Const.mult_by_real cs i, vmap_mult_real ts i)
+    Poly(Const.mult_by_real cs i, VMap.mult_real ts i)
   | Vea(v) -> 
     Poly(Const.real_zero, VMap.add v (Const.const_real i) VMap.empty)
 
@@ -196,9 +209,9 @@ let term_mult_by_vea t v =
   | _ -> failwith "trying to multiply two vars"
 
 let term_neg = function
-  | Poly(cs,ts) -> Poly(Const.neg cs, vmap_neg ts)
+  | Poly(cs,ts) -> Poly(Const.neg cs, VMap.neg ts)
   | Vea v -> 
-      Poly(Const.neg (Const.unknown_zero), vmap_neg (VMap.add v Const.unknown_one VMap.empty))
+      Poly(Const.neg (Const.unknown_zero), VMap.neg (VMap.add v Const.unknown_one VMap.empty))
 
 let term_add t1 t2 = 
   match t1, t2 with
@@ -206,25 +219,25 @@ let term_add t1 t2 =
       let cs = Const.unknown_zero in 
       let ts = VMap.empty in
       let vtots1 = VMap.add v1 Const.unknown_one VMap.empty in 
-      let ts = vmap_add vtots1 ts in
+      let ts = VMap.add_vmap vtots1 ts in
       let vtots2 = VMap.add v1 Const.unknown_one VMap.empty in 
-      let ts = vmap_add vtots2 ts in
+      let ts = VMap.add_vmap vtots2 ts in
       Poly(cs, ts)
   | Vea v, Poly(ConstInt(_) as cs, ts) | Poly(ConstInt(_) as cs ,ts), Vea v ->
       let vtots = VMap.add v Const.int_one VMap.empty in 
-      let ts' = vmap_add vtots ts in 
+      let ts' = VMap.add_vmap vtots ts in 
       Poly(cs, ts')
   | Vea v, Poly(ConstReal(_) as cs, ts) | Poly(ConstReal(_) as cs ,ts), Vea v ->
       let vtots = VMap.add v Const.real_one VMap.empty in 
-      let ts' = vmap_add vtots ts in 
+      let ts' = VMap.add_vmap vtots ts in 
       Poly(cs, ts')
   | Vea v, Poly(Unknown(_) as cs, ts) | Poly(Unknown(_) as cs ,ts), Vea v ->
       let vtots = VMap.add v Const.unknown_one VMap.empty in 
-      let ts' = vmap_add vtots ts in 
+      let ts' = VMap.add_vmap vtots ts in 
       Poly(cs, ts')
   | Poly(cs1, ts1), Poly(cs2, ts2) -> 
       let cs' = Const.add_const cs1 cs2 in 
-      let ts' = vmap_add ts1 ts2 in
+      let ts' = VMap.add_vmap ts1 ts2 in
       Poly(cs', ts')
 
 let term_mult_by_term t1 t2 =
@@ -246,12 +259,19 @@ module Term = struct
     match t1, t2 with
     | Vea v1, Vea v2 -> Vea.compare v1 v2
     | Vea v, Poly(cs, ts) ->
-        if VMap.cardinal ts = 0 then Const.compare v cs else 1
+        if VMap.cardinal ts = 1 then
+          let (v2, c2) = VMap.choose ts in 
+          if Const.is_one c2 then Vea.compare v2 v else 1
+        else 1
     | Poly(cs, ts), Vea v ->
-        if VMap.cardinal ts = 0 then Const.compare v cs else -1
+        if VMap.cardinal ts = 1 then
+          let (v2, c2) = VMap.choose ts in 
+          if Const.is_one c2 then Vea.compare v2 v else -1
+        else -1
     | Poly(cs1, ts1), Poly(cs2, ts2) ->
         let c = Const.compare cs1 cs2 in 
-        if c <> 0 then c else 0
+        if c <> 0 then c else
+          VMap.compare Const.compare ts1 ts2
   
   let hash (a : t) = Hashtbl.hash_param 50 50 a
 
