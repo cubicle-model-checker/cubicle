@@ -288,15 +288,15 @@ module Term = struct
   module Set = STerm
 
   let subst sigma t =
-    let subst_vea vea = match vea with
-    | Vea.Elem (x, s) ->
-       let nx = Variable.subst sigma x in
-       if x == nx then vea
-       else Vea.Elem (nx, s)
-    | Vea.Access (a, lz) -> 
-       Vea.Access (a, List.map
-                    (fun z ->
-                     try Variable.subst sigma z with Not_found -> z) lz)
+    let subst_vea (vea : Vea.t) = 
+      match vea with
+      | Elem (x, s) ->
+         let nx = Variable.subst sigma x in
+         if x == nx then vea
+         else Elem (nx, s)
+      | Access (a, lz) -> 
+         Access (a, List.map
+                      (fun z -> try Variable.subst sigma z with Not_found -> z) lz)
     in
     match t with
     | Vea  v        -> Vea(subst_vea v)
