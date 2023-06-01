@@ -46,7 +46,7 @@ let rec print fmt t =
     | Sy.Op op, [e1; e2] -> 
 	fprintf fmt "(%a %a %a)" print e1 Sy.print x print e2
     | _, [] -> fprintf fmt "%a" Sy.print x
-    | _, _ -> fprintf fmt "%a(%a)" Sy.print x print_list l
+    | _, _  -> fprintf fmt "%a(%a)" Sy.print x print_list l
 
 and print_list fmt = function
   | [] -> ()
