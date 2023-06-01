@@ -64,36 +64,26 @@ let make_op_comp = function
   | Le -> F.Le
   | Neq -> F.Neq
 
-let make_const t = (* t added to avoid failure *) 
-  failwith "todo : make const"
-  (*
+let make_const = 
   function
-  | ConstInt i -> T.make_int i
+  | ConstInt  i -> T.make_int  i
   | ConstReal i -> T.make_real i
-  | ConstName n -> T.make_app n []
-  *)
+  | Unknown   i -> assert false (* Impossible after typing *)
 
-let ty_const t = (* t added to avoid failure *)
-  failwith "todo : ty const"
-  (* 
-  function
-  | ConstInt _ -> Smt.Type.type_int
-  | ConstReal _ -> Smt.Type.type_real
-  | ConstName n -> snd (Smt.Symbol.type_of n)
-  *)
+let ty_const c = Option.get (Const.type_of c)
 
 let rec mult_const tc c i =
  match i with
   | 0 -> 
     if ty_const c = Smt.Type.type_int then T.make_int (Num.Int 0)
     else T.make_real (Num.Int 0)
-  | 1 -> tc
+  | 1  -> tc
   | -1 -> T.make_arith T.Minus (mult_const tc c 0) tc
   | i when i > 0 -> T.make_arith T.Plus (mult_const tc c (i - 1)) tc
   | i when i < 0 -> T.make_arith T.Minus (mult_const tc c (i + 1)) tc
   | _ -> assert false
 
-let make_arith_cs t =(* t added to avoid failure *)
+let make_arith_cs t = (* t added to avoid failure *)
   failwith "todo make arith cs"
   (*
   MConst.fold 
