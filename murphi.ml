@@ -273,7 +273,8 @@ let extra_procs_of_sys sys =
   |> Hstring.HSet.elements
 
 let rec is_const = function
-  | Poly(cs, ts) -> VMap.is_empty ts
+  (* TODO : Vérifier *)
+  | Poly(cs, ts) -> VMap.is_empty ts (* Humm *)
   | Vea(Elem (_, (Var | Constr))) -> true
   (* TODO G | Vea(Arith (t, _)) -> is_const t *)
   | _ -> false

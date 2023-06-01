@@ -33,12 +33,18 @@ type inst_trans =
 let prime_h h =
   Hstring.make ((Hstring.view h)^"@0")
 
-let rec prime_term t = match t with
-  | Vea(Elem (e, Glob)) -> Vea(Elem (prime_h e, Glob))
-  | Vea(Access (a, lx)) -> Vea(Access (prime_h a, lx))
-  (* TODO G | Arith (x, c) -> Arith (prime_term x, c) *)
-  (* | Access (a, x, Glob) -> Access (prime_h a, prime_h x, Glob) *)
-  | _ -> t
+let prime_term t = 
+  let prime_vea vea = 
+    match vea with 
+    | Vea.Elem (e, Glob) -> Vea.Elem (prime_h e, Glob)
+    | Vea.Access (a, lx) -> Vea.Access (prime_h a, lx)
+    | _ -> vea
+  in
+  match t with
+  | Vea(v) -> Vea(prime_vea v)
+  | Poly(cs, ts) ->
+      let ts' = VMap.fold (fun v c acc -> VMap.add (prime_vea v) c acc) ts VMap.empty in
+      Poly(cs,ts') 
 
 let rec prime_atom a = match a with
   | True | False -> a
@@ -53,13 +59,18 @@ let unprime_h h =
   let s = Hstring.view h in
   Hstring.make (String.sub s 0 (String.index s '@'))
 
-let rec unprime_term t = match t with
-  | Vea(Elem (e, Glob)) -> Vea(Elem (unprime_h e, Glob))
-  (* | Access (a, x, Glob) -> Access (unprime_h a, unprime_h x, Glob) *)
-  | Vea(Access (a, lx)) -> Vea(Access (unprime_h a, lx))
-  (* TODO G | Arith (x, c) -> Arith (unprime_term x, c) *)
-  | _ -> t
-
+let rec unprime_term t = 
+  let unprime_vea vea = 
+    match vea with 
+    | Vea.Elem (e, Glob) -> Vea.Elem (unprime_h e, Glob)
+    | Vea.Access (a, lx) -> Vea.Access (unprime_h a, lx)
+    | _ -> vea
+  in
+  match t with
+  | Vea v -> Vea (unprime_vea v)
+  | Poly(cs, ts) -> 
+      let ts' = VMap.fold (fun v c acc -> VMap.add (unprime_vea v) c acc) ts VMap.empty in
+      Poly(cs,ts') 
 
 let is_prime s =
   try
