@@ -27,7 +27,6 @@ type sort = Glob | Constr | Var
 type const =
     | ConstInt  of Num.num 
     | ConstReal of Num.num
-    | Unknown   of Num.num
 
 module Const = struct
   type t = const
@@ -35,30 +34,25 @@ module Const = struct
   let compare c1 c2 = 
     match c1, c2 with 
     | ConstInt i1, ConstInt i2
-    | ConstReal i1, ConstReal i2
-    | Unknown i1, Unknown i2 -> Num.compare_num i1 i2 
+    | ConstReal i1, ConstReal i2 -> Num.compare_num i1 i2 
     | ConstReal _, _ -> 1
     | ConstInt _, ConstReal _ -> -1
-    | Unknown _, _-> -1
-    | _, Unknown _ -> 1
     
   let equal c1 c2 = compare c1 c2 = 0
   
   let type_of = function 
-    | ConstInt  _ -> Some(Smt.Type.type_int)
-    | ConstReal _ -> Some(Smt.Type.type_real)
-    | Unknown   _ -> None
+    | ConstInt  _ -> Smt.Type.type_int
+    | ConstReal _ -> Smt.Type.type_real
 
   let is_int = function
-    | ConstInt  _ -> Some(true)
-    | ConstReal _ -> Some(false)
-    | Unknown   _ -> None
+    | ConstInt  _ -> true 
+    | ConstReal _ -> false
 
   let sign = function
-    | ConstInt n | ConstReal n | Unknown n -> Num.sign_num n
+    | ConstInt n | ConstReal n -> Num.sign_num n
 
   let to_num = function
-    | ConstInt n | ConstReal n | Unknown n -> n
+    | ConstInt n | ConstReal n -> n
 
   let is_one n = Num.compare_num (to_num n) (Num.num_of_int 1) = 0
 
@@ -70,65 +64,47 @@ module Const = struct
   let int_one      = ConstInt   (Num.num_of_int 1)
   let real_zero    = ConstReal  (Num.num_of_int 0)
   let real_one     = ConstReal  (Num.num_of_int 1)
-  let unknown_one  = Unknown    (Num.num_of_int 1)
-  let unknown_zero = Unknown    (Num.num_of_int 0)
 
   (* Opérations arithméthiques *)
 
   let add_const c1 c2 =
     match c1, c2 with 
-    | ConstInt i1, ConstInt i2   
-    | ConstInt i1, Unknown i2
-    | Unknown i1, ConstInt i2
-      -> ConstInt(Num.add_num i1 i2) 
-    | ConstReal r1, ConstReal r2 
-    | ConstReal r1, Unknown r2
-    | Unknown r1, ConstReal r2
-      -> ConstReal(Num.add_num r1 r2)
-    | Unknown u1, Unknown u2
-      -> Unknown (Num.add_num u1 u2)
-    | ConstInt _, ConstReal _ | ConstReal _, ConstInt _ -> 
-        assert false
+    | ConstInt i1, ConstInt i2   -> ConstInt(Num.add_num i1 i2) 
+    | ConstReal i1, ConstReal i2 
+    | ConstInt i1, ConstReal i2 
+    | ConstReal i1, ConstInt i2 -> ConstReal(Num.add_num i1 i2) 
 
-  let add_int c i = 
-    add_const c (ConstInt(i))
+  let add_int c i = add_const c (ConstInt(i))
 
-  let add_real c i =
-    add_const c (ConstReal(i))
+  let add_real c i = add_const c (ConstReal(i))
 
   let mult_by_int c i =
     match c with 
-    | ConstInt n | Unknown n -> 
-        ConstInt (Num.mult_num n i)
-    | ConstReal _ ->
-        assert false
+    | ConstInt  n -> ConstInt (Num.mult_num n i)
+    | ConstReal n -> ConstReal (Num.mult_num n i) 
 
   let mult_by_real c i =  
     match c with 
-    | ConstReal n | Unknown n -> 
-        ConstReal (Num.mult_num n i)
-    | ConstInt _ ->
-        assert false
+    | ConstReal n | ConstInt n -> ConstReal (Num.mult_num n i)
 
   let mult_by_const c1 c2 =
     match c1, c2 with 
-    | ConstInt i1,  ConstInt i2   -> ConstInt (Num.mult_num i1 i2)
-    | ConstReal r1, ConstReal r2  -> ConstReal (Num.mult_num r1 r2)
-    | _,_ -> assert false
+    | ConstInt i1,  ConstInt  i2 -> ConstInt (Num.mult_num i1 i2)
+    | ConstReal i1, ConstReal i2  
+    | ConstReal i1, ConstInt  i2
+    | ConstInt  i1, ConstReal i2 -> ConstReal (Num.mult_num i1 i2)
 
   let neg = function 
     | ConstReal r -> ConstReal(Num.minus_num r)
     | ConstInt  i -> ConstInt(Num.minus_num i)
-    | Unknown   n -> Unknown(Num.minus_num n)
 
   let cast c t =
     let is_type = Hstring.equal t in 
     match c with
-    | ConstInt  _ when is_type Smt.Type.type_int  -> Some c
-    | Unknown   n when is_type Smt.Type.type_int  -> Some(ConstInt n)
-    | ConstReal _ when is_type Smt.Type.type_real -> Some c
-    | Unknown   n when is_type Smt.Type.type_real -> Some(ConstReal n)
-    | _ -> None
+    | ConstInt  _ when is_type Smt.Type.type_int  -> c
+    | ConstInt  i when is_type Smt.Type.type_real -> ConstReal(i) 
+    | ConstReal i when is_type Smt.Type.type_real -> c
+    | _ -> assert false
 
 end
 
@@ -211,28 +187,20 @@ let term_mult_by_vea t v =
 let term_neg = function
   | Poly(cs,ts) -> Poly(Const.neg cs, VMap.neg ts)
   | Vea v -> 
-      Poly(Const.neg (Const.unknown_zero), VMap.neg (VMap.add v Const.unknown_one VMap.empty))
+      Poly(Const.neg (Const.int_zero), VMap.neg (VMap.add v Const.int_one VMap.empty))
 
 let term_add t1 t2 = 
   match t1, t2 with
   | Vea(v1), Vea(v2) ->
-      let cs = Const.unknown_zero in 
+      let cs = Const.int_zero in 
       let ts = VMap.empty in
-      let vtots1 = VMap.add v1 Const.unknown_one VMap.empty in 
+      let vtots1 = VMap.add v1 Const.int_one VMap.empty in 
       let ts = VMap.add_vmap vtots1 ts in
-      let vtots2 = VMap.add v1 Const.unknown_one VMap.empty in 
+      let vtots2 = VMap.add v1 Const.int_one VMap.empty in 
       let ts = VMap.add_vmap vtots2 ts in
       Poly(cs, ts)
-  | Vea v, Poly(ConstInt(_) as cs, ts) | Poly(ConstInt(_) as cs ,ts), Vea v ->
+  | Vea v, Poly(cs, ts) | Poly(cs ,ts), Vea v ->
       let vtots = VMap.add v Const.int_one VMap.empty in 
-      let ts' = VMap.add_vmap vtots ts in 
-      Poly(cs, ts')
-  | Vea v, Poly(ConstReal(_) as cs, ts) | Poly(ConstReal(_) as cs ,ts), Vea v ->
-      let vtots = VMap.add v Const.real_one VMap.empty in 
-      let ts' = VMap.add_vmap vtots ts in 
-      Poly(cs, ts')
-  | Vea v, Poly(Unknown(_) as cs, ts) | Poly(Unknown(_) as cs ,ts), Vea v ->
-      let vtots = VMap.add v Const.unknown_one VMap.empty in 
       let ts' = VMap.add_vmap vtots ts in 
       Poly(cs, ts')
   | Poly(cs1, ts1), Poly(cs2, ts2) -> 
@@ -325,11 +293,7 @@ module Term = struct
 
   let type_of = function
     | Vea  (v)      -> Vea.type_of v
-    | Poly (cs, ts) -> 
-        begin match Const.type_of cs with 
-        | Some t  -> t 
-        | None    -> Vea.type_of (fst(VMap.choose ts)) 
-        end
+    | Poly (cs, ts) -> Const.type_of cs
 
   let rec print_strings fmt = function
     | [] -> ()

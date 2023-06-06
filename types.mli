@@ -28,15 +28,14 @@ type sort =
 type const = 
     | ConstInt  of Num.num 
     | ConstReal of Num.num 
-    | Unknown   of Num.num
 
 module Const : sig 
   type t = const
 
-  val is_int  : t -> bool option 
+  val is_int  : t -> bool 
   val sign    : t -> int 
   val to_num  : t -> Num.num 
-  val type_of : t -> Smt.Type.t option
+  val type_of : t -> Smt.Type.t 
 
   val add_const : t -> t -> t 
   val add_int   : t -> Num.num -> t
@@ -45,7 +44,7 @@ module Const : sig
   val mult_by_int  : t -> Num.num -> t
   val mult_by_real : t -> Num.num -> t
 
-  val cast : t -> Smt.Type.t -> t option
+  val cast : t -> Smt.Type.t -> t 
 end
 
 module Vea : sig

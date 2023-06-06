@@ -68,9 +68,8 @@ let make_const =
   function
   | ConstInt  i -> T.make_int  i
   | ConstReal i -> T.make_real i
-  | Unknown   i -> assert false (* Impossible after typing *)
 
-let ty_const c = Option.get (Const.type_of c)
+let ty_const = Const.type_of
 
 let rec mult_const tc c i =
  match i with

@@ -98,7 +98,6 @@ let report fmt = function
   
   | Smt (Smt.UnknownType s) ->
     fprintf fmt "unknown type %a" Hstring.print s
-  
   | Smt (Smt.UnknownSymb s) ->
     fprintf fmt "unknown symbol %a" Hstring.print s
   | AdditionOfIntAndReal ->
@@ -165,21 +164,21 @@ let term_vea loc args t =
 	    ) li;
       Vea(t),([], ty_a)
 
-let rec term loc args t =
+let term loc args t =
   match t with 
   | Vea v -> term_vea loc args v
   | Poly(cs, ts) ->
-      let ty  = Term.type_of t in
-      let convert_const c = 
-        match Const.cast c ty with  
-        | Some cc -> cc 
-        | None    -> error AdditionOfIntAndReal loc
+      let ty  = 
+        if 
+          VMap.exists 
+          (fun v c ->
+             Hstring.equal (Const.type_of c) Smt.Type.type_real 
+          || Hstring.equal (snd (snd (term_vea loc args v))) Smt.Type.type_real ) ts
+        then Smt.Type.type_real else Const.type_of cs
       in
-      let cs' = convert_const cs in
+      let cs' = Const.cast cs ty in
       let ts' = VMap.fold (fun v c res->
-          let c' = convert_const c in
-          let _,(_, tv) = term_vea loc args v in
-          (if not (Hstring.equal tv ty) then error AdditionOfIntAndReal loc);
+          let c' = Const.cast c ty in
           VMap.add v c' res
         ) ts VMap.empty
         in
@@ -188,9 +187,9 @@ let rec term loc args t =
 
 let rec assignment ?(init_variant=false) g x (_, ty) =
   (*Format.eprintf "GG: %a; x : %a; ty: %a@." Hstring.print g Types.Term.print x Hstring.print ty;*)
-  if ty = Smt.Type.type_proc 
+  if    ty = Smt.Type.type_proc 
      || ty = Smt.Type.type_bool
-       || ty = Smt.Type.type_int
+     || ty = Smt.Type.type_int
   then ()
   else
     match x with
@@ -210,7 +209,7 @@ let atom loc init_variant args a =
     | Comp (y, Eq, (Vea(Access(g, _)) as x))
     | Comp (Vea(Access(g, _)) as x, Eq, y) ->
       let x', tx = term loc args x in
-      let y',ty = term loc args y in
+      let y',ty  = term loc args y in
       unify loc tx ty;
       if init_variant then assignment ~init_variant g y' ty;
       Comp(x', Eq, y')
@@ -339,7 +338,6 @@ let declare_symbol loc n args ret =
 
 let declare_array loc n args ret =
   declare_symbol loc n args ret
-
 
 let init_global_env s = 
   List.iter declare_t s.type_defs;
