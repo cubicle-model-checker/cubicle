@@ -1,0 +1,11 @@
+var A : int
+var B : real
+
+init () { A < 2 }
+
+transition up () {
+
+	A := A + 1;
+	B := 4*B+3;
+
+}

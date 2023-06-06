@@ -1,9 +1,17 @@
 #!/bin/sh 
 
 BASEDIR=$(dirname "$0")
-CUBICLE="$BASEDIR/../../cubicle.opt"
+CUBDIR="$BASEDIR/../.."
+CUBICLE="$CUBDIR/cubicle.opt"
+CALLING=$(pwd)
+
+echo "Making..."
+cd $CUBDIR && make && cd $CALLING
 
 for file in $(ls $BASEDIR | grep .cub); 
 do
+	echo "Testing $file"
 	$CUBICLE -type-only $file	
 done
+
+echo "done."
