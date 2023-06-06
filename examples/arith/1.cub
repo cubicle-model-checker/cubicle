@@ -1,6 +1,8 @@
 var A : int
 
-init () { A > 0 }
+init () { A = 0 }
+
+unsafe () { A > 0 }
 
 transition up () 
 {

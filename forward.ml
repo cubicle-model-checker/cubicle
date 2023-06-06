@@ -33,14 +33,13 @@ type inst_trans =
 let prime_h h =
   Hstring.make ((Hstring.view h)^"@0")
 
-let prime_term t = 
-  let prime_vea vea = 
-    match vea with 
-    | Vea.Elem (e, Glob) -> Vea.Elem (prime_h e, Glob)
-    | Vea.Access (a, lx) -> Vea.Access (prime_h a, lx)
-    | _ -> vea
-  in
-  match t with
+
+let prime_vea vea = match vea with 
+  | Vea.Elem (e, Glob) -> Vea.Elem (prime_h e, Glob)
+  | Vea.Access (a, lx) -> Vea.Access (prime_h a, lx)
+  | _ -> vea
+
+let prime_term t = match t with
   | Vea(v) -> Vea(prime_vea v)
   | Poly(cs, ts) ->
       let ts' = VMap.fold (fun v c acc -> VMap.add (prime_vea v) c acc) ts VMap.empty in

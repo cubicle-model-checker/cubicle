@@ -1,0 +1,13 @@
+var A : int
+var B : int
+var C : int
+
+init () { A > 0 && B > 0 && C > 0 }
+
+unsafe (){ A <= 0 }
+
+transition up (){
+	A := A * 5 + B * 4 + 8 + C * 3;
+	B := A * 2 + B * 4 + 6 * C - 7;
+	C := A+3*4;
+}
