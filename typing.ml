@@ -164,8 +164,8 @@ let term_vea loc args t =
 	    ) li;
       Vea(t),([], ty_a)
 
-let term loc args t =
-  match t with 
+let term loc args =
+  function
   | Vea v -> term_vea loc args v
   | Poly(cs, ts) ->
       let ty  = 

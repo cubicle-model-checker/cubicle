@@ -1,7 +1,7 @@
-var A : real
+var A : int
 
 init () { A > 0 }
 
 transition up () {
-	A := 1;
+	A := 1.2;
 }

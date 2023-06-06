@@ -7,8 +7,8 @@ unsafe () { A = 0 }
 
 transition inv () 
 { 
-	A := 0 - A;
-  B := 0 - B;
+	A := - A;
+  B := - B;
 }
 
 transition add () {

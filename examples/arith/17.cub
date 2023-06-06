@@ -1,0 +1,15 @@
+var A : real
+var B : real
+
+init () { A > 0. }
+
+transition up ()
+{
+	A := (A * 4 + 1) * 3 + (B * 2 - 1);
+	B := (B * 6 - B * 3) + ((A * 4) * 2);
+}
+
+transition down ()
+{
+	A := (((((A + 3) * 5))));
+}
