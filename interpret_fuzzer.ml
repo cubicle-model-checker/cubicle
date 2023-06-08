@@ -34,6 +34,8 @@ let parents = Hashtbl.create 200
 
 let entropy_sum = ref 0.
 
+module TimerFuzz = Timer.Make (struct let profiling = true end)
+
 
   
 module STMap = Map.Make (Types.Term)
@@ -73,6 +75,13 @@ type deadlock_state = {
   dead_path : (Hstring.t * Variable.t list) PersistentQueue.t;
   dead_steps : int
 }
+
+    
+
+let print_time fmt sec =
+  let minu = floor (sec /. 60.) in
+  let extrasec = sec -. (minu *. 60.) in
+  Format.fprintf fmt "%dm%2.3fs" (int_of_float minu) extrasec
 
 
 let print_interpret_env fmt (env,locks, cond, sem)=
@@ -348,7 +357,7 @@ let force_procs_forward code glob_env trans all_procs p_proc all_unsafes =
   while !steps < depth do
     incr overall;
     try
-      if (List.length !visited_states) > Options.fuzz_s then
+      if !visit_count > Options.fuzz_s then
       begin
 	Format.printf "\n\nSet limit reached@."; raise Exit
       end;
@@ -431,6 +440,9 @@ let force_procs_forward code glob_env trans all_procs p_proc all_unsafes =
 	      | TopError Unsafe ->
 		Format.printf "\n@{<b>@{<bg_red>WARNING@}@}";
 		Format.printf "@{<fg_red> Unsafe state reached during forward exploration@}@.";
+		TimerFuzz.pause ();
+		Format.printf "%a@." print_time (TimerFuzz.get ());
+		TimerFuzz.start ();
 		unsafe_states := hash :: !unsafe_states;
 	  end;
 	  if (List.length exits) > 1 && (!steps < depth - 2) then
@@ -597,6 +609,7 @@ let markov_entropy_detailed glob tsys all_procs trans steps matr =
 	
     with
       | TopError Deadlock ->
+	Format.eprintf "Deadlock reached [M]@.";
 	raise (TopError Deadlock)
       | TopError (FalseReq _) -> incr tried; incr taken; if !tried > 1000 then running := false 
   done;
@@ -744,7 +757,7 @@ let markov_entropy code glob all_procs trans all_unsafes=
   let w1 = ref (entropy_env glob.state trans all_procs) in 
   while !taken < steps do
     try
-      if (List.length !visited_states) > Options.fuzz_s then
+      if !visit_count > Options.fuzz_s then
       begin
 	Format.printf "\n\nSet limit reached@."; raise Exit
       end;
@@ -846,6 +859,9 @@ let markov_entropy code glob all_procs trans all_unsafes=
 		  Format.printf "\n@{<b>@{<bg_red>WARNING@}@}@.";
 		  unsafe_states := hash :: !unsafe_states;
 		  Format.printf "@{<fg_red>Unsafe state reached during forward exploration@}@.";
+		  TimerFuzz.pause ();
+		  Format.printf "%a@." print_time (TimerFuzz.get ());
+		  TimerFuzz.start ();
 		  (*reconstruct_trace parents hash;
 		  raise ReachedUnsafe*)
 		end;
@@ -954,7 +970,7 @@ let run_smart code node all_procs trans all_unsafes =
     ref (Array.of_list (all_possible_transitions node.state trans all_procs false)) in
   while !steps < max_depth do
     try
-      if (List.length !visited_states) > Options.fuzz_s then
+      if !visit_count > Options.fuzz_s then
       begin
 	Format.printf "\n\nSet limit reached@."; raise Exit
       end;
@@ -1065,6 +1081,9 @@ let run_smart code node all_procs trans all_unsafes =
 		| TopError Unsafe ->
 		  Format.printf "\n@{<b>@{<bg_red>WARNING@}@}@.";
 		  Format.printf "@{<fg_red>Unsafe state reached during forward exploration@}@.";
+		  TimerFuzz.pause ();
+		  Format.printf "%a@." print_time (TimerFuzz.get ());
+		  TimerFuzz.start ();
 		  unsafe_states := hash :: !unsafe_states
 	    (*reconstruct_trace parents hash;
 	      raise ReachedUnsafe*)
@@ -1088,6 +1107,10 @@ let run_smart code node all_procs trans all_unsafes =
     incr steps;
     transitions := Array.of_list exits;
     with
+      | Dead h ->
+	Format.printf "Deadlock reached.@.";
+	steps := max_depth;
+	dead_states := h::!dead_states
       | TopError Deadlock -> Format.printf "Deadlock reached."; steps := max_depth
       | Stdlib.Sys.Break | Exit ->  steps := max_depth; raise Exit
   done ;
@@ -1098,7 +1121,7 @@ let run_smart code node all_procs trans all_unsafes =
 let further_bfs code node transitions all_procs all_unsafes =
   try
     (*let parents = Hashtbl.create 200 in*)
-    let max_depth = Random.int 10 in
+    let max_depth = Random.int 5 in
     let curr_depth = ref 0 in
     let curr = ref 0 in
     let rem = ref 1 in
@@ -1184,7 +1207,7 @@ let further_bfs code node transitions all_procs all_unsafes =
 		taken_transitions = ExitMap.empty; } in
 	    Hashtbl.add bfs_visited he nd;
 	    incr visit_count;
-	    if (List.length !visited_states) > Options.fuzz_s then
+	    if !visit_count > Options.fuzz_s then
 	      begin
 		Format.printf "\n\nSet limit reached@."; raise Exit
 	      end;
@@ -1197,6 +1220,9 @@ let further_bfs code node transitions all_procs all_unsafes =
 		| TopError Unsafe ->
 		  Format.printf "\n@{<b>@{<bg_red>WARNING@}@}@.";
 		  Format.printf "@{<fg_red>Unsafe state reached during forward exploration@}@.";
+		  TimerFuzz.pause ();
+		  Format.printf "%a@." print_time (TimerFuzz.get ());
+		  TimerFuzz.start ();
 		  unsafe_states := he :: !unsafe_states
 		  (*reconstruct_trace parents he;
 		  raise ReachedUnsafe*)
@@ -1230,11 +1256,11 @@ let further_bfs code node transitions all_procs all_unsafes =
     
 let interpret_bfs original_env transitions all_procs all_unsafes =
   try
-    let max_depth = 50 in
+    let max_depth =  Options.fuzz_d in
     let curr_depth = ref 0 in
     let node = ref 0 in
     let rem = ref 1 in
-    let time_limit = 10.0 in
+    let time_limit = float (Options.fuzz_t) in
     check_unsafe original_env all_unsafes;
     let he = hash_full_env original_env in
     let all_poss = all_possible_transitions original_env transitions all_procs false in
@@ -1298,6 +1324,10 @@ let interpret_bfs original_env transitions all_procs all_unsafes =
 		| TopError Unsafe ->
 		  Format.printf "\n@{<b>@{<bg_red>WARNING@}@}@.";
 		  Format.printf "@{<fg_red>Unsafe state reached during forward exploration@}@.";
+		  TimerFuzz.pause ();
+		  Format.printf "%a@." print_time (TimerFuzz.get ());
+		  TimerFuzz.start();
+
 		  unsafe_states := he :: !unsafe_states
 		  (*reconstruct_trace parents he;
 		  raise ReachedUnsafe*)
@@ -1337,7 +1367,7 @@ let run_forward code node all_procs trans all_unsafes =
     ref (Array.of_list (all_possible_transitions node.state trans all_procs false)) in
   while !steps < max_depth do
     try
-      if (List.length !visited_states) > Options.fuzz_s then
+      if !visit_count > Options.fuzz_s then
       begin
 	Format.printf "\n\nSet limit reached@."; raise Exit
       end;
@@ -1418,6 +1448,10 @@ let run_forward code node all_procs trans all_unsafes =
 		| TopError Unsafe ->
 		  Format.printf "\n@{<b>@{<bg_red>WARNING@}@}";
 		  Format.printf "@{<fg_red> Unsafe state reached during forward exploration@}@.";
+		  TimerFuzz.pause ();
+		  Format.printf "%a@." print_time (TimerFuzz.get ());
+		  TimerFuzz.start ();
+
 		  unsafe_states := hash :: !unsafe_states;
 
 	    end;
@@ -1439,7 +1473,7 @@ let run_forward code node all_procs trans all_unsafes =
       transitions := Array.of_list (exits);
     with
       | Dead h ->
-	Format.printf "Deadlock reached.";
+	Format.printf "Deadlock reached.@.";
 	steps := max_depth;
 	dead_states := h::!dead_states
       | Stdlib.Sys.Break | Exit ->  steps := max_depth; raise Exit
@@ -1454,7 +1488,7 @@ let do_new_exit code node all_procs trans all_unsafes =
   let added = ref 0 in
   
   try
-    if (List.length !visited_states) > Options.fuzz_s then
+    if !visit_count > Options.fuzz_s then
       begin
 	Format.printf "\n\nSet limit reached@."; raise Exit
       end;
@@ -1530,6 +1564,10 @@ let do_new_exit code node all_procs trans all_unsafes =
 	    | TopError Unsafe ->
 	      Format.printf "\n@{<b>@{<bg_red>WARNING@}@}@.";
 	      Format.printf "@{<fg_red>Unsafe state reached during forward exploration@}@.";
+	      TimerFuzz.pause ();
+	      Format.printf "%a@." print_time (TimerFuzz.get ());
+	      TimerFuzz.start ();
+
 	      unsafe_states := new_hash :: !unsafe_states;
 	      (*reconstruct_trace parents new_hash;
 	      raise ReachedUnsafe*)
@@ -1566,14 +1604,14 @@ let choose_random_proc arr n =
   
       
 let continue_from_bfs all_procs transitions all_unsafes =
-  Format.printf "Current number of states: %d@." (List.length !visited_states);
+  Format.printf "Current number of states: %d@." !visit_count;
   let num_procs = Options.get_int_brab () in
   let procs = Variable.give_procs num_procs in
   let arr_procs = Array.of_list procs in
   try 
   let running = ref true in
   while !running do
-    if (List.length !visited_states) > Options.fuzz_s then
+    if !visit_count > Options.fuzz_s then
       begin
 	Format.printf "\n\nSet limit reached@."; raise Exit
       end;
@@ -1589,24 +1627,80 @@ let continue_from_bfs all_procs transitions all_unsafes =
        - run smart for X steps starting from node
        - recalibrate remaining_pool occasionally 
     *)
-    let choice = Random.int 8 in
+    let choice = Random.int 7 in
     match choice with
       | 0 -> run_forward rand node all_procs transitions all_unsafes
       | 5 -> run_forward rand node all_procs transitions all_unsafes 
       | 1 -> markov_entropy rand node all_procs transitions all_unsafes
-      | 2 -> recalibrate_states ()
+      (*| 2 -> recalibrate_states ()*)
       | 3 -> further_bfs rand node transitions all_procs all_unsafes
       | 4 -> run_smart rand node all_procs transitions all_unsafes
       | 6 -> do_new_exit rand node all_procs transitions all_unsafes
-      | 7 -> force_procs_forward rand node transitions all_procs (choose_random_proc arr_procs num_procs) all_unsafes 
+      | 2 -> force_procs_forward rand node transitions all_procs (choose_random_proc arr_procs num_procs) all_unsafes 
       | _ -> assert false   
   done
   with
     | Exit -> ()
-  
-    
 
+
+let compare_envs env1 env2 = assert false
+      
+    
+let try_bfs original_env transitions all_procs all_unsafes =
+  let visited = Hashtbl.create 500 in
+  let meh = ref 1 in
+  let g = ref 0 in
+  try
+    let max_depth =  10000 in
+    let curr_depth = ref 0 in
+    let node = ref 0 in
+    let rem = ref 1 in
+    let time_limit = float (6) in
+    Hashtbl.add visited !g original_env; 
+    incr visit_count;
+    let to_do = Queue.create () in
+    Queue.push (!g, 0,original_env) to_do;
+    Format.printf "\n[VISITED][REMAINING][DEPTH]@.";
+    let time = Unix.time () in
+    while (!curr_depth < max_depth) &&
+      (not (Queue.is_empty to_do)) &&
+      ((Unix.time () -. time) < time_limit) do
+      let ha, dep, env = Queue.pop to_do in
+      decr rem;
+      let possible = all_possible_transitions env transitions all_procs false in
+      List.iter (fun (at,at_p) ->
+	let e = apply_transition at_p at.tr_name transitions env in
+	let he = hash_full_env e in
+	try
+	  let _ = Hashtbl.find visited he in
+	  ()
+	with Not_found ->
+	  incr meh;
+	  begin
+	    Hashtbl.add visited he e;
+	    incr visit_count;  
+	    incr node;
+	    incr rem;
+	    Format.printf "[%d][%d][%d]\r%!" !node !rem dep;
+	    Queue.push (he, dep+1, e) to_do
+	  end ) possible;
+      if dep > !curr_depth then incr curr_depth
+    done;
+    Format.printf "@.";
+    Format.printf "Meh: %d@." !meh
+      
+  with
+    | Stdlib.Sys.Break | Exit -> ()
+    | TopError Unsafe ->
+      Format.printf "\n@{<b>@{<bg_red>WARNING@}@}@.";
+      Format.printf "@{<b>@{<fg_red>Initial state is unsafe@}@}\n@.";
+      raise Exit
+  
+
+      
 let go_from_bfs original_env transitions all_procs all_unsafes tsys =
+  (*try_bfs  original_env transitions all_procs all_unsafes;
+  assert false;*)
   (*List.iter (fun x -> Hashtbl.add fuzz_tr_count x.tr_name 0) tsys;*)
   interpret_bfs original_env transitions all_procs all_unsafes;
   (*if BFS finished to_do queue, there's no need to keep exploring down*)
@@ -1696,23 +1790,12 @@ let init_vals env init num_procs=
 
 
 
-module TimerFuzz = Timer.Make (struct let profiling = true end)
 
 
 let print_fuzz fmt =
   Format.printf "@{<b>@{<u>@{<fg_magenta_b>Cubicle Fuzzer:@}@}@}@."
 
 
-let print_time fmt sec =
-  let minu = floor (sec /. 60.) in
-  let extrasec = sec -. (minu *. 60.) in
-  Format.printf  "%dm%2.3fs" (int_of_float minu) extrasec
-    
-
-let print_time fmt sec =
-  let minu = floor (sec /. 60.) in
-  let extrasec = sec -. (minu *. 60.) in
-  Format.fprintf fmt "%dm%2.3fs" (int_of_float minu) extrasec
 
 let print_transitions fmt () = 
   Format.fprintf fmt "----------------Transitions----------------\n";
@@ -1928,6 +2011,7 @@ let init_aux tsys sys num_procs =
   let unsafe = init_unsafe procs unsafe in
   original_env, unsafe
 
+    
 
 
 let decide_how_many_procs tsys sys trans pick_min =
@@ -1946,11 +2030,15 @@ let decide_how_many_procs tsys sys trans pick_min =
   let poss_first = all_possible_transitions oe trans !procs false in
   Format.printf "Calculating for %d processes:@." pick_min;
 
-  let possy = List.fold_left ( fun pos (n, np) ->
-    let e = apply_transition np n.tr_name trans oe in
-    
-    let _,(_,_,_,_,pos), _ = markov_entropy_detailed e sys.trans !procs trans 25000 pos in
-    pos) matrix poss_first in 
+  let possy, _  =
+    List.fold_left ( fun (pos,dc) (n, np) ->
+      let e = apply_transition np n.tr_name trans oe in 
+      try 
+      let _,(_,_,_,_,pos), _ =  markov_entropy_detailed e sys.trans !procs trans 25000 pos
+      in (pos,dc)
+      with
+	| TopError Deadlock -> (pos,dc + 1)
+    ) (matrix,0) poss_first in 
   
   (*let _, (_,_,_,mat,possy), acp1 =
     markov_entropy_detailed oe sys.trans !procs trans 250000 matrix in*)
@@ -2005,7 +2093,9 @@ let decide_how_many_procs tsys sys trans pick_min =
 	stop := false;
 	
 	raise (ParamFuzz (DecidedProc (!curr_proc, !less_beh)))
+
       | TopError Deadlock ->
+	Format.eprintf "Deadlock reached...@.";
 	incr deadlock_count;
 	if !deadlock_count > 5 then raise (ParamFuzz (TooDead !deadlock_count));
 	calc_proc := !curr_proc; 
@@ -2101,7 +2191,9 @@ let init tsys sys =
 	  | ParamFuzz (TooDead n) ->
 	    Format.printf "The model has deadlocked with %d different values of procs.\n\
                            Please verify your model and try again.@." n; raise Exit
-	  | _ ->
+	  
+
+	  (*| _ ->
 	    Format.printf "Calculation of procs interrupted.\n\
                            Would you like to run the fuzzer with the last number of procs?\n\
                            [last seen: %d procs] (y/n)@." !calc_proc;
@@ -2117,7 +2209,7 @@ let init tsys sys =
 		  | "n" -> Format.printf "@{<b>@{<fg_blue>Exiting fuzzer. @}@."; raise Done
 		  | _ -> Format.printf  "Invalid input. Type y or n@."; decide ()
 	      in decide ()
-	    end;
+	    end;*)
 	    
       end ;
       let procs = Variable.give_procs !final_procs in
