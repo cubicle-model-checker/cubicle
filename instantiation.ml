@@ -106,8 +106,6 @@ let add_obv ((x,y) as p) obvs =
   end
 
 let obvious_impossible a1 a2 =
-  failwith "todo obvious impossible"
-  (* TODO G
   let n1 = Array.length a1 in
   let n2 = Array.length a2 in
   let obvs = ref [] in
@@ -119,42 +117,32 @@ let obvious_impossible a1 a2 =
     let a2i = a2.(!i2) in
     (match a1i, a2i with
        | Atom.Comp (Vea(Elem (x1, sx1)), Eq, Vea(Elem (y1, sy1))), 
-	 Atom.Comp (Vea(Elem (x2, sx2)), Eq, Vea(Elem (y2, sy2))) ->
-	   begin
-    	     match sx1, sy1, sx2, sy2 with
-    	       | Glob, Constr, Glob, Constr 
-		   when H.equal x1 x2 && not (H.equal y1 y2) ->
-    		   raise NoPermutations
-    	       | Glob, Var, Glob, Var when H.equal x1 x2 ->
-		   add_obv (y1,y2) obvs
-    	       | Glob, Var, Var, Glob when H.equal x1 y2 ->
-    		   add_obv (y1,x2) obvs
-    	       | Var, Glob, Glob, Var when H.equal y1 x2 ->
-    		   add_obv (x1,y2) obvs
-    	       | Var, Glob, Var, Glob when H.equal y1 y2 ->
-    		   add_obv (x1,x2) obvs
-    	       | _ -> ()
+	       Atom.Comp (Vea(Elem (x2, sx2)), Eq, Vea(Elem (y2, sy2))) ->
+	        begin match sx1, sy1, sx2, sy2 with
+    	      | Glob, Constr, Glob, Constr when H.equal x1 x2 && not (H.equal y1 y2) ->
+    		        raise NoPermutations
+    	      | Glob, Var, Glob, Var when H.equal x1 x2 -> add_obv (y1,y2) obvs
+    	      | Glob, Var, Var, Glob when H.equal x1 y2 -> add_obv (y1,x2) obvs
+    	      | Var, Glob, Glob, Var when H.equal y1 x2 -> add_obv (x1,y2) obvs
+    	      | Var, Glob, Var, Glob when H.equal y1 y2 -> add_obv (x1,x2) obvs
+    	      | _ -> ()
     	   end
        | Atom.Comp (Vea(Elem (x1, sx1)), Eq, Vea(Elem (y1, sy1))), 
-	 Atom.Comp (Vea(Elem (x2, sx2)), (Neq | Lt), Vea(Elem (y2, sy2))) ->
-    	   begin
-	     match sx1, sy1, sx2, sy2 with
-    	       | Glob, Constr, Glob, Constr 
-		   when H.equal x1 x2 && H.equal y1 y2 ->
-    		   raise NoPermutations
-    	       | _ -> ()
-	   end
-       | Atom.Comp (Access (a1, lx1), op, 
-	            (Vea(Elem (_, Constr)) | Vea(Elem (_, Glob)) | Arith _ as c1)), 
-	 Atom.Comp (Vea(Access (a, _)), _,
-                    (Vea(Elem (_, Constr)) | Vea(Elem (_, Glob)) | Arith _ ))
-    	   when H.equal a1 a ->
-	   find_impossible a1 lx1 op c1 !i2 a2 n2 impos !obvs
+	       Atom.Comp (Vea(Elem (x2, sx2)), (Neq | Lt), Vea(Elem (y2, sy2))) ->
+    	    begin match sx1, sy1, sx2, sy2 with
+    	    | Glob, Constr, Glob, Constr when H.equal x1 x2 && H.equal y1 y2 ->
+    		    raise NoPermutations
+    	    | _ -> ()
+	        end
+      (* TODO G 
+       | Atom.Comp (Vea(Access (a1, lx1)), op, (Vea(Elem (_, Constr)) | Vea(Elem (_, Glob)) | Arith _ as c1)),
+	       Atom.Comp (Vea(Access (a, _)), _, (Vea(Elem (_, Constr)) | Vea(Elem (_, Glob)) | Arith _ ))
+    	   when H.equal a1 a -> find_impossible a1 lx1 op c1 !i2 a2 n2 impos !obvs
+       *)
        | _ -> ());
     if Atom.compare a1i a2i <= 0 then incr i1 else incr i2
   done;
   !obvs, !impos
-  *)
 
 (*******************************************)
 (* Relevant permuations for fixpoint check *)

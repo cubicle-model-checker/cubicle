@@ -39,7 +39,8 @@ module Const = struct
     | ConstInt _, ConstReal _ -> -1
     
   let equal c1 c2 = compare c1 c2 = 0
-  
+
+
   let type_of = function 
     | ConstInt  _ -> Smt.Type.type_int
     | ConstReal _ -> Smt.Type.type_real
@@ -54,7 +55,12 @@ module Const = struct
   let to_num = function
     | ConstInt n | ConstReal n -> n
 
-  let is_one n = Num.compare_num (to_num n) (Num.num_of_int 1) = 0
+  let is_one  n = Num.compare_num (to_num n) (Num.num_of_int 1) = 0
+  let is_zero n = Num.compare_num (to_num n) (Num.num_of_int 0) = 0
+
+  let num_equal c1 c2 = Num.eq_num (to_num c1) (to_num c2)
+  let num_lt    c1 c2 = Num.lt_num (to_num c1) (to_num c2)
+  let num_le    c1 c2 = Num.le_num (to_num c1) (to_num c2)
 
   (* -- *)
 
@@ -64,7 +70,7 @@ module Const = struct
   let int_one      = ConstInt   (Num.num_of_int 1)
   let real_zero    = ConstReal  (Num.num_of_int 0)
   let real_one     = ConstReal  (Num.num_of_int 1)
-
+  
   (* Opérations arithméthiques *)
 
   let add_const c1 c2 =
@@ -392,14 +398,12 @@ end = struct
 	    let c = compare a1 a2 in
 	    if c<>0 then c else compare b1 b2
 
-  let trivial_is_implied a1 a2 = failwith "todo : trivial is implied"
-    (*
+  let trivial_is_implied a1 a2 = 
     match a1, a2 with
-      | Comp (x1, Neq, Elem (v1, (Constr|Var))),
-        Comp (x2, Eq, Elem (v2, (Constr|Var))) 
+      | Comp (x1, Neq, Vea(Elem (v1, (Constr|Var)))),
+        Comp (x2, Eq,  Vea(Elem (v2, (Constr|Var)))) 
           when not (Hstring.equal v1 v2) && Term.compare x1 x2 = 0 -> 0
       | _ -> compare a1 a2
-    *)
 
   let neg = function
     | True -> False
@@ -414,7 +418,7 @@ end = struct
     | Comp (x, Lt, y) -> Comp (y, Le, x)
     | Comp (x, Le, y) -> Comp (y, Lt, x)
     | Comp (x, Neq, y) -> Comp (x, Eq, y)
-    | _ -> assert false
+    | _ -> failwith "todo neg" (*assert false TODO G : Reput assert false*)
 
   let hash (sa: Atom.t) = Hashtbl.hash_param 50 100 sa
 

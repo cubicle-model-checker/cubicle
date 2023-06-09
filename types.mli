@@ -36,7 +36,16 @@ module Const : sig
   val sign    : t -> int 
   val to_num  : t -> Num.num 
   val type_of : t -> Smt.Type.t 
+  val compare : t -> t -> int
+  val equal   : t -> t -> bool
 
+  val is_zero : t -> bool
+  val is_one  : t -> bool
+
+  val num_equal   : t -> t -> bool
+  val num_lt      : t -> t -> bool 
+  val num_le      : t -> t -> bool
+  
   val add_const : t -> t -> t 
   val add_int   : t -> Num.num -> t
   val add_real  : t -> Num.num -> t

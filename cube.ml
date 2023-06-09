@@ -179,12 +179,12 @@ let redondant_or_false others a = match a with
 
 let simplify_comp i si op j sj =
   match op, (si, sj) with
-    | Eq, _ when H.equal i j -> Atom.True
+    | Eq,  _ when H.equal i j -> Atom.True
     | Neq, _ when H.equal i j -> Atom.False
     | Eq, (Var, Var | Constr, Constr) ->
-	if H.equal i j then Atom.True else Atom.False
+      if H.equal i j then Atom.True else Atom.False
     | Neq, (Var, Var | Constr, Constr) ->
-	if not (H.equal i j) then Atom.True else Atom.False
+      if not (H.equal i j) then Atom.True else Atom.False
     | Le, _ when H.equal i j -> Atom.True
     | Lt, _ when H.equal i j -> Atom.False
     | (Eq | Neq) , _ ->
@@ -197,17 +197,54 @@ let simplify_comp i si op j sj =
 
 let rec simplification np a =
   let a = redondant_or_false (SAtom.remove a np) a in
-  failwith "todo simplification"
-  (* TODO G
   match a with
     | Atom.True | Atom.False -> a
     | Atom.Comp (Vea(Elem (i, si)), op , Vea(Elem (j, sj))) -> simplify_comp i si op j sj
+    | Atom.Comp (Poly (cs1, ts1), (Eq | Le) , Poly (cs2, ts2)) 
+        when VMap.equal Const.equal ts1 ts2 && Const.equal cs1 cs2 ->
+          Atom.True
+    | Atom.Comp (Poly (cs1, ts1), (Neq | Lt) , Poly (cs2, ts2)) 
+        when VMap.equal Const.equal ts1 ts2 && Const.equal cs1 cs2 ->
+          Atom.False
+   | Atom.Comp (Poly (cs1, ts1), Le, Poly (cs2, ts2)) 
+        when VMap.equal Const.equal ts1 ts2 && Const.num_le cs1 cs2 ->
+          Atom.True
+    | Atom.Comp (Poly (cs1, ts1), Lt , Poly (cs2, ts2)) 
+        when VMap.equal Const.equal ts1 ts2 && Const.num_lt cs1 cs2 ->
+          Atom.True
+    | Atom.Comp (Poly (cs1, ts1), Lt , Poly (cs2, ts2)) 
+        when VMap.equal Const.equal ts1 ts2 && Const.num_le cs2 cs1 ->
+          Atom.False
+    | Atom.Comp (Poly (cs1, ts1), Le , Poly (cs2, ts2)) 
+        when VMap.equal Const.equal ts1 ts2 && Const.num_lt cs2 cs1 ->
+          Atom.False
+    | Atom.Ite (sa, a1, a2) ->
+      let sa =
+        SAtom.fold
+          (fun a -> SAtom.add (simplification np a)) sa SAtom.empty
+      in
+      let a1 = simplification np a1 in
+      let a2 = simplification np a2 in
+      if SAtom.is_empty sa || SAtom.subset sa np then a1
+      else if SAtom.mem Atom.False sa then a2
+      else a
+    (* TODO G :
+      If comparing Poly and Poly
+      - When two element are in ts1 and ts2, remove it in both
+      If comparing a Poly and a Vea: 
+      - check if const is null
+      - If Poly only has one element with coeff 1 and null const, change it to
+        type Vea and simplify again
+    *)
+    | _ -> a
+
+    (* TODO : DELETE LEGACY
     | Atom.Comp (Arith (i, csi), op, (Arith (j, csj)))
       when compare_constants csi csj = 0 -> simplification np (Atom.Comp (i, op, j))
     | Atom.Comp (Arith (i, csi), op, (Arith (j, csj))) ->
         let cs = add_constants (mult_const (-1) csi) csj in
-	if MConst.is_empty cs then Atom.Comp (i, op, j)
-	else Atom.Comp (i, op, (Arith (j, cs)))
+        if MConst.is_empty cs then Atom.Comp (i, op, j)
+        else Atom.Comp (i, op, (Arith (j, cs)))
     (* | Atom.Comp (Const cx, op, Arith (y, sy, cy)) -> *)
     (* 	Atom.Comp (Const (add_constants (mult_const (-1) cx) cx), op, *)
     (* 	      Arith (y, sy , (add_constants (mult_const (-1) cx) cy))) *)
@@ -220,50 +257,41 @@ let rec simplification np a =
     | Atom.Comp (Const cx, op, Arith (y, cy)) ->
        let mcy = mult_const (-1) cy in
        Atom.Comp (Const (add_constants cx mcy), op, y)
-
     | Atom.Comp (x, op, Arith (y, cy)) when Term.compare x y = 0 ->
         let cx = add_constants (mult_const (-1) cy) cy in
-	let c, i = MConst.choose cy in
-	let my = MConst.remove c cy in
-	let cy =
+        let c, i = MConst.choose cy in
+        let my = MConst.remove c cy in
+        let cy =
 	  if MConst.is_empty my then MConst.add c (i/(abs i)) my else cy in
         Atom.Comp (Const cx, op, Const cy)
     | Atom.Comp (Arith (y, cy), op, x) when Term.compare x y = 0 ->
         let cx = add_constants (mult_const (-1) cy) cy in
-	let c, i = MConst.choose cy in
-	let my = MConst.remove c cy in
-	let cy =
-	  if MConst.is_empty my then MConst.add c (i/(abs i)) my else cy in
-        Atom.Comp (Const cy, op, Const cx)
+        let c, i = MConst.choose cy in
+        let my = MConst.remove c cy in
+        let cy =
+          if MConst.is_empty my then MConst.add c (i/(abs i)) my 
+                                else cy 
+          in
+          Atom.Comp (Const cy, op, Const cx)
     | Atom.Comp (Const c1, (Eq | Le), Const c2) when compare_constants c1 c2 = 0 ->
        Atom.True
     | Atom.Comp (Const c1, Le, Const c2) ->
-       begin
-	 match MConst.is_num c1, MConst.is_num c2 with
-	 | Some n1, Some n2 -> if Num.le_num n1 n2 then Atom.True else Atom.False
-	 | _ -> a
+       begin match MConst.is_num c1, MConst.is_num c2 with
+       | Some n1, Some n2 -> if Num.le_num n1 n2 then Atom.True else Atom.False
+       | _ -> a
        end
     | Atom.Comp (Const c1, Lt, Const c2) ->
-       begin
-	 match MConst.is_num c1, MConst.is_num c2 with
-	 | Some n1, Some n2 -> if Num.lt_num n1 n2 then Atom.True else Atom.False
-	 | _ -> a
+       begin match MConst.is_num c1, MConst.is_num c2 with
+       | Some n1, Some n2 -> if Num.lt_num n1 n2 then Atom.True else Atom.False
+       | _ -> a
        end
     | Atom.Comp (Const _ as c, Eq, y) -> Atom.Comp (y, Eq, c)
     | Atom.Comp (x, Eq, y) when Term.compare x y = 0 -> Atom.True
     | Atom.Comp (x, (Eq | Neq as op), y) when Term.compare x y < 0 -> Atom.Comp (y, op, x)
     | Atom.Comp _ -> a
-    | Atom.Ite (sa, a1, a2) ->
-	let sa =
-	  SAtom.fold
-	    (fun a -> SAtom.add (simplification np a)) sa SAtom.empty
-	in
-	let a1 = simplification np a1 in
-	let a2 = simplification np a2 in
-	if SAtom.is_empty sa || SAtom.subset sa np then a1
-	else if SAtom.mem Atom.False sa then a2
-	else Atom.Ite(sa, a1, a2)
-  *)
+    *)
+
+
 
 (***********************************)
 (* Cheap check of inconsitent cube *)
@@ -568,12 +596,15 @@ let remove_tick_atom sa (tick, at) =
   *)
 
 let const_simplification sa =
+  sa 
+  (* TODO G : TICK ??
   if noqe then sa
   else
     try
       let ticks = tick_pos sa in
       List.fold_left remove_tick_atom sa ticks
     with Not_found -> sa
+  *)
 
 let simplification_atoms base sa =
   SAtom.fold
@@ -697,15 +728,15 @@ let resolve_two c1 c2 =
   | None -> None
   | Some ar -> Some (create_normal_array ar)
 
+let term_vea t acc = 
+  match t with  
+  | Vea.Elem (a, Glob) | Vea.Access (a, _) -> Term.Set.add (Vea t) acc
+  | _ -> acc
 
 let rec term_globs t acc = 
-  failwith "todo term_globs"
-  (* TODO G
-  match t with
-  | Elem (a, Glob) | Access (a, _) -> Term.Set.add t acc
-  | Arith (x, _) -> term_globs x acc
-  | _ -> acc
-  *)
+  match t with 
+  | Vea vea       -> term_vea vea acc
+  | Poly (_, vm)  -> VMap.fold (fun vea _ acc -> term_vea vea acc) vm acc
 
 let rec atom_globs a acc = match a with
     | Atom.True | Atom.False -> acc

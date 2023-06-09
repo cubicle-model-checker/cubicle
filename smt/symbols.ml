@@ -24,10 +24,10 @@ type t =
   | True 
   | False
   | Name of Hstring.t * name_kind
-  | Int of Hstring.t
+  | Int  of Hstring.t
   | Real of Hstring.t
-  | Op of operator
-  | Var of Hstring.t
+  | Op   of operator
+  | Var  of Hstring.t
 
 let name ?(kind=Other) s = Name (s, kind)
 let var s = Var (Hstring.make s)

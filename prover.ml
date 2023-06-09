@@ -82,6 +82,9 @@ let rec mult_const tc c i =
   | i when i < 0 -> T.make_arith T.Minus (mult_const tc c (i + 1)) tc
   | _ -> assert false
 
+let add_const tc c = 
+  T.make_arith T.Plus tc c 
+
 let make_arith_cs t = (* t added to avoid failure *)
   failwith "todo make arith cs"
   (*
@@ -93,6 +96,7 @@ let make_arith_cs t = (* t added to avoid failure *)
   *)
 
 let make_cs cs =
+
   failwith "todo make cs"
   (*
   let c, i = MConst.choose cs in
@@ -102,10 +106,42 @@ let make_cs cs =
   else make_arith_cs r (mult_const t_c c i)
   *)
 
-let rec make_term = function
-  | Vea(Elem (e, _))    -> T.make_app e []
-  | Vea(Access (a, li)) -> T.make_app a (List.map (fun i -> T.make_app i []) li)
-  | Poly(cs, ts) -> failwith "todo make term"
+
+
+let make_vea = function 
+  | Vea.Elem   (e, _)  -> T.make_app e []
+  | Vea.Access (a, li) -> T.make_app a (List.map (fun i -> T.make_app i []) li)
+
+let make_ts ts = 
+
+  match VMap.choose_opt ts with 
+  | Some (vea, cs) ->
+    let cs_t = make_const cs in 
+    let vea_t = make_vea vea in
+    let fst = vea_t in (* TODO : Mult by cs_t *)
+
+    let ts_without_fst = VMap.remove vea ts in 
+
+    let res = VMap.fold
+    (fun vea cs tres ->
+      let cs_t  = make_const cs in
+      let vea_t = make_vea vea  in
+      let csvea_t = vea_t in (* TODO : Mult by cs_t *)
+      T.make_arith T.Plus tres csvea_t 
+    )
+    ts_without_fst
+    fst
+    in Some(res)
+  | None -> None
+
+let make_term = function
+  | Vea v        -> make_vea v
+  | Poly(cs, ts) ->
+      match make_ts ts with 
+      | Some (ts_t) -> 
+          if Const.is_zero cs then ts_t else 
+          let cs_t = make_const cs in T.make_arith T.Plus cs_t ts_t
+      | None -> make_const cs
   (*
   | Const cs -> make_cs cs 
   | Arith (x, cs) -> 
