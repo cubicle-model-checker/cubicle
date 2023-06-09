@@ -1,0 +1,15 @@
+var A : int
+var B : int
+
+init () { A < 0 && B < 0 }
+unsafe () { A > 0 }
+
+transition add ()
+{
+	A := A + B;
+}
+
+transition up () 
+{
+	B := B + 1;
+}

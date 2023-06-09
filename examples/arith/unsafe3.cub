@@ -1,0 +1,11 @@
+var A : int
+var B : int
+var C : int
+
+init () { B < 0 && C < 0 && A < 0 }
+unsafe () { A > 0 }
+
+transition add ()
+{
+	A := B + C - A;
+}
