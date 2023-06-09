@@ -11,7 +11,7 @@ cd $CUBDIR && make && cd $CALLING
 for file in $(ls $BASEDIR | grep .cub); 
 do
 	echo "Testing $file"
-	$CUBICLE -type-only $file	
+	$CUBICLE $file	
 done
 
 echo "done."
