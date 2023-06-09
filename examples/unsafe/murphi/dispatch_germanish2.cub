@@ -1,0 +1,316 @@
+(*number_procs 3*)
+
+type t = A1 | A2 | A3 | A4 | None
+type d = Z | One | Two | Three | Four | Five
+
+type pc = Empty | L2_1 | L2_2 | L2_3 | L3_1 | L3_2 | L3_3 | L4_1 | L4_2 | L4_3 |  L5_1 | L5_2 | L5_3 | L2_1_1
+
+(*---- Germanish ----*)
+type req = Empty2 | Reqs | Reqe
+type cstate = Invalid | Shared | Exclusive
+(*------------------*)
+
+
+array Cmd[proc] : t
+array Data[proc] : d
+array PC1[proc] : pc
+array PC2[proc] : pc
+
+var C : t
+var P : proc
+
+var Sync : bool
+
+(*---- Germanish ----*)
+
+var Exgntd : bool
+var Curcmd : req
+var Curptr : proc
+
+array Cache[proc] : cstate
+array Shrset[proc] : bool
+array Chan[proc] : req
+
+(*------------------*)
+
+
+
+
+
+
+
+
+
+init (i) { C = None && Cmd[i] = None && Data[i] = Z && PC1[i] = Empty && PC2[i] = Empty && Sync = False &&
+	   Cache[i] = Invalid && Shrset[i] = False &&
+           Exgntd = False && Curcmd = Empty2 && Chan[i]=Empty2 }
+
+	  
+
+unsafe() { Sync  = True && Exgntd = True } 
+
+
+transition choix1(i)
+requires { Cmd[i] = None }
+{
+ Cmd[i] := A1
+}
+
+
+transition choix2(i)
+requires { Cmd[i] = None }
+{
+ Cmd[i] := A2
+}
+
+
+transition choix3(i)
+requires { Cmd[i] = None }
+{
+ Cmd[i] := A3
+}
+
+
+transition choix4(i)
+requires { Cmd[i] = None }
+{
+ Cmd[i] := A4
+}
+
+
+(*
+transition data1(i)
+requires { PC1[i] <> Empty ||  PC2[i] <> Empty }
+{
+ Data[i] := One
+}
+
+
+transition data2_1(i)
+requires { PC1[i] <> Empty ||  PC2[i] <> Empty }
+{
+ Data[i] := Two
+}
+
+transition data3(i)
+requires { PC1[i] <> Empty  ||  PC2[i] <> Empty }
+{
+ Data[i] := Three
+}
+
+
+transition data4(i)
+requires { PC1[i] <> Empty ||  PC2[i] <> Empty }
+{
+ Data[i] := Four;
+}
+
+transition data5(i)
+requires { PC1[i] <> Empty  ||  PC2[i] <> Empty }
+{
+ Data[i] := Five;
+}
+*)
+transition cmd1(i)
+requires { Cmd[i] = A1 && C = None }
+{
+ C := A1;
+ Cmd[i] := None;
+ P := i;
+}
+
+
+transition cmd2(i)
+requires { Cmd[i] = A2 && C = None}
+{
+ C := A2;
+ Cmd[i] := None;
+ P := i;
+}
+
+
+transition cmd3(i)
+requires { Cmd[i] = A3 && C = None}
+{
+ C := A3;
+ Cmd[i] := None;
+ P := i;
+}
+
+transition cmd4(i)
+requires { Cmd[i] = A4 && C = None}
+{
+ C := A4;
+ Cmd[i] := None;
+ P := i;
+}
+
+transition process_A1(i j)
+requires { C = A1 && P = i && PC1[i] = Empty }
+{ PC1[i] := L2_1 ; C := None; P := j;  }
+
+
+transition process_A2(i j)
+requires { C = A2 && P = i && PC1[i] = Empty }
+{ PC1[i] := L3_1 ; C := None; P := j; }
+
+transition process_A3(i j)
+requires { C = A3 && P = i && PC1[i] = Empty }
+{ PC1[i] := L4_1 ; C := None; P := j; }
+
+transition process_A4(i j)
+requires { C = A4 && P = i && PC1[i] = Empty }
+{ PC1[i] := L5_1 ; C := None; P := j; }
+
+transition seq2_1(i)
+requires { PC1[i] = L2_1 }
+{ PC1[i] := L2_1_1; }
+
+transition seq2_1_1(i)
+requires { PC1[i] = L2_1_1 }
+{ PC1[i] := L2_2; }
+
+transition seq2_2(i)
+requires { PC1[i] = L2_2 }
+{ PC1[i] := Empty;
+  PC2[i] := L2_3; }
+
+transition seq2_3(i)
+requires { PC2[i] = L2_3 }
+{ PC2[i] := Empty; }
+
+transition seq3_1(i)
+requires { PC1[i] = L3_1 }
+{ PC1[i] := L3_2; }
+
+transition seq3_2(i)
+requires { PC1[i] = L3_2 }
+{ PC1[i] := Empty;
+  PC2[i] := L3_3; }
+
+transition seq3_3(i)
+requires { PC2[i] = L3_3 }
+{ PC2[i] := Empty; }
+
+
+transition seq4_1(i)
+requires { PC1[i] = L4_1 }
+{ PC1[i] := L4_2; }
+
+transition seq4_2(i)
+requires { PC1[i] = L4_2 }
+{ PC1[i] := Empty;
+  PC2[i] := L4_3; }
+
+transition seq4_3(i)
+requires { PC2[i] = L4_3 }
+{ PC2[i] := Empty; }
+
+
+transition seq5_1(i)
+requires { PC1[i] = L5_1 }
+{ PC1[i] := L5_2; }
+
+transition seq5_2(i)
+requires { PC1[i] = L5_2 }
+{ PC1[i] := Empty;
+  PC2[i] := L5_3; }
+
+transition seq5_3(i)
+requires { PC2[i] = L5_3 }
+{ PC2[i] := Empty; }
+
+transition sync(i j m)
+requires {Sync = False && PC2[i] = L5_3 && PC1[j] = L5_1 && PC2[m] = L4_3 && forall_other k. PC2[k] = L5_3}
+{ PC2[l] := case | _ : Empty;
+  Sync := True } 
+
+
+(*--------- Germanish ---------*)
+
+
+transition send_shared (n)
+requires { Sync = True && Chan[n] = Empty2 && Cache[n] = Invalid }
+{ 
+  Chan[j] := case 
+  	      | j = n : Reqs 
+	      | _ : Chan[j] 
+}
+
+transition recv_shared (n)
+requires { Sync = True && Curcmd = Empty2 && Chan[n] = Reqs }
+{ 	 
+  Curcmd := Reqs; 
+  Curptr := n ;
+  Chan[j] := case 
+  	      | j = n : Empty2 
+	      | _ : Chan[j] 
+}
+    
+transition send_exclusive (n)
+requires { Sync = True && Chan[n] = Empty2 && Cache[n] <> Exclusive }
+{ 
+  Chan[j] := case 
+  	      | j = n : Reqe 
+	      | _ : Chan[j] 
+}
+
+transition recv_exclusive (n)
+requires { Sync = True && Curcmd = Empty2 && Chan[n] = Reqe }
+{ 
+  Curcmd := Reqe; 
+  Curptr := n ;
+  Chan[j] := case 
+  	      | j = n : Empty2 
+	      | _ : Chan[j] 
+}
+    
+transition inv_1 (n)
+requires { Sync = True && Shrset[n]=True  &&  Curcmd = Reqe }
+{ 
+  Exgntd := False;
+  Cache[j] := case 
+  	       | j = n : Invalid 
+	       | _ : Cache[j] ;
+  Shrset[j] := case
+  	        | j= n : False 
+		| _ : Shrset[j] 
+}
+
+transition inv_2 (n)
+requires { Sync = True && Shrset[n]=True  && Curcmd = Reqs && Exgntd=True }
+{ 
+  Exgntd := False;
+  Cache[j] := case
+	       | j = n : Invalid 
+	       | _ : Cache[j] ;
+  Shrset[j] := case
+  	        | j= n : False 
+		| _ : Shrset[j] 
+}
+    
+transition gnt_shared (n)
+requires { Sync = True && Curptr = n && Curcmd = Reqs && Exgntd = False }
+{ 
+  Curcmd := Empty2;
+  Shrset[j] := case 
+  	       	| j = n : True 
+		| _ : Shrset[j] ;
+  Cache[j] := case 
+  	       | j = n : Shared 
+	       | _ : Cache[j] 
+}
+
+transition gnt_exclusive (n)
+requires { Sync = True && Shrset[n] = False && Curcmd = Reqe && Exgntd = False && 
+	  Curptr = n && forall_other l. Shrset[l] = False }
+{ 
+  Curcmd := Empty2; 
+  Exgntd := True;
+  Shrset[j] := case 
+  	        | j = n : True 
+		| _ : Shrset[j] ;
+  Cache[j] := case 
+  	       | j = n : Exclusive 
+	       | _ : Cache[j] 
+}

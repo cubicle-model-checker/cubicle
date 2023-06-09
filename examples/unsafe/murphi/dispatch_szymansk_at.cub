@@ -1,0 +1,306 @@
+(*number_procs 3*)
+
+type t = A1 | A2 | A3 | A4 | None
+type d = Z | One | Two | Three | Four | Five
+
+type pc = Empty | L2_1 | L2_2 | L2_3 | L3_1 | L3_2 | L3_3 | L4_1 | L4_2 | L4_3 |  L5_1 | L5_2 | L5_3 | L2_1_1
+
+(*---- Szymanski ----*)
+type location = L0 | L1 | L2 | L3 | L4 | L5 | L6 | L7 
+(*------------------*)
+
+
+array Cmd[proc] : t
+array Data[proc] : d
+array PC1[proc] : pc
+array PC2[proc] : pc
+
+var C : t
+var P : proc
+
+var Sync : bool
+
+(*---- Szymanski ----*)
+
+array A[proc] : location
+array B[proc] : bool
+array S[proc] : bool
+array W[proc] : bool 
+
+(*------------------*)
+
+
+(*
+(1)  A[#1] = L7 && S[#1] = @MFalse
+(2)  A[#1] = L6 && S[#1] = @MFalse
+(3)  A[#1] = L5 && S[#1] = @MFalse
+(4)  A[#1] = L7 && B[#1] = @MTrue
+(5)  A[#1] = L3 && S[#1] = @MFalse
+(6)  A[#1] = L6 && B[#1] = @MTrue
+(7)  A[#1] = L5 && B[#1] = @MTrue
+(8)  A[#1] = L4 && W[#1] = @MFalse
+(9)  A[#1] = L3 && B[#1] = @MTrue
+(10)  A[#1] = L3 && W[#1] = @MFalse
+(11)  A[#1] = L2 && B[#1] = @MTrue
+(12)  A[#1] = L2 && W[#1] = @MTrue
+(13)  A[#1] = L2 && S[#1] = @MTrue
+(14)  A[#1] = L1 && W[#1] = @MTrue
+(15)  A[#1] = L1 && S[#1] = @MTrue
+(16)  A[#1] = L0 && W[#1] = @MTrue
+(17)  A[#1] = L0 && S[#1] = @MTrue
+(18)  A[#1] = L7 && W[#1] = @MTrue
+(19)  A[#1] = L6 && W[#1] = @MTrue
+(20)  A[#1] = L5 && W[#1] = @MTrue
+(21)  A[#1] = L4 && B[#1] = @MTrue
+(22)  Sync = @MFalse && A[#1] = L5
+(23)  Sync = @MFalse && A[#1] = L6
+(24)  A[#1] = L7 && A[#2] = L4
+(25)  A[#1] = L6 && A[#2] = L4
+(26)  A[#1] = L7 && A[#2] = L3
+(27)  A[#1] = L6 && A[#2] = L3
+(28)  A[#1] = L7 && A[#2] = L2
+(29)  A[#1] = L6 && A[#2] = L2
+(30)  A[#1] = L5 && A[#2] = L2
+*)
+
+
+init (i) { C = None && Cmd[i] = None && Data[i] = Z && PC1[i] = Empty && PC2[i] = Empty && Sync = False &&
+	    A[i] = L0 && S[i] = False && W[i] = False && B[i] = False }
+
+	  
+
+unsafe (z1) { A[z1] = L7 && Sync = True}
+
+
+
+transition choix1(i)
+requires { Cmd[i] = None }
+{
+ Cmd[i] := A1
+}
+
+
+transition choix2(i)
+requires { Cmd[i] = None }
+{
+ Cmd[i] := A2
+}
+
+
+transition choix3(i)
+requires { Cmd[i] = None }
+{
+ Cmd[i] := A3
+}
+
+
+transition choix4(i)
+requires { Cmd[i] = None }
+{
+ Cmd[i] := A4
+}
+
+
+(*
+transition data1(i)
+requires { PC1[i] <> Empty ||  PC2[i] <> Empty }
+{
+ Data[i] := One
+}
+
+
+transition data2_1(i)
+requires { PC1[i] <> Empty ||  PC2[i] <> Empty }
+{
+ Data[i] := Two
+}
+
+transition data3(i)
+requires { PC1[i] <> Empty  ||  PC2[i] <> Empty }
+{
+ Data[i] := Three
+}
+
+
+transition data4(i)
+requires { PC1[i] <> Empty ||  PC2[i] <> Empty }
+{
+ Data[i] := Four;
+}
+
+transition data5(i)
+requires { PC1[i] <> Empty  ||  PC2[i] <> Empty }
+{
+ Data[i] := Five;
+}
+*)
+transition cmd1(i)
+requires { Cmd[i] = A1 && C = None }
+{
+ C := A1;
+ Cmd[i] := None;
+ P := i;
+}
+
+
+transition cmd2(i)
+requires { Cmd[i] = A2 && C = None}
+{
+ C := A2;
+ Cmd[i] := None;
+ P := i;
+}
+
+
+transition cmd3(i)
+requires { Cmd[i] = A3 && C = None}
+{
+ C := A3;
+ Cmd[i] := None;
+ P := i;
+}
+
+transition cmd4(i)
+requires { Cmd[i] = A4 && C = None}
+{
+ C := A4;
+ Cmd[i] := None;
+ P := i;
+}
+
+transition process_A1(i j)
+requires { C = A1 && P = i && PC1[i] = Empty }
+{ PC1[i] := L2_1 ; C := None; P := j;  }
+
+
+transition process_A2(i j)
+requires { C = A2 && P = i && PC1[i] = Empty }
+{ PC1[i] := L3_1 ; C := None; P := j; }
+
+transition process_A3(i j) 
+requires { C = A3 && P = i && PC1[i] = Empty }
+{ PC1[i] := L4_1 ; C := None; P := j; }
+
+transition process_A4(i j)
+requires { C = A4 && P = i && PC1[i] = Empty }
+{ PC1[i] := L5_1 ; C := None; P := j; }
+
+transition seq2_1(i)
+requires { PC1[i] = L2_1 }
+{ PC1[i] := L2_1_1; }
+
+transition seq2_1_1(i)
+requires { PC1[i] = L2_1_1 }
+{ PC1[i] := L2_2; }
+
+transition seq2_2(i)
+requires { PC1[i] = L2_2 }
+{ PC1[i] := Empty;
+  PC2[i] := L2_3; }
+
+transition seq2_3(i)
+requires { PC2[i] = L2_3 }
+{ PC2[i] := Empty; }
+
+transition seq3_1(i)
+requires { PC1[i] = L3_1 }
+{ PC1[i] := L3_2; }
+
+transition seq3_2(i)
+requires { PC1[i] = L3_2 }
+{ PC1[i] := Empty;
+  PC2[i] := L3_3; }
+
+transition seq3_3(i)
+requires { PC2[i] = L3_3 }
+{ PC2[i] := Empty; }
+
+
+transition seq4_1(i)
+requires { PC1[i] = L4_1 }
+{ PC1[i] := L4_2; }
+
+transition seq4_2(i)
+requires { PC1[i] = L4_2 }
+{ PC1[i] := Empty;
+  PC2[i] := L4_3; }
+
+transition seq4_3(i)
+requires { PC2[i] = L4_3 }
+{ PC2[i] := Empty; }
+
+
+transition seq5_1(i)
+requires { PC1[i] = L5_1 }
+{ PC1[i] := L5_2; }
+
+transition seq5_2(i)
+requires { PC1[i] = L5_2 }
+{ PC1[i] := Empty;
+  PC2[i] := L5_3; }
+
+transition seq5_3(i)
+requires { PC2[i] = L5_3 }
+{ PC2[i] := Empty; }
+
+transition sync(i j m)
+requires {Sync = False && PC2[i] = L5_3 && PC1[j] = L5_1 && PC2[m] = L4_3 && forall_other k. PC2[k] = L5_3}
+{ PC2[l] := case | _ : Empty;
+  Sync := True } 
+
+
+(*--------- Szymanski ---------*)
+
+transition t0 (x)
+requires { Sync = True && A[x] = L0 }
+{ A[x] := L1; B[x] := True }
+
+transition t1 (x)
+requires { Sync = True && A[x] = L1 && forall_other y. S[y] = False }
+{ A[x] := L2; B[x] := False }
+
+transition t2 (x)
+requires { Sync = True && A[x] = L2 }
+{ A[x] := L3; S[x] := True; W[x] := True }
+
+transition t3_then (x y)
+requires { Sync = True && A[x] = L3 && B[y] = False && W[y] = False }
+{ A[x] := L4; S[x] := False }
+
+(*transition t3_else (x)
+requires { Sync = True && A[x] = L3 && forall_other y. ( B[y] =  True || W[y] = True ) }
+{ A[x] := L5; W[x] := False }*)
+
+
+transition t3_else (x)
+requires { Sync = True && A[x] = L3 && forall_other y. ( B[y] =  True) }
+{ A[x] := L5; W[x] := False }
+
+
+transition t3_else_or (x)
+requires { Sync = True && A[x] = L3 && forall_other y. ( W[y] = True ) }
+{ A[x] := L5; W[x] := False }
+
+transition t4 (x y)
+requires { Sync = True && A[x] = L4 && S[y] = True && W[y] = False }
+{ A[x] := L5; S[x] := True; W[x] := False }
+
+transition t5 (x)
+requires { Sync = True && A[x] = L5 && forall_other y. W[y] = False }
+{ A[x] := L6 }
+
+(*transition t6 (x)
+requires { Sync = True && A[x] = L6 && forall_other j. (x <= j || S[j] = False) }
+{ A[x] := L7 }*)
+
+transition t6 (x)
+requires { Sync = True && A[x] = L6 && forall_other j. (x <= j) }
+{ A[x] := L7 }
+
+transition t6_or (x)
+requires { Sync = True && A[x] = L6 && forall_other j. (S[j] = False) }
+{ A[x] := L7 }
+
+transition t7 (x)
+requires { Sync = True && A[x] = L7 }
+{ A[x] := L0; S[x] := False }

@@ -1,0 +1,70 @@
+Dekker:
+States: 48000 states explored in 0.85s, with 171749 rules fired and
+24021 states in the queue.
+Error: Internal Error: Too many active states.
+TO : 1500 nodes
+
+
+Germanish:
+States: 48000 states explored in 0.85s, with 171749 rules fired and
+24021 states in the queue.
+Error: Internal Error: Too many active states.
+TO : 267 nodes
+
+
+Germanish2:
+States: 39000 states explored in 1.09s, with 139396 rules fired and 19116 states in the queue.
+Error: Internal Error: Too many active states.
+TO : 241 nodes
+
+Germanish3:
+States: 39000 states explored in 1.00s, with 139396 rules fired and 19116 states in the queue.
+Error: Internal Error: Too many active states.
+TO : 533 nodes
+
+Germanish4:
+States: 39000 states explored in 1.00s, with 139396 rules fired and 19116 states in the queue.
+Error: Internal Error: Too many active states.
+TO : 876 nodes
+
+German:
+States:	33000 states explored in 1.06s, with 115907 rules fired and 16345 states in the queue.
+Error: Internal Error: Too many active states.
+TO: 501 nodes
+
+
+German_Baukus:
+States: 33000 states explored in 0.92s, with 115907 rules fired and 16345 states in the queue. 
+Error: Internal Error: Too many active states.
+TO: 455 nodes
+
+German_Pfs:
+States: 33000 states explored in 1.05s, with 115907 rules fired and 16345 states in the queue.
+Error: Internal Error: Too many active states
+TO: 530
+(will def. backtrack, made bad approx)
+
+German.CTC:
+States: 24000 states explored in 0.82s, with 81546 rules fired and 12231 states in the queue.
+Error: Internal Error: Too many active states
+TO: 595
+
+Szymansk_at
+States: 32000 states explored in 1.23s, with 92692 rules fired and 19454 states in the queue.
+Error: Internal Error: Too many active states
+TO: 2 backtracks  (482 + 252 )
+
+Szymanski_na
+States: 26000 states explored in 1.34s, with 74550 rules fired and 15919 states in the queue.
+Error: Internal Error: Too many active states
+TO: 2 backtracks (518 + 264)
+
+Bakery_lamport [MODIFIED: Max + 1]
+States: 32000 states explored in 1.05s, with 92692 rules fired and 19454 states in the queue.
+Error: Internal Error: Too many active states
+TO: backtrack (252) 
+
+Flash_no_data:
+States: 21000 states explored in 1.11s, with 71023 rules fired and 10631 states in the queue.
+Error: Internal Error: Too many active states
+TO: 1302 nodes

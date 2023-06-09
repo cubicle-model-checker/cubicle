@@ -1,0 +1,23 @@
+Dekker:
+TO: 5min
+Backtracl: yes [5]
+
+Germanish:
+TO: 5min
+Backtrack: yes [3]
+
+Germanish2
+TO: 5min
+Backtrack: yes [6]
+
+Germanish3
+TO: 5min
+Backtrack: yes [3]
+
+Germanish4
+TO: 5min
+Backtrack: yes [10]
+
+German
+TO: 5min
+Backtrack: yes [16]
