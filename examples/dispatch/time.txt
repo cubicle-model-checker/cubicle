@@ -1,0 +1,75 @@
+Dekker
+Time: 10s
+Fuzzer: 104 129 states -> SAFE 4 nodes [11.36s]
+DFS: 605 367 -> SAFE 4 nodes [12.72s]
+BFS: 466 477 -> TO 5min [6904 nods, 0 backtracks]
+
+
+Germanish
+Time:10s
+Fuzzer: 92 858 states -> SAFE 4nodes [11.80]
+DFS: 593 034 -> SAFE 4 nodes [12.91]
+BFS: 424 562 states -> TO 5min [889 nodes, 0 backtracks]
+
+Germanish2 
+Time:10s
+Fuzzer: 92 861 states -> SAFE 4nodes [12.79]
+DFS: 515 229 -> SAFE 4 nodes [12.26]
+BFS: 315 328 -> TO 5min [1770 nodes]
+
+Germanish3 --
+
+Germanish4 
+Time: 10s
+Fuzzer: 86 913 - SAFE 20 nodes [19.16]
+DFS: 558 195 -> SAFE 20nodes [14.54]
+BFS: 286 861 -> TO 5min [2415 nodes]
+
+
+German
+Time: 10s
+Fuzzer: 90 993 nodes -> SAFE 41 nodes [27.29s]
+DFS: 546 920 nodes -> SAFE 41 nodes [16.25]
+BFS: 311 875 nodes -> TO 5min [2862 nodes]
+
+German_Baukus
+Time: 10s
+Fuzzer: 89 264 -> SAFE 41 nodes [33.67s]
+DFS: 591 478 -> SAFE 41 nodes [14.82s]
+BFS: 358 734 -> TO 5min [2170 nodes]
+
+German_CTC
+Time: 30s
+Fuzzer: 129 294 -> SAFE 60 nodes [51.07s]
+DFS: 1 148 562 -> TO 5min [135 nodes]
+BFS: 789 651 -> TO 5min [332 nodes]
+
+German_pfs
+Time: 10s
+Fuzzer: 97 603 -> SAFE 44 nodes [35.44s]
+DFS: 431 042 -> SAFE 44 nodes [17.37s]
+BFS: 415 517 -> TO 5min [1121 nodes]
+
+Szymanski_at
+Time: 10s
+Fuzzer: 81 631 -> SAFE 33 nodes [16.48]
+DFS: 534 194 -> TO 5min [174 nodes]
+BFS: 372 358 -> TO 5min [2861 nodes]
+
+Szymanski_na
+Time: 10s
+Fuzzer: 73 964 -> SAFE 43 nodes [26.05]
+DFS: 483 423 -> TO 5min [210 nodes]
+BFS: 270 373 -> TO 5min [2061]
+
+Bakery_lamport
+Time: 10s
+Fuzzer: 98 635 -> SAFE 16 nodes [14.26]
+DFS: 525 652 -> TO Reached limit [105.13s, 2189 nodes]
+BFS: 398 424 -> TO 5min [2148]
+
+Flash_no_data
+Time: 40s
+Fuzzer: 119 987 states -> SAFE 37 nodes [52seconds total]
+DFS: 1 048 092 -> T.O 5min [61 nodes]
+BFS: 861 677 -> T.O 5min [1329 nodes]
