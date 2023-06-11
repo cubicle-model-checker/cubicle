@@ -136,15 +136,13 @@ let rec find_assign memo tr tt =
        let t = find_assign memo tr x in
        match t with
        | Single (Const cs2) -> 
-	  let c = 
-	    Const (add_constants cs1 cs2)
-	  in
-	  Single c
-       | Single (Arith (y, cs2)) ->
-	  Single (Arith (y, add_constants cs1 cs2))
+        let c = 
+        Const (add_constants cs1 cs2)
+        in
+        Single c
+       | Single (Arith (y, cs2)) -> Single (Arith (y, add_constants cs1 cs2))
        | Single y -> Single (Arith (y, cs1))
-       | Branch up_swts ->
-	  Branch (List.map (fun (sa, y) -> (sa, (Arith (y, cs1))))
+       | Branch up_swts -> Branch (List.map (fun (sa, y) -> (sa, (Arith (y, cs1))))
 		           up_swts)
      end
   *)
@@ -174,19 +172,19 @@ let make_tau tr =
     | Single tx, Single ty -> Atom.Comp (tx, op, ty)
     | Single tx, Branch ls ->
        List.fold_right
-	 (fun (ci, ti) f -> Atom.Ite(ci, Atom.Comp(tx, op, ti), f))
-	 ls Atom.True
+       (fun (ci, ti) f -> Atom.Ite(ci, Atom.Comp(tx, op, ti), f))
+       ls Atom.True
     | Branch ls, Single tx ->
        List.fold_right
-	 (fun (ci, ti) f -> Atom.Ite(ci, Atom.Comp(ti, op, tx), f))
-	 ls Atom.True
+       (fun (ci, ti) f -> Atom.Ite(ci, Atom.Comp(ti, op, tx), f))
+       ls Atom.True
     | Branch ls1, Branch ls2 ->
        List.fold_right
-	 (fun (ci, ti) f -> 
-	  List.fold_right 
-	    (fun (cj, tj) f ->
-	     Atom.Ite(SAtom.union ci cj, Atom.Comp(ti, op, tj), f)) ls2 f)
-	 ls1 Atom.True
+       (fun (ci, ti) f -> 
+          List.fold_right 
+          (fun (cj, tj) f ->
+           Atom.Ite(SAtom.union ci cj, Atom.Comp(ti, op, tj), f)) ls2 f)
+       ls1 Atom.True
   with Remove_lit_var _ -> Atom.True),
   (fun () -> memo := [])
 
