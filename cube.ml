@@ -496,27 +496,26 @@ let args_of_atoms sa =
 (* --------------------------------------------------------------*)
 
 let tick_pos sa =
-  failwith "todo tick_pos"
-  (*
-  TODO G
+  failwith "todo : tick_pos"
+  (* TODO G
   let ticks = ref [] in
   SAtom.iter
     (fun a -> match a with
-       | Atom.Comp(Const c,Lt, Const m) when const_nul c ->
-	  begin
-	    try
-	      let n = ref None in
-	      MConst.iter
-		(fun c i ->
-		   if i > 0 then
-		     match c with
-		       | ConstName t ->
-			   if !n = None then n := Some c else raise Not_found
-		       | _ -> raise Not_found )
-		m;
-	      match !n with Some c -> ticks := (c,a) :: !ticks | _ -> ()
-	    with Not_found -> ()
-	  end
+      | Atom.Comp(Const c,Lt, Const m) when const_nul c ->
+        begin try
+          let n = ref None in
+          MConst.iter
+          (fun c i ->
+             if i > 0 then
+               match c with
+                 | ConstName t ->
+                    if !n = None then n := Some c else raise Not_found
+                 | _ -> raise Not_found 
+          )
+          m;
+          match !n with Some c -> ticks := (c,a) :: !ticks | _ -> ()
+        with Not_found -> ()
+        end
        | _-> ()
     )
     sa;
@@ -596,15 +595,12 @@ let remove_tick_atom sa (tick, at) =
   *)
 
 let const_simplification sa =
-  sa 
-  (* TODO G : TICK ??
   if noqe then sa
   else
     try
       let ticks = tick_pos sa in
       List.fold_left remove_tick_atom sa ticks
     with Not_found -> sa
-  *)
 
 let simplification_atoms base sa =
   SAtom.fold

@@ -82,15 +82,12 @@ let is_prime s =
   | Invalid_argument _ -> false
   | Failure _ -> false
 
-let rec is_prime_term t = (* t added to avoid failure *) 
-  failwith "todo is prime term"
-  (*
-  function
-  | Const _ -> false 
-  | Elem (s, _) | Access (s, _) ->
-      is_prime (Hstring.view s)
-  | Arith (x, _) -> is_prime_term x
-  *)
+let is_prime_term t =
+  let is_prime_vea = function  
+  | Vea.Elem (s, _) | Access (s, _) -> is_prime (Hstring.view s)
+  in match t with 
+  | Vea v -> is_prime_vea v
+  | Poly (_, ts) -> VMap.exists (fun k _ -> is_prime_vea k) ts
 
 let rec is_prime_atom = function
   | True | False -> false
@@ -100,14 +97,14 @@ let rec is_prime_atom = function
     is_prime_atom a1 || is_prime_atom a2 || SAtom.exists is_prime_atom sa
 
 
-let rec is_const t = (* t added to avoid failure *) 
-  failwith "todo is_const"
-  (*
-  function
-  | Const _ | Elem (_, (Constr | Var)) -> true
-  | Arith (x, _) -> is_const x
-  | _ -> false
-  *)
+let rec is_const t = 
+  let is_const_vea = function 
+    | Vea.Elem (_, (Constr | Var))  -> true
+    | _                         -> false
+  in match t with
+  | Vea v -> is_const_vea v
+  | Poly (_, ts) -> VMap.for_all (fun k _ -> is_const_vea k) ts 
+  (* TODO G : Verify this *)
 
 exception Found_const of (op_comp * term)
 
@@ -115,10 +112,12 @@ let find_const_value g init =
   try
     SAtom.iter (function
       | Comp (g', op, t') when Term.compare g g' = 0 ->
-	  if is_const t' then raise (Found_const (op, t'))
+	      if is_const t' then raise (Found_const (op, t'))
       | Comp (t', op, g') when Term.compare g g' = 0 ->
-	  if is_const t' then raise (Found_const (op, t'))
-      | _ -> ()) init;
+	      if is_const t' then raise (Found_const (op, t'))
+      | _ -> ()
+    ) init;
+    Format.printf "ERR: find_const_value\n%!";
     raise Not_found
   with Found_const c -> c
 
@@ -142,23 +141,25 @@ let rec elim_prime_atom init = function
   | False -> Some False
   | Comp (t1, Eq, t2)  ->
       let t1, t2 = 
-	if is_prime_term t1 && not (is_prime_term t2) then t2, t1
-	else t1, t2 in
+      if is_prime_term t1 && not (is_prime_term t2) then t2, t1
+                                                    else t1, t2 
+      in
       assert (not (is_prime_term t1));
       if not (is_prime_term t2) then Some (Comp (t1, Eq, t2))
-      else begin
-	try
-	  let op, t2' = find_const_value t2 init in
-	  Some (Comp (t1, op, t2'))
-	with Not_found -> None (* Some (Comp (t1, Eq, t2)) *)
+      else begin try
+        let op, t2' = find_const_value t2 init in
+        Some (Comp (t1, op, t2'))
+        with Not_found -> None (* Some (Comp (t1, Eq, t2)) *)
       end
   | Ite (sa, a1, a2) ->
       let a1 = match elim_prime_atom init a1 with
-	| None -> True
-	| Some a1 -> a1 in
+        | None -> True
+        | Some a1 -> a1 
+      in
       let a2 = match elim_prime_atom init a2 with
-	| None -> True
-	| Some a2 -> a2 in
+        | None -> True
+        | Some a2 -> a2 
+      in
       Some (Ite (elim_prime init sa, a1, a2))
   | _ -> assert false
 
@@ -167,15 +168,14 @@ and elim_prime init sa =
   let sa = 
     SAtom.fold 
       (fun a acc ->
-	match elim_prime_atom init a with
-	  | None -> acc
-	  | Some na -> SAtom.add na acc)
+        match elim_prime_atom init a with
+        | None -> acc
+        | Some na -> SAtom.add na acc)
       sa SAtom.empty
   in
   (* assert (not (SAtom.exists is_prime_atom sa)); *)
   (* eprintf "   == %a@." Pretty.print_cube sa; *)
   sa
-
 
 exception Found_eq of term * term * Atom.t
 exception Found_neq of term * term * Atom.t
@@ -194,7 +194,6 @@ and apply_subst_terms_atoms t t' sa =
   SAtom.fold 
     (fun a acc -> SAtom.add (apply_subst_terms_atom t t' a) acc)
     sa SAtom.empty
-
 
 let elim_primed_term t sa =	     
   try
@@ -217,8 +216,7 @@ let elim_primed_term t sa =
   with
     | Found_eq (t, t', a) -> 
         let rsa = SAtom.remove a sa in
-	apply_subst_terms_atoms t t' rsa
-
+        apply_subst_terms_atoms t t' rsa
     | Found_neq (t, t', a) -> (* TODO *) sa
 
 type primed_value = Const_Eq | Var_Eq | Var_Neq
@@ -227,39 +225,39 @@ let elim_primed_term t sa =
   let r = SAtom.fold (fun a res -> match a with
     | Comp (t1, Eq, t2) ->
       begin
-	if Term.compare t t1 = 0 then
-	  match res with
-	    | None -> 
-	        Some (Eq, t1, t2, a)
-	    | Some (Eq, _, t', _) when Term.compare t2 t' < 0 ->
-	        Some (Eq, t1, t2, a)
-	    | _ -> res	    
-      else if Term.compare t t2 = 0 then
-	  match res with
-	    | None ->
-	        Some (Eq, t2, t1, a)
-	    | Some (Eq, _, t', _) when Term.compare t1 t' < 0 ->
-	        Some (Eq, t2, t1, a)
-	    | _ -> res
-      else res
+        if Term.compare t t1 = 0 then
+          match res with
+          | None -> 
+              Some (Eq, t1, t2, a)
+          | Some (Eq, _, t', _) when Term.compare t2 t' < 0 ->
+              Some (Eq, t1, t2, a)
+          | _ -> res	    
+        else if Term.compare t t2 = 0 then
+            match res with
+              | None ->
+                  Some (Eq, t2, t1, a)
+              | Some (Eq, _, t', _) when Term.compare t1 t' < 0 ->
+                  Some (Eq, t2, t1, a)
+              | _ -> res
+        else res
       end
     | Comp (t1, Neq, t2) -> 
       begin
-	if Term.compare t t1 = 0 then
-	  match res with
-	    | None -> Some (Neq, t1, t2, a)
-	    | _ -> res
-	else if Term.compare t t2 = 0 then
-	  match res with
-	    | None -> Some (Neq, t2, t1, a)
-	    | _ -> res
-	else res
+        if Term.compare t t1 = 0 then
+          match res with
+            | None -> Some (Neq, t1, t2, a)
+            | _ -> res
+        else if Term.compare t t2 = 0 then
+          match res with
+            | None -> Some (Neq, t2, t1, a)
+            | _ -> res
+        else res
       end
     | Comp (t1, op, t2) ->
         (* TODO: perform fourier motzkin instead *)
         if Term.compare t t1 = 0 || Term.compare t t2 = 0 then
           match res with
-	    | None -> Some (op, t1, t2, a) 
+            | None -> Some (op, t1, t2, a) 
             | _ -> res
         else res
     | _ -> res) sa None
@@ -292,6 +290,7 @@ let first_primed_atom sa =
       let pts = primed_terms_of_atom a in
       if not (Term.Set.is_empty pts) then raise (First_primed_atom (a, pts))
     ) sa;
+    Format.printf "ERR: First primed atom not found\n%!";
     raise Not_found
   with First_primed_atom (a, pts) -> a, pts
 
@@ -341,9 +340,10 @@ let choose_prime_term sa =
   try
     SAtom.iter (function
       | Comp (t1, eq, t2) ->
-	if is_prime_term t1 then raise (Found_prime_term t1);
-	if is_prime_term t2 then raise (Found_prime_term t2)
+        if is_prime_term t1 then raise (Found_prime_term t1);
+        if is_prime_term t2 then raise (Found_prime_term t2)
       | _ -> ()) sa;
+    Format.printf "ERR: Couldn'g choose prime term\n%!";
     raise Not_found
   with Found_prime_term t -> t
 
@@ -353,7 +353,6 @@ let split_prime_atoms t sa =
     | Comp (t1, Eq, t2) when Term.compare t t1 = 0 || Term.compare t t2 = 0 ->
         SAtom.add a yes, no
     | _ -> yes, SAtom.add a no) sa (SAtom.empty, SAtom.empty)
-    
 
 let aux_corss t t' sa =
   SAtom.fold (fun a acc -> match a with
@@ -390,28 +389,9 @@ let rec gauss_prime_elim sa =
 
 module MH = Map.Make (Hstring)
 
-
-let rec type_of_term t = (* t added to avoid failure *) 
-  failwith "todo type_of_term"
-  (* TODO 
-  function
-  | Const m ->
-      MConst.fold (fun c _ _ -> match c with
-	| ConstReal _ -> Smt.Type.type_real
-	| ConstInt _ -> Smt.Type.type_int
-	| ConstName x -> 
-          let x = if is_prime (Hstring.view x) then unprime_h x else x in
-          snd (Smt.Symbol.type_of x)
-      ) m Smt.Type.type_int
-  | Elem (x, _) | Access (x, _) -> 
-      let x = if is_prime (Hstring.view x) then unprime_h x else x in
-      snd (Smt.Symbol.type_of x)
-  | Arith (t, _) -> type_of_term t
-  *)
-
 let rec type_of_atom = function
   | True | False -> None
-  | Comp (t, _, _) -> Some (type_of_term t)
+  | Comp (t, _, _) -> Some (Term.type_of t)
   | Ite (_, a1, a2) -> 
       let ty = type_of_atom a1 in if ty = None then type_of_atom a2 else ty
 
@@ -493,8 +473,6 @@ let swts_to_ites at swts sigma =
 
 
 let apply_assigns assigns sigma =
-  failwith "todo apply assign"
-  (*
   List.fold_left 
     (fun (nsa, terms) (h, gu, _) ->
       let nt = Vea(Elem (h, Glob)) in
@@ -502,17 +480,19 @@ let apply_assigns assigns sigma =
         match gu with
         | UTerm t -> 
           let t = Term.subst sigma t in
+          Comp (nt, Eq, prime_term t)
+          (* TODO G : Comprendre ici
           begin match t with
             | Arith (t, c) ->
-              let nt = Arith(nt, mult_const (-1) c) in
+              let nt = Arith (nt, mult_const (-1) c) in
               Comp (nt, Eq, prime_term t)
             | _ -> Comp (nt, Eq, prime_term t)
           end
+          *)
         | UCase swts -> swts_to_ites nt swts sigma
       in
       SAtom.add sa nsa, Term.Set.add nt terms)
     (SAtom.empty, Term.Set.empty) assigns
-  *)
 
 let add_update (sa, st) {up_arr=a; up_arg=lj; up_swts=swts} procs sigma =
   let at = Vea(Access (a, lj)) in

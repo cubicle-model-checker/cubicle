@@ -73,7 +73,8 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
           | None ->
              Stats.check_limit n;
              Stats.new_node n;
-             let n = begin
+             let n = 
+               begin
                  match Approx.good n with
                  | None -> n
                  | Some c ->
@@ -90,9 +91,8 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
              in
              let ls, post = Pre.pre_image system.t_trans n in
              if delete then
-               visited :=
-                 Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;
-	     postponed := List.rev_append post !postponed;
+               visited := Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;
+	           postponed := List.rev_append post !postponed;
              visited := Cubetrie.add_node n !visited;
              Q.push_list ls q;
              Stats.remaining (nb_remaining q postponed);

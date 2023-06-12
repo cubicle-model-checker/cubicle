@@ -59,7 +59,7 @@ end
 
 (***********************************************************************)
 (* Pre-image of an atom w.r.t a transition, simply represented here by *)
-(* a function tau						       *)
+(* a function tau						                                           *)
 (***********************************************************************)
 
 let rec pre_atom tau a = 
@@ -92,20 +92,22 @@ let rec find_update a li = function
   | [] -> raise Not_found
   | { up_loc = loc; up_arr = a'; up_arg = lj; up_swts = ls} :: _ when a=a' ->
       let ls = 
-	List.map 
-	  (fun (ci, ti) ->
-            let sigma  = List.combine lj li in
-            SAtom.subst sigma ci,
-            Term.subst sigma ti) ls in
+        List.map 
+        (fun (ci, ti) ->
+          let sigma  = List.combine lj li in
+          SAtom.subst sigma ci,
+          Term.subst  sigma ti
+        ) 
+        ls 
+      in
       Branch ls
   | _ :: l -> find_update a li l
 
-
 exception Remove_lit_var of Hstring.t
 
-let rec find_assign memo tr tt =
+let find_assign_vea memo tr tt = 
   match tt with 
-  | Vea(Elem (x, sx)) -> 
+  | Vea.Elem (x, sx) -> 
     let gu =
       if H.list_mem x tr.tr_nondets then 
            (*raise (Remove_lit_var x)*)
@@ -121,12 +123,34 @@ let rec find_assign memo tr tt =
         | UTerm t    -> Single t
         | UCase swts -> Branch swts
        end
-  | Vea(Access (a, li)) -> 
+  | Vea.Access (a, li) -> 
       begin
         try find_update a li tr.tr_upds
-        with Not_found -> Single tt
+        with Not_found -> Single (Vea tt)
       end
-  | _ -> failwith "todo find assign"
+
+let rec find_assign memo tr tt =
+  match tt with 
+  | Vea  (vea)    -> find_assign_vea memo tr vea
+  | Poly (cs, ts) -> 
+      if VMap.cardinal ts = 0 then Single tt 
+      else 
+        let ts' = 
+          VMap.fold 
+            (fun vea c -> 
+              let vea' = 
+                let assign = find_assign_vea memo tr vea in 
+                match assign with
+                | Single (Vea v) -> v
+                | _ -> vea 
+              in
+              VMap.add vea' c
+            ) 
+            ts
+            VMap.empty 
+        in
+        Single (Poly(cs, ts'))        
+
   (*
     TODO G
   | Const i as a -> Single a
@@ -323,7 +347,7 @@ let pre { tr_info = tri; tr_tau = tau; tr_reset = reset } unsafe =
 
 (*********************************************************************)
 (* Pre-image of a system s : computing the cubes gives a list of new *)
-(* systems							     *)
+(* systems							                                             *)
 (*********************************************************************)
 
 let pre_image trs s =

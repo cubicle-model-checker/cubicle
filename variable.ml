@@ -141,7 +141,6 @@ let arity s = List.length (fst (Smt.Symbol.type_of s))
 
 let rec all_arrangements_arity s l = all_arrangements (arity s) l
 
-
 let rec all_instantiations l1 l2 =
   match l1 with
     | [] -> []
@@ -150,7 +149,6 @@ let rec all_instantiations l1 l2 =
         List.fold_left (fun acc l' ->
           List.fold_left (fun acc x2 -> ((x1, x2) :: l') :: acc) acc l2
         ) [] (all_instantiations r1 l2)
-
 
 let rec mix x = function
   | [] -> [[x]]
@@ -173,7 +171,6 @@ let rec interleave l1 l2 =
 let rec perms = function
   | [] -> [[]]
   | x :: r -> List.flatten (List.map (mix x) (perms r))
-
 
 (* renamed in extra_procs *)
 (* let extra_args args tr_args = *)
@@ -271,8 +268,6 @@ let rec print_subst fmt = function
      fprintf fmt "%a -> %a" print x print y
   | (x,y)::r -> 
      fprintf fmt "%a -> %a, %a" print x print y print_subst r
-
-
 
 let subst sigma v =
   try Hstring.list_assoc v sigma
