@@ -48,7 +48,9 @@ module Const : sig
   val num_equal   : t -> t -> bool
   val num_lt      : t -> t -> bool 
   val num_le      : t -> t -> bool
-  
+  val divided_by  : t -> int -> bool
+  val div         : t -> Num.num-> t
+
   val add_const : t -> t -> t 
   val add_int   : t -> Num.num -> t
   val add_real  : t -> Num.num -> t

@@ -1,0 +1,9 @@
+var A : int 
+var B : int
+
+init ()   { A = 0 && B = 0 }
+unsafe () { A + B < 0 }
+
+transition up (){
+	A := A * 2 + B * 4;
+}

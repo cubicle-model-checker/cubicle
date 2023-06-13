@@ -60,6 +60,14 @@ module Const = struct
   let num_equal c1 c2 = Num.eq_num (to_num c1) (to_num c2)
   let num_lt    c1 c2 = Num.lt_num (to_num c1) (to_num c2)
   let num_le    c1 c2 = Num.le_num (to_num c1) (to_num c2)
+  let divided_by c i  = 
+    match c with 
+    | ConstInt c -> (Num.int_of_num c) mod i = 0 
+    | _ -> false
+  let div cst i = 
+    match cst with 
+    | ConstInt c -> ConstInt (Num.div_num c i)
+    | ConstReal c -> ConstReal (Num.div_num c i)
 
   (* -- *)
 

@@ -195,6 +195,7 @@ let simplify_comp i si op j sj =
     | _ ->
         Atom.Comp (Vea(Elem (i, si)), op, Vea(Elem (j, sj)))
 
+
 let simplify_poly cs ts =
   (* 
      If poly contains only a Vea, transform into Vea.
@@ -210,10 +211,67 @@ let simplify_poly cs ts =
   match r with 
   | Some t -> t 
   | None   ->
-      (* TODO : 
-       Check if const have a common divisor and divide every
-       coefficient by the greater common divisor. 
+      (* 1. Remove every null vea *)
+      let min_const = ref cs in 
+      let ts = 
+        VMap.fold
+        (fun vea const acc -> 
+          if not (Const.is_zero const) then 
+            (
+              (* TODO : Need to be abs value here *)
+              (if Const.is_zero !min_const || Const.num_lt const !min_const then min_const := const);
+              VMap.add vea const acc 
+            )
+          else acc 
+        )
+        ts
+        VMap.empty
+      in
+
+      (* 2. Divide const by greater common divisor *)
+
+      (* I'm not convinced by this optimisation, so i disabled it for now.*)
+      (* 
+      let min_int = Num.int_of_num (Const.to_num !min_const) in 
+      let divider = Hashtbl.create min_int in 
+      for i = 1 to min_int do
+        Hashtbl.add divider i ()
+      done;
+ 
+      VMap.iter
+      (fun _ const -> 
+        let to_remove = 
+          Hashtbl.fold 
+          (fun k _ acc ->
+            if not (Const.divided_by const k) then k::acc
+                                              else acc
+          )  
+          divider 
+          [] 
+        in
+        List.iter (Hashtbl.remove divider) to_remove
+      )
+      ts;
+ 
+      let greater = 
+        Hashtbl.fold (fun k _ acc -> if k > acc then k else acc)
+        divider 1 
+      in 
+      
+      Term.print Format.std_formatter (Poly(cs,ts));
+      Format.printf "Greatest divider : %d minint : %d \n" greater min_int;
+      let greater = Num.num_of_int greater in 
+      let ts = 
+        VMap.fold 
+        (fun k v acc -> 
+          VMap.add k (Const.div v greater) acc 
+        )
+        ts
+        VMap.empty
+      in
+      Term.print Format.std_formatter (Poly(cs,ts));
       *)
+
       Poly(cs, ts)
 
 

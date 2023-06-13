@@ -281,7 +281,7 @@ let primed_terms_of_atom a =
     | Ite (sa, a1, a2) -> 
       primed_terms_of_atom a1 
 	(primed_terms_of_atom a2 
-	   (SAtom.fold primed_terms_of_atom sa acc))
+	(SAtom.fold primed_terms_of_atom sa acc))
   in
   primed_terms_of_atom a Term.Set.empty
 
