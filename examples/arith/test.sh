@@ -11,8 +11,8 @@ cd $CUBDIR && make && cd $CALLING
 
 for file in $(ls $BASEDIR | grep .cub); 
 do
-	echo "Testing $file $OCAMLRUNPARAM"
-	$CUBICLE $file	
+	echo "Testing $file..."
+	$CUBICLE -v -dot 4 $file
 done
 
 echo "done."

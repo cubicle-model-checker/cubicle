@@ -33,10 +33,9 @@ type inst_trans =
 let prime_h h =
   Hstring.make ((Hstring.view h)^"@0")
 
-
 let prime_vea vea = match vea with 
-  | Vea.Elem (e, Glob) -> Vea.Elem (prime_h e, Glob)
-  | Vea.Access (a, lx) -> Vea.Access (prime_h a, lx)
+  | Vea.Elem   (e, Glob)  -> Vea.Elem   (prime_h e, Glob)
+  | Vea.Access (a, lx)    -> Vea.Access (prime_h a, lx)
   | _ -> vea
 
 let prime_term t = match t with
@@ -48,20 +47,21 @@ let prime_term t = match t with
 let rec prime_atom a = match a with
   | True | False -> a
   | Comp (t1, op, t2) -> Comp (prime_term t1, op, prime_term t2)
-  | Ite (sa, a1, a2) -> 
-    Ite (prime_satom sa, prime_atom a1, prime_atom a2)
+  | Ite (sa, a1, a2)  -> 
+      Ite (prime_satom sa, prime_atom a1, prime_atom a2)
   
 and prime_satom sa =
   SAtom.fold (fun a acc -> SAtom.add (prime_atom a) acc) sa SAtom.empty
 
 let unprime_h h =
   let s = Hstring.view h in
-  Hstring.make (String.sub s 0 (String.index s '@'))
+  try Hstring.make (String.sub s 0 (String.index s '@'))
+  with Not_found -> h
 
 let rec unprime_term t = 
   let unprime_vea vea = 
     match vea with 
-    | Vea.Elem (e, Glob) -> Vea.Elem (unprime_h e, Glob)
+    | Vea.Elem (e, Glob) -> Vea.Elem   (unprime_h e, Glob)
     | Vea.Access (a, lx) -> Vea.Access (unprime_h a, lx)
     | _ -> vea
   in
@@ -84,9 +84,9 @@ let is_prime s =
 
 let is_prime_term t =
   let is_prime_vea = function  
-  | Vea.Elem (s, _) | Access (s, _) -> is_prime (Hstring.view s)
+    | Vea.Elem (s, _) | Access (s, _) -> is_prime (Hstring.view s)
   in match t with 
-  | Vea v -> is_prime_vea v
+  | Vea v        -> is_prime_vea v
   | Poly (_, ts) -> VMap.exists (fun k _ -> is_prime_vea k) ts
 
 let rec is_prime_atom = function
@@ -100,7 +100,7 @@ let rec is_prime_atom = function
 let rec is_const t = 
   let is_const_vea = function 
     | Vea.Elem (_, (Constr | Var))  -> true
-    | _                         -> false
+    | _                             -> false
   in match t with
   | Vea v -> is_const_vea v
   | Poly (_, ts) -> VMap.for_all (fun k _ -> is_const_vea k) ts 
@@ -137,7 +137,7 @@ let find_const_value g init =
 
 
 let rec elim_prime_atom init = function
-  | True -> None 
+  | True  -> None 
   | False -> Some False
   | Comp (t1, Eq, t2)  ->
       let t1, t2 = 
@@ -199,18 +199,21 @@ let elim_primed_term t sa =
   try
     SAtom.iter (fun a -> match a with
       | Comp (t1, Eq, t2) -> 
-	if Term.compare t t1 = 0 && is_const t2 then raise (Found_eq (t1, t2, a));
-	if Term.compare t t2 = 0 && is_const t1 then raise (Found_eq (t2, t1, a))
-      | _ -> ()) sa;
+        if Term.compare t t1 = 0 && is_const t2 then raise (Found_eq (t1, t2, a));
+        if Term.compare t t2 = 0 && is_const t1 then raise (Found_eq (t2, t1, a))
+      | _ -> ()
+      ) 
+    sa;
     SAtom.iter (fun a -> match a with
       | Comp (t1, Eq, t2) -> 
-	if Term.compare t t1 = 0 then raise (Found_eq (t1, t2, a));
-	if Term.compare t t2 = 0 then raise (Found_eq (t2, t1, a))
-      | _ -> ()) sa;
+        if Term.compare t t1 = 0 then raise (Found_eq (t1, t2, a));
+        if Term.compare t t2 = 0 then raise (Found_eq (t2, t1, a))
+      | _ -> ()) 
+    sa;
     SAtom.iter (fun a -> match a with
       | Comp (t1, Neq, t2) -> 
-	if Term.compare t t1 = 0 then raise (Found_neq (t1, t2, a));
-	if Term.compare t t2 = 0 then raise (Found_neq (t2, t1, a))
+        if Term.compare t t1 = 0 then raise (Found_neq (t1, t2, a));
+        if Term.compare t t2 = 0 then raise (Found_neq (t2, t1, a))
       | _ -> ()) sa;
     sa
   with
@@ -271,7 +274,7 @@ let elim_primed_term t sa =
 
 let primed_terms_of_atom a =
   let rec primed_terms_of_atom a acc = match a with
-    | True | False -> acc
+    | True | False     -> acc
     | Comp (t1, _, t2) ->
       let acc = if is_prime_term t1 then Term.Set.add t1 acc else acc in
       if is_prime_term t2 then Term.Set.add t2 acc else acc
@@ -390,8 +393,8 @@ let rec gauss_prime_elim sa =
 module MH = Map.Make (Hstring)
 
 let rec type_of_atom = function
-  | True | False -> None
-  | Comp (t, _, _) -> Some (Term.type_of t)
+  | True | False    -> None
+  | Comp (t, _, _)  -> Some (Term.type_of (unprime_term t))
   | Ite (_, a1, a2) -> 
       let ty = type_of_atom a1 in if ty = None then type_of_atom a2 else ty
 

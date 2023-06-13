@@ -56,7 +56,6 @@ let () =
 let () =
   if verbose > 0 then Printexc.record_backtrace true
 
-
 let _ = 
   let lb = from_channel cin in 
   try

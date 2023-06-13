@@ -495,113 +495,6 @@ let args_of_atoms sa =
 
 (* --------------------------------------------------------------*)
 
-let tick_pos sa =
-  failwith "todo : tick_pos"
-  (* TODO G
-  let ticks = ref [] in
-  SAtom.iter
-    (fun a -> match a with
-      | Atom.Comp(Const c,Lt, Const m) when const_nul c ->
-        begin try
-          let n = ref None in
-          MConst.iter
-          (fun c i ->
-             if i > 0 then
-               match c with
-                 | ConstName t ->
-                    if !n = None then n := Some c else raise Not_found
-                 | _ -> raise Not_found 
-          )
-          m;
-          match !n with Some c -> ticks := (c,a) :: !ticks | _ -> ()
-        with Not_found -> ()
-        end
-       | _-> ()
-    )
-    sa;
-  !ticks
-  *)
-
-let remove_tick tick e op x =
-  failwith "todo remove_tick"
-  (* TODO G
-  match e with
-    | Const m ->
-	begin
-	  try
-	    let c = MConst.find tick m in
-	    if c > 0 then
-	      let m = MConst.remove tick m in
-	      let m =
-		if MConst.is_empty m then
-		  MConst.add (ConstReal (Num.Int 0)) 1 m
-		else m
-	      in
-	      simplification SAtom.empty (Atom.Comp (Const m, Lt, x))
-	    else raise Not_found
-	  with Not_found -> Atom.Comp (e, op, x)
-	end
-    | Arith (v, m) ->
-	begin
-	  try
-	    let c = MConst.find tick m in
-	    if c > 0 then
-	      let m = MConst.remove tick m in
-	      let e =
-		if MConst.is_empty m then v else Arith(v, m)
-	      in
-	      simplification SAtom.empty (Atom.Comp (e, Lt, x))
-	    else raise Not_found
-	  with Not_found -> Atom.Comp (e, op, x)
-	end
-    | _ -> assert false
-  *)
-
-let contains_tick_term tick = 
-  failwith "todo contains tick term"
-  (* TODO G
-  function
-  | Const m | Arith (_, m) ->
-      (try MConst.find tick m <> 0 with Not_found -> false)
-  | _ -> false
-  *)
-
-let rec contains_tick_atom tick = function
-  | Atom.Comp (t1, _, t2) ->
-      contains_tick_term tick t1 || contains_tick_term tick t2
-  (* | Atom.Ite (sa, a1, a2) -> *)
-  (*     contains_tick_atom tick a1 || contains_tick_atom tick a2 || *)
-  (*       SAtom.exists (contains_tick_atom tick) sa *)
-  | _ -> false
-
-let remove_tick_atom sa (tick, at) =
-  failwith "todo remove tick atom"
-  (* TODO G
-  let sa = SAtom.remove at sa in
-  (* let flag = ref false in *)
-  let remove a sa =
-    let a = match a with
-      | Atom.Comp ((Const _ | Arith (_, _) as e), (Le|Lt|Eq as op), x)
-      | Atom.Comp (x, (Eq as op), (Const _ | Arith (_, _) as e))  ->
-	  remove_tick tick e op x
-      | _ -> a
-    in
-    (* flag := !flag || contains_tick_atom tick a; *)
-    if contains_tick_atom tick a then sa else
-    SAtom.add a sa
-  in
-  SAtom.fold remove sa SAtom.empty
-  (* if !flag then SAtom.add at sa else sa *)
-  *)
-
-let const_simplification sa =
-  if noqe then sa
-  else
-    try
-      let ticks = tick_pos sa in
-      List.fold_left remove_tick_atom sa ticks
-    with Not_found -> sa
-
 let simplification_atoms base sa =
   SAtom.fold
     (fun a sa ->
@@ -650,30 +543,26 @@ let elim_ite_atoms np =
     let ites, base = SAtom.partition (function Atom.Ite _ -> true | _ -> false) np in
     let base = simplification_atoms SAtom.empty base in
     let ites = simplification_atoms base ites in
-    let lsa =
       SAtom.fold
-	(fun ite cubes ->
-	   List.fold_left
-	     (fun acc sa ->
-		List.fold_left
-		  (fun sa_cubes cube ->
-		     try
-		       let sa = simplification_atoms cube sa in
-		       let sa = SAtom.union sa cube in
-		       if inconsistent_set sa then sa_cubes else
-			 add_without_redondancy sa sa_cubes
-		     with Exit -> sa_cubes
-		  )
-		  acc cubes
-	     )
-	     []
-	     (break ite)
-	)
+      (fun ite cubes ->
+         List.fold_left
+           (fun acc sa ->
+            List.fold_left
+            (fun sa_cubes cube ->
+             try
+               let sa = simplification_atoms cube sa in
+               let sa = SAtom.union sa cube in
+               if inconsistent_set sa then sa_cubes 
+                                      else add_without_redondancy sa sa_cubes
+             with Exit -> sa_cubes
+            )
+          acc cubes
+          )
+           []
+           (break ite)
+    )
 	ites
 	[base]
-    in
-    if noqe then lsa
-    else List.rev (List.rev_map const_simplification lsa)
   with Exit -> []
 
 
