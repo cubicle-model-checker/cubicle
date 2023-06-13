@@ -1,9 +1,9 @@
 var A : int
 var B : int
 
-init () { A = 1 && B = 0 }
+init () { A = 0 }
 
-unsafe () { A = B }
+unsafe () { A = 1 }
 
 transition up ()
 { A := A + 2 }
