@@ -562,15 +562,15 @@ let missing_args procs tr_args =
   in
   aux procs tr_args Variable.procs
 
-let rec term_contains_arg z = function
-  | Vea(Elem (x, Var))  -> Hstring.equal x z
-  | Vea(Access (_, lx)) -> Hstring.list_mem z lx
-  | _ -> failwith "todo term contain arg"
-  (*
-  TODO G
-  | Arith (x, _) -> term_contains_arg z x
-  | _ -> false
-  *)
+let term_contains_arg z t = 
+  let vea_contains_arg = function 
+  | Vea.Elem (x, Var)  -> Hstring.equal x z
+  | Vea.Access (_, lx) -> Hstring.list_mem z lx
+  | _                  -> false
+  in 
+  match t with 
+  | Vea vea -> vea_contains_arg vea
+  | Poly(_, ts) -> VMap.exists (fun v _ -> vea_contains_arg v) ts
 
 let rec atom_contains_arg z = function
   | True | False -> false
@@ -650,8 +650,6 @@ module HI = Hashtbl.Make
   type t = int 
   let equal = (=) 
   let hash x = x end)
-
-
 
 let already_seen sa args h =
   let d = Variable.all_permutations args args in

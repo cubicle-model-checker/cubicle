@@ -40,7 +40,6 @@ module Const = struct
     
   let equal c1 c2 = compare c1 c2 = 0
 
-
   let type_of = function 
     | ConstInt  _ -> Smt.Type.type_int
     | ConstReal _ -> Smt.Type.type_real
@@ -153,7 +152,7 @@ module VMap = struct
   let mult_real v i = 
     map (fun x -> Const.mult_by_real x i) v
 
-  let vmap_mult_const v c = 
+  let mult_const v c = 
     map (fun x -> Const.mult_by_const x c) v
 
   let neg =
@@ -167,6 +166,13 @@ end
 type term = 
   | Vea   of Vea.t
   | Poly  of Const.t * Const.t VMap.t
+
+let term_mult_by_const t c = 
+  match t with
+  | Poly(cs, ts) -> 
+    Poly(Const.mult_by_const cs c, VMap.mult_const ts c)
+  | Vea(v) -> 
+    Poly(Const.int_zero, VMap.add v c VMap.empty)
 
 let term_mult_by_int t1 i = 
   match t1 with
@@ -224,6 +230,7 @@ let term_mult_by_term t1 t2 =
       if VMap.cardinal ts = 0 then term_mult_by_real  t i
                               else failwith "trying to multiply two vars"
   | _ -> failwith "trying to multiply two vars" 
+
 
 module Term = struct
 
@@ -418,17 +425,15 @@ end = struct
        else Comp(sx, op, sy)
     | _ -> a
 
-  let rec has_vars_term vs = function
-    | Vea v -> 
-        begin match v with 
-        | Elem (x, Var) -> Hstring.list_mem x vs
-        | Access (_, lx) -> List.exists (fun z -> Hstring.list_mem z lx) vs
+  let rec has_vars_term vs t = 
+    let has_vars_vea = function
+        | Vea.Elem (x, Var)   -> Hstring.list_mem x vs
+        | Vea.Access (_, lx) -> List.exists (fun z -> Hstring.list_mem z lx) vs
         | _ -> false
-        end 
-    (* TODO G
-    | Arith (x, _) ->  has_vars_term vs x
-    *)
-    | _ -> false
+    in 
+    match t with 
+    | Vea v -> has_vars_vea v 
+    | Poly (_, ts) -> VMap.exists (fun vea _ -> has_vars_vea vea) ts
 
   let rec has_vars vs = function
     | True | False -> false

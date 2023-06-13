@@ -195,6 +195,28 @@ let simplify_comp i si op j sj =
     | _ ->
         Atom.Comp (Vea(Elem (i, si)), op, Vea(Elem (j, sj)))
 
+let simplify_poly cs ts =
+  (* 
+     If poly contains only a Vea, transform into Vea.
+  *)
+  (* Check if poly contains only one Vea *)
+  let r = 
+    if Const.is_zero cs && VMap.cardinal ts = 1 then
+    let vea, c = VMap.choose ts in 
+    if Const.is_one c then Some(Vea(vea))
+                      else None
+    else None
+  in
+  match r with 
+  | Some t -> t 
+  | None   ->
+      (* TODO : 
+       Check if const have a common divisor and divide every
+       coefficient by the greater common divisor. 
+      *)
+      Poly(cs, ts)
+
+
 let rec simplification np a =
   let a = redondant_or_false (SAtom.remove a np) a in
   match a with
@@ -228,14 +250,13 @@ let rec simplification np a =
       if SAtom.is_empty sa || SAtom.subset sa np then a1
       else if SAtom.mem Atom.False sa then a2
       else a
-    (* TODO G :
-      If comparing Poly and Poly
-      - When two element are in ts1 and ts2, remove it in both
-      If comparing a Poly and a Vea: 
-      - check if const is null
-      - If Poly only has one element with coeff 1 and null const, change it to
-        type Vea and simplify again
-    *)
+    | Atom.Comp ((Poly _ as t1), op, (Poly _ as t2)) ->
+        let t1' = 
+          match term_add t1 (term_neg t2) with 
+          | Poly (cs,ts) -> simplify_poly cs ts 
+          | t            -> t
+        in
+        Atom.Comp (t1', op, Poly(Const.int_zero, VMap.empty))
     | _ -> a
 
     (* TODO : DELETE LEGACY

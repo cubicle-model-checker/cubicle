@@ -41,6 +41,9 @@ module Const : sig
 
   val is_zero : t -> bool
   val is_one  : t -> bool
+  val int_zero  : t
+  val real_zero : t
+
 
   val num_equal   : t -> t -> bool
   val num_lt      : t -> t -> bool 
@@ -49,6 +52,8 @@ module Const : sig
   val add_const : t -> t -> t 
   val add_int   : t -> Num.num -> t
   val add_real  : t -> Num.num -> t
+
+  val neg       : t -> t
 
   val mult_by_int  : t -> Num.num -> t
   val mult_by_real : t -> Num.num -> t
@@ -72,6 +77,7 @@ type term =
 val term_add : term -> term -> term
 val term_mult_by_int  : term -> Num.num  -> term
 val term_mult_by_real : term -> Num.num -> term
+val term_mult_by_const : term -> Const.t -> term
 val term_mult_by_vea  : term -> Vea.t -> term
 val term_neg : term -> term
 val term_mult_by_term : term -> term -> term

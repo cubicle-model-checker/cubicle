@@ -119,19 +119,6 @@ let nb_neq s =
   ) (Node.litterals s) 0
 
 
-let nb_arith s =
-  SAtom.fold (fun a n -> match a with
-    | Atom.Comp (_, (Le|Lt), _)
-    | _ -> n 
-    (* TODO G 
-    | Atom.Comp (Vea(Arith _), _, _) 
-    | Atom.Comp (_, _, Vea(Arith _)) 
-    | Atom.Comp (Const _, _, _) 
-    | Atom.Comp (_, _, Const _) -> n + 1
-    | _ -> n
-    *)
-  ) (Node.litterals s) 0
-
 let respect_finite_order =
   SAtom.for_all (function
     | Atom.Comp (Vea(Elem (x, Var)), Le, Vea(Elem (y, Var))) ->
@@ -201,12 +188,8 @@ let useless_candidate sa =
 
 
 let arith_atom = function
-  (* TODO G
-  | Atom.Comp ((Arith _)), _, _) | Atom.Comp (_, _, (Arith _))
-  | Atom.Comp ((Const _)), _, _) | Atom.Comp (_, _, (Const _)) -> true
-  *)
+  | Atom.Comp (Poly _, _, _) | Atom.Comp (_, _, Poly _) -> true
   | _ -> false
-
 
 let cube_likely_bad c = (* heuristic *)
   Cubetrie.mem_array_poly c.Cube.array !bad_candidates

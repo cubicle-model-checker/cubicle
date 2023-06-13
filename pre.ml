@@ -134,22 +134,21 @@ let rec find_assign memo tr tt =
   | Vea  (vea)    -> find_assign_vea memo tr vea
   | Poly (cs, ts) -> 
       if VMap.cardinal ts = 0 then Single tt 
-      else 
-        let ts' = 
+      else
+        let res = 
           VMap.fold 
-            (fun vea c -> 
-              let vea' = 
-                let assign = find_assign_vea memo tr vea in 
-                match assign with
-                | Single (Vea v) -> v
-                | _ -> vea 
-              in
-              VMap.add vea' c
+            (fun vea c acc -> 
+              match find_assign_vea memo tr vea with
+              | Single t -> term_add acc (term_mult_by_const t c)
+              (* TODO ICI :
+                - Remplacer si Swts 
+              *)
+              | _ -> acc 
             ) 
             ts
-            VMap.empty 
+            (Poly(cs, VMap.empty)) 
         in
-        Single (Poly(cs, ts'))        
+        Single res        
 
   (*
     TODO G
