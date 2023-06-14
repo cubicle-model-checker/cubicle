@@ -129,53 +129,57 @@ let size c = Array.length c.array
 (******************************************************************)
 
 let redondant_or_false others a = match a with
-  | Atom.True -> Atom.True
   | Atom.Comp (t1, Neq, (Vea(Elem (x, (Var | Constr))) as t2))
   | Atom.Comp ((Vea(Elem (x, (Var | Constr))) as t2), Neq, t1) ->
       (try
-	 (SAtom.iter (function
-	   | Atom.Comp (t1', Eq, (Vea(Elem (x', (Var | Constr))) as t2'))
-	   | Atom.Comp ((Vea(Elem (x', (Var | Constr))) as t2'), Eq, t1') ->
-	     if Term.compare t1' t1 = 0 then
+       (SAtom.iter (function
+       | Atom.Comp (t1', Eq, (Vea(Elem (x', (Var | Constr))) as t2'))
+       | Atom.Comp ((Vea(Elem (x', (Var | Constr))) as t2'), Eq, t1') ->
+           if Term.compare t1' t1 = 0 then
                if Term.compare t2' t2 = 0 then raise Exit
                else raise Not_found
-	   | _ -> ()) others);
-	 a
+       | _ -> ()) 
+       others);
+       a
        with Not_found -> Atom.True | Exit -> Atom.False)
   | Atom.Comp (t1, Eq, (Vea(Elem (x, (Var | Constr))) as t2))
   | Atom.Comp ((Vea(Elem (x, (Var | Constr))) as t2), Eq, t1) ->
       (try
-	 (SAtom.iter (function
-	   | Atom.Comp (t1', Neq, (Vea(Elem (x', (Var | Constr))) as t2'))
-	   | Atom.Comp ((Vea(Elem (x', (Var | Constr))) as t2'), Neq, t1') ->
-	     if Term.compare t1' t1 = 0 && Term.compare t2' t2 = 0 then
-	     raise Exit
-	   | Atom.Comp (t1', Eq, (Vea(Elem (x', (Var | Constr))) as t2'))
-	   | Atom.Comp ((Vea(Elem (x', (Var | Constr))) as t2'), Eq, t1') ->
-	     if Term.compare t1' t1 = 0 && Term.compare t2' t2 <> 0 then
-	     raise Exit
-	   | _ -> ()) others); a
+       (SAtom.iter (function
+       | Atom.Comp (t1', Neq, (Vea(Elem (x', (Var | Constr))) as t2'))
+       | Atom.Comp ((Vea(Elem (x', (Var | Constr))) as t2'), Neq, t1') ->
+         if Term.compare t1' t1 = 0 && Term.compare t2' t2 = 0 then
+         raise Exit
+       | Atom.Comp (t1', Eq, (Vea(Elem (x', (Var | Constr))) as t2'))
+       | Atom.Comp ((Vea(Elem (x', (Var | Constr))) as t2'), Eq, t1') ->
+         if Term.compare t1' t1 = 0 && Term.compare t2' t2 <> 0 then
+         raise Exit
+       | _ -> ()) 
+       others);
+       a
        with Not_found -> Atom.True | Exit -> Atom.False)
   | Atom.Comp (t1, Neq, t2) ->
       (try
-	 (SAtom.iter (function
-	   | Atom.Comp (t1', Eq, t2')
-	       when (Term.compare t1' t1 = 0 && Term.compare t2' t2 = 0)
-		 || (Term.compare t1' t2 = 0 && Term.compare t2' t1 = 0) ->
-	     raise Exit
-	   | _ -> ()) others); a
-       with Exit -> Atom.False)
+       (SAtom.iter (function
+         | Atom.Comp (t1', Eq, t2')
+             when (Term.compare t1' t1 = 0 && Term.compare t2' t2 = 0)
+               || (Term.compare t1' t2 = 0 && Term.compare t2' t1 = 0) ->
+           raise Exit
+         | _ -> ()) 
+        others); 
+        a
+      with Exit -> Atom.False)
   | Atom.Comp (t1, Eq, t2) ->
       (try
-	 (SAtom.iter (function
-	   | Atom.Comp (t1', Neq, t2')
-	       when (Term.compare t1' t1 = 0 && Term.compare t2' t2 = 0)
-		 || (Term.compare t1' t2 = 0 && Term.compare t2' t1 = 0)  ->
-	     raise Exit
-	   | _ -> ()) others); a
-       with Exit -> Atom.False)
+       (SAtom.iter (function
+         | Atom.Comp (t1', Neq, t2')
+             when (Term.compare t1' t1 = 0 && Term.compare t2' t2 = 0)
+               || (Term.compare t1' t2 = 0 && Term.compare t2' t1 = 0) ->
+           raise Exit
+         | _ -> ()) others);
+        a
+      with Exit -> Atom.False)
   | _ -> a
-
 
 let simplify_comp i si op j sj =
   match op, (si, sj) with
@@ -194,7 +198,6 @@ let simplify_comp i si op j sj =
        else Atom.Comp (ti, op, tj)
     | _ ->
         Atom.Comp (Vea(Elem (i, si)), op, Vea(Elem (j, sj)))
-
 
 let simplify_poly cs ts =
   (* 1. Remove every null vea *)
@@ -219,7 +222,6 @@ let simplify_poly cs ts =
 let rec simplification np a =
   let a = redondant_or_false (SAtom.remove a np) a in
   match a with
-    | Atom.True | Atom.False -> a
     | Atom.Comp (Vea(Elem (i, si)), op , Vea(Elem (j, sj))) -> simplify_comp i si op j sj
     | Atom.Comp (Poly (cs1, ts1), (Eq | Le) , Poly (cs2, ts2)) 
         when VMap.equal Const.equal ts1 ts2 && Const.equal cs1 cs2 ->
@@ -481,49 +483,16 @@ let inconsistent_2 ?(use_sets=false)
   if use_sets then inconsistent_2sets sa1 sa2
   else inconsistent_2arrays ar1 ar2
 
-
-
-(* ---------- TODO : doublon avec SAtom.variables -----------*)
-
-let rec add_arg args = function
-  | Vea(Elem (s, _)) ->
-      let s' = H.view s in
-      if s'.[0] = '#' || s'.[0] = '$' then S.add s args else args
-  | Vea(Access (_, ls)) ->
-      List.fold_left (fun args s ->
-        let s' = H.view s in
-        if s'.[0] = '#' || s'.[0] = '$' then S.add s args else args)
-        args ls
-  | _ -> failwith "todo add_arg"
-  (* TODO G
-  | Arith (t, _) -> add_arg args t
-  | Const _ -> args
-  *)
-
-let args_of_atoms sa =
-  let rec args_rec sa args =
-    SAtom.fold
-      (fun a args ->
-	 match a with
-	   | Atom.True | Atom.False -> args
-	   | Atom.Comp (x, _, y) -> add_arg (add_arg args x) y
-	   | Atom.Ite (sa, a1, a2) ->
-	       args_rec (SAtom.add a1 (SAtom.add a2 sa)) args)
-      sa args
-  in
-  S.elements (args_rec sa S.empty)
-
-(* --------------------------------------------------------------*)
-
 let simplification_atoms base sa =
   SAtom.fold
     (fun a sa ->
        let a = simplification base a in
        let a = simplification sa a in
        match a with
-	 | Atom.True -> sa
-	 | Atom.False -> raise Exit
-	 | _ -> SAtom.add a sa)
+       | Atom.True -> sa
+       | Atom.False -> raise Exit
+       | _ -> SAtom.add a sa
+    )
     sa SAtom.empty
 
 let rec break a =

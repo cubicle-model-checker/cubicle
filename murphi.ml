@@ -279,7 +279,6 @@ let rec is_const = function
   (* TODO G | Vea(Arith (t, _)) -> is_const t *)
   | _ -> false
 
-
 module STS = Set.Make(T.Set)
 
 let mk_defined_values sa =

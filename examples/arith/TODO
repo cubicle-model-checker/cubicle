@@ -1,0 +1,14 @@
+Temporary TODO exclusively for arithmetic.
+
+- Décomposition des Constante en facteurs premiers afin de permettre une
+	simplification de ceux ci
+	Ex :
+
+	4 * A + 2 * B = 0
+	<=> 2 * A + B = 0
+
+- S'occuper des swts
+
+- Comprendre ce qu'est une "constante" ? 
+
+
