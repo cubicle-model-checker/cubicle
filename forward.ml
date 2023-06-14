@@ -77,9 +77,9 @@ let is_prime s =
               (String.sub s (pos_at + 1) (String.length s - pos_at - 1)));
     true
   with
-  | Not_found -> false
+  | Not_found          -> false
   | Invalid_argument _ -> false
-  | Failure _ -> false
+  | Failure          _ -> false
 
 let is_prime_term t =
   let is_prime_vea = function  
@@ -96,14 +96,13 @@ let rec is_prime_atom = function
     is_prime_atom a1 || is_prime_atom a2 || SAtom.exists is_prime_atom sa
 
 
-let rec is_const t = 
+let is_const t = 
   let is_const_vea = function 
     | Vea.Elem (_, (Constr | Var))  -> true
     | _                             -> false
   in match t with
-  | Vea v -> is_const_vea v
+  | Vea v        -> is_const_vea v
   | Poly (_, ts) -> VMap.for_all (fun k _ -> is_const_vea k) ts 
-  (* TODO G : Verify this *)
 
 exception Found_const of (op_comp * term)
 
@@ -116,7 +115,6 @@ let find_const_value g init =
 	      if is_const t' then raise (Found_const (op, t'))
       | _ -> ()
     ) init;
-    Format.printf "ERR: find_const_value\n%!";
     raise Not_found
   with Found_const c -> c
 
@@ -292,7 +290,6 @@ let first_primed_atom sa =
       let pts = primed_terms_of_atom a in
       if not (Term.Set.is_empty pts) then raise (First_primed_atom (a, pts))
     ) sa;
-    Format.printf "ERR: First primed atom not found\n%!";
     raise Not_found
   with First_primed_atom (a, pts) -> a, pts
 
@@ -345,7 +342,6 @@ let choose_prime_term sa =
         if is_prime_term t1 then raise (Found_prime_term t1);
         if is_prime_term t2 then raise (Found_prime_term t2)
       | _ -> ()) sa;
-    Format.printf "ERR: Couldn'g choose prime term\n%!";
     raise Not_found
   with Found_prime_term t -> t
 
@@ -910,7 +906,6 @@ type possible_result =
   | Spurious of trace
   | Unreach
 
-
 let possible_trace ~starts ~finish ~procs ~trace =
   (* eprintf "Possible with %d procs?@." (List.length procs); *)
   let usa = Node.litterals finish in
@@ -942,7 +937,7 @@ let possible_trace ~starts ~finish ~procs ~trace =
         forward_rec nls rest_trace
   in
   try
-    let init = List.map (fun (isa, iargs)-> isa, iargs, []) starts in
+    let init = List.map (fun (isa, iargs) -> isa, iargs, []) starts in
     forward_rec init trace
   with
     | Reachable hist -> Reach hist

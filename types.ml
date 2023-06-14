@@ -404,17 +404,15 @@ end = struct
   let neg = function
     | True -> False
     | False -> True
-    (* TODO G 
-    | Comp (c, Eq, (Elem (x, Constr))) when Hstring.equal x Term.hfalse -> 
-	Comp (c, Eq, (Elem (Term.htrue, Constr)))
-    | Comp (c, Eq, (Elem (x, Constr))) when Hstring.equal x Term.htrue -> 
-	Comp (c, Eq, (Elem (Term.hfalse, Constr)))
-    *)
+    | Comp (c, Eq, (Vea(Elem (x, Constr)))) when Hstring.equal x Term.hfalse -> 
+        Comp (c, Eq, (Vea(Elem (Term.htrue, Constr))))
+    | Comp (c, Eq, (Vea(Elem (x, Constr)))) when Hstring.equal x Term.htrue -> 
+        Comp (c, Eq, (Vea(Elem (Term.hfalse, Constr))))
     | Comp (x, Eq, y) -> Comp (x, Neq, y)
     | Comp (x, Lt, y) -> Comp (y, Le, x)
     | Comp (x, Le, y) -> Comp (y, Lt, x)
     | Comp (x, Neq, y) -> Comp (x, Eq, y)
-    | _ -> failwith "todo neg" (*assert false TODO G : Reput assert false*)
+    | _ -> assert false 
 
   let hash (sa: Atom.t) = Hashtbl.hash_param 50 100 sa
 

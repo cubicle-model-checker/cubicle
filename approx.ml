@@ -206,18 +206,13 @@ let cube_known_bad c =
 (*****************************************)
 
 let approx_arith a = match a with
+  | Atom.Comp (t, Eq, Poly(cs, ts)) when VMap.cardinal ts = 0 ->
+      begin match Const.sign cs with 
+      | 0 -> a 
+      | n when n > 0 -> Atom.Comp (t, Lt, Poly (Const.int_zero, VMap.empty))
+      | _            -> Atom.Comp (Poly (Const.int_zero, VMap.empty), Lt, t)
+      end
   | _ -> a 
-  (* TODO G 
-  | Atom.Comp (t, Eq, Const c) ->
-     begin
-       match const_sign c with
-       | None | Some 0 -> a
-       | Some n ->
-	  let zer = Const (add_constants c (mult_const (-1) c)) in
-	  if n < 0 then Atom.Comp (t, Lt, zer)
-	  else Atom.Comp (zer, Lt, t)
-     end
-     *)
 
 let approximations s =
   let args, sa = Node.variables s, Node.litterals s in
