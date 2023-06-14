@@ -216,7 +216,7 @@ let term_add t1 t2 =
       let ts = VMap.empty in
       let vtots1 = VMap.add v1 Const.int_one VMap.empty in 
       let ts = VMap.add_vmap vtots1 ts in
-      let vtots2 = VMap.add v1 Const.int_one VMap.empty in 
+      let vtots2 = VMap.add v2 Const.int_one VMap.empty in 
       let ts = VMap.add_vmap vtots2 ts in
       Poly(cs, ts)
   | Vea v, Poly(cs, ts) | Poly(cs ,ts), Vea v ->

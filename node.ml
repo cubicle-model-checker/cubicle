@@ -21,7 +21,6 @@ open Types
 
 type t = node_cube
 
-
 let variables {cube = {Cube.vars = vars }} = vars 
 
 let array n = n.cube.Cube.array

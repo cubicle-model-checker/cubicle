@@ -68,8 +68,7 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
         Safety.check system n;
         begin
           match Fixpoint.check n !visited with
-          | Some db ->
-             Stats.fixpoint n db
+          | Some db -> Stats.fixpoint n db
           | None ->
              Stats.check_limit n;
              Stats.new_node n;

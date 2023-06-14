@@ -282,7 +282,6 @@ let switchs loc a args ty_e l =
       assignment a tt ty;
       sa, tt) l
 
-
 let updates args upds =
   let dv = ref [] in
   List.map 
@@ -311,18 +310,18 @@ let transitions tl =
       let reqs, loc_reqs = tr.tr_reqs in
       let tr_reqs = atoms loc_reqs tr.tr_args reqs, loc_reqs in 
       let tr_ureq =
-	List.map 
-	 (fun (ur, dnf, loc_req) -> 
-	   let dnf =
-	     List.map (atoms tr.tr_loc (ur::tr.tr_args)) dnf in
-	   ur, dnf, loc_req) tr.tr_ureq in
+        List.map 
+        (fun (ur, dnf, loc_req) -> 
+          let dnf = List.map (atoms tr.tr_loc (ur::tr.tr_args)) dnf in
+          ur, dnf, loc_req) 
+        tr.tr_ureq 
+      in
       let tr_lets = check_lets tr.tr_loc tr.tr_args tr.tr_lets in 
       let tr_upds = updates tr.tr_args tr.tr_upds in 
       let tr_assigns = assigns tr.tr_args tr.tr_assigns in 
       nondets tr.tr_loc tr.tr_nondets;
-      { tr with tr_reqs; tr_ureq; tr_lets; tr_upds; tr_assigns }
-
-    ) tl
+      { tr with tr_reqs; tr_ureq; tr_lets; tr_upds; tr_assigns }) 
+    tl
     
 
 let declare_type (loc, (x, y)) =
@@ -424,10 +423,11 @@ let mk_init_inst_single sa ar = {
   init_invs = [];
   }
 
-let mk_init_inst init_cdnf init_cdnf_a =
-  { init_cdnf;
-    init_cdnf_a;
-    init_invs = [] }
+let mk_init_inst init_cdnf init_cdnf_a = { 
+  init_cdnf;
+  init_cdnf_a;
+  init_invs = []; 
+  }
 
 let create_init_instances (iargs, l_init) invs = 
   let init_instances = Hashtbl.create 11 in
@@ -484,13 +484,7 @@ let create_init_instances (iargs, l_init) invs =
 
   (* add user supplied invariants to init *)
   add_invs init_instances invs;
-  (* Hashtbl.iter (fun nb (cdnf, _) -> *)
-  (*   eprintf "> %d --->@." nb; *)
-  (*   List.iter (fun dnf -> *)
-  (*       eprintf "[[ %a ]]@." (Pretty.print_list SAtom.print " ||@ ") dnf *)
-  (*     ) cdnf; *)
-  (*   eprintf "@." *)
-  (* ) init_instances; *)
+
   init_instances
 
 
@@ -531,13 +525,13 @@ let fresh_args ({ tr_args = args; tr_upds = upds} as tr) =
 	tr_assigns = 
 	  List.map (function
             | x, UTerm t, loc -> x, UTerm (Term.subst sigma t),loc
-	    | x, UCase swts, loc ->
+	          | x, UCase swts, loc ->
               let swts = 
-	        List.map 
-		  (fun (sa, t) ->
-                    SAtom.subst sigma sa, Term.subst sigma t) swts in
-              x, UCase swts, loc
-	  ) tr.tr_assigns;
+	              List.map (fun (sa, t) ->
+                  SAtom.subst sigma sa, Term.subst sigma t) 
+                swts in
+                x, UCase swts, loc)
+	          tr.tr_assigns;
 	tr_upds = 
 	List.map 
 	  (fun ({up_swts = swts} as up) -> 
@@ -550,9 +544,6 @@ let fresh_args ({ tr_args = args; tr_upds = upds} as tr) =
       
 
 let add_tau tr =
-  (* (\* let tr = fresh_args tr in *\) *)
-  (* { tr with *)
-  (*   tr_tau = Pre.make_tau tr } *)
   let pre,reset_memo = Pre.make_tau tr in
   { tr_info = tr;
     tr_tau = pre;
@@ -560,7 +551,8 @@ let add_tau tr =
   }
 
     
-let system s = 
+let system s =
+  
   let l = init_global_env s in
   let s_init = if not Options.notyping then init s.init else s.init in
   (*List.iter (fun (f,t) -> Format.eprintf "system: f: %a; t: %a @." Hstring.print f Hstring.print t) l;*)

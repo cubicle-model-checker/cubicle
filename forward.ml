@@ -47,8 +47,7 @@ let prime_term t = match t with
 let rec prime_atom a = match a with
   | True | False -> a
   | Comp (t1, op, t2) -> Comp (prime_term t1, op, prime_term t2)
-  | Ite (sa, a1, a2)  -> 
-      Ite (prime_satom sa, prime_atom a1, prime_atom a2)
+  | Ite  (sa, a1, a2) -> Ite (prime_satom sa, prime_atom a1, prime_atom a2)
   
 and prime_satom sa =
   SAtom.fold (fun a acc -> SAtom.add (prime_atom a) acc) sa SAtom.empty

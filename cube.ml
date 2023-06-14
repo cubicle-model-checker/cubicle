@@ -119,14 +119,14 @@ let size c = Array.length c.array
 
 
 
-(*****************************************************************)
-(* Simplifcation of atoms in a cube based on the hypothesis that *)
-(* indices #i are distinct and the type of elements is an	 *)
-(* enumeration							 *)
-(* 								 *)
-(* simplify comparison atoms, according to the assumption that	 *)
-(* variables are all disctincts					 *)
-(*****************************************************************)
+(******************************************************************)
+(* Simplifcation of atoms in a cube based on the hypothesis that  *)
+(* indices #i are distinct and the type of elements is an	        *)
+(* enumeration							                                      *)
+(* 								                                                *)
+(* simplify comparison atoms, according to the assumption that	  *)
+(* variables are all disctincts					                          *)
+(******************************************************************)
 
 let redondant_or_false others a = match a with
   | Atom.True -> Atom.True
@@ -197,82 +197,23 @@ let simplify_comp i si op j sj =
 
 
 let simplify_poly cs ts =
-  (* 
-     If poly contains only a Vea, transform into Vea.
-  *)
-  (* Check if poly contains only one Vea *)
-  let r = 
-    if Const.is_zero cs && VMap.cardinal ts = 1 then
-    let vea, c = VMap.choose ts in 
-    if Const.is_one c then Some(Vea(vea))
-                      else None
-    else None
+  (* 1. Remove every null vea *)
+  let ts = 
+    VMap.fold
+    (fun vea const acc -> 
+      if not (Const.is_zero const) then VMap.add vea const acc 
+                                   else acc 
+    )
+    ts
+    VMap.empty
   in
-  match r with 
-  | Some t -> t 
-  | None   ->
-      (* 1. Remove every null vea *)
-      let min_const = ref cs in 
-      let ts = 
-        VMap.fold
-        (fun vea const acc -> 
-          if not (Const.is_zero const) then 
-            (
-              (* TODO : Need to be abs value here *)
-              (if Const.is_zero !min_const || Const.num_lt const !min_const then min_const := const);
-              VMap.add vea const acc 
-            )
-          else acc 
-        )
-        ts
-        VMap.empty
-      in
 
-      (* 2. Divide const by greater common divisor *)
-
-      (* I'm not convinced by this optimisation, so i disabled it for now.*)
-      (* 
-      let min_int = Num.int_of_num (Const.to_num !min_const) in 
-      let divider = Hashtbl.create min_int in 
-      for i = 1 to min_int do
-        Hashtbl.add divider i ()
-      done;
- 
-      VMap.iter
-      (fun _ const -> 
-        let to_remove = 
-          Hashtbl.fold 
-          (fun k _ acc ->
-            if not (Const.divided_by const k) then k::acc
-                                              else acc
-          )  
-          divider 
-          [] 
-        in
-        List.iter (Hashtbl.remove divider) to_remove
-      )
-      ts;
- 
-      let greater = 
-        Hashtbl.fold (fun k _ acc -> if k > acc then k else acc)
-        divider 1 
-      in 
-      
-      Term.print Format.std_formatter (Poly(cs,ts));
-      Format.printf "Greatest divider : %d minint : %d \n" greater min_int;
-      let greater = Num.num_of_int greater in 
-      let ts = 
-        VMap.fold 
-        (fun k v acc -> 
-          VMap.add k (Const.div v greater) acc 
-        )
-        ts
-        VMap.empty
-      in
-      Term.print Format.std_formatter (Poly(cs,ts));
-      *)
-
-      Poly(cs, ts)
+  (* 2. Check if poly contains only one Vea *)
+  if Const.is_zero cs && VMap.cardinal ts = 1 then
+    let vea, c = VMap.choose ts in 
+    if Const.is_one c then Vea(vea)
+                      else Poly(cs, ts)
+    else Poly (cs, ts)
 
 
 let rec simplification np a =
@@ -317,7 +258,7 @@ let rec simplification np a =
         Atom.Comp (t1', op, Poly(Const.int_zero, VMap.empty))
     | _ -> a
 
-    (* TODO : DELETE LEGACY
+    (* TODO G : DELETE LEGACY
     | Atom.Comp (Arith (i, csi), op, (Arith (j, csj)))
       when compare_constants csi csj = 0 -> simplification np (Atom.Comp (i, op, j))
     | Atom.Comp (Arith (i, csi), op, (Arith (j, csj))) ->

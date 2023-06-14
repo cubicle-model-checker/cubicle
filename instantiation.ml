@@ -35,9 +35,6 @@ let filter_impos perms impos =
 let rec all_permutations_impos l1 l2 impos =
   filter_impos (Variable.all_permutations l1 l2) impos
 
-
-
-
 (****************************************************)
 (* Improved relevant permutations (still quadratic) *)
 (****************************************************)
@@ -108,7 +105,7 @@ let add_obv ((x,y) as p) obvs =
 let obvious_impossible a1 a2 =
   let n1 = Array.length a1 in
   let n2 = Array.length a2 in
-  let obvs = ref [] in
+  let obvs  = ref [] in
   let impos = ref [] in
   let i1 = ref 0 in
   let i2 = ref 0 in

@@ -628,42 +628,6 @@ module Why3 = struct
   
   let op_comp = function Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"
 
-  let print_const fmt = 
-    failwith "todo print_const"
-  (* TODO G 
-    function
-    | ConstInt n -> fprintf fmt "%s" (Num.string_of_num n)
-    | ConstReal n -> fprintf fmt "%F" (Num.float_of_num n)
-    | ConstName n -> fprintf fmt "%a" print_name n
-  *)
-
-  let print_cs ?(arith=false) fmt cs =
-    failwith "todo print_cs"
-    (* TODO G 
-  let ls = MConst.fold (fun c i acc -> (c,i) :: acc) cs [] in
-    let rec prpr arith first ls = 
-      let put_sign = arith || not first in 
-      match ls, put_sign with
-      | (c, 1) :: rs, false ->
-         print_const fmt c;
-         prpr arith false rs
-      | (c, -1) :: rs, _ ->
-         fprintf fmt " - %a" print_const c;
-         prpr arith false rs
-      | (c, i) :: rs, false ->
-         fprintf fmt "%d * %a" i print_const c;
-         prpr arith false rs
-      | (c, 1) :: rs, true ->
-         fprintf fmt " + %a" print_const c;
-         prpr arith false rs
-      | (c, i) :: rs, true ->
-         fprintf fmt "%+d * %a" i print_const c;
-         prpr arith false rs
-      | [], _ -> ()
-    in
-    prpr arith true ls
-    *)
-
   let print_proc fmt s = 
     try Scanf.sscanf (Hstring.view s) "#%d" (fun id -> fprintf fmt "z%d" id)
     with Scanf.Scan_failure _ -> print_name fmt s

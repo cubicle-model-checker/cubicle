@@ -67,12 +67,12 @@ let rec pre_atom tau a =
     | Atom.True | Atom.False -> a
     | Atom.Comp (x, op, y) -> tau x op y
     | Atom.Ite (sa, a1, a2) -> 
-	let pre_sa = 
-	  SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) sa SAtom.empty 
-	in
-	let pre_a1 = pre_atom tau a1 in 
-	let pre_a2 = pre_atom tau a2 in 
-	Atom.Ite(pre_sa, pre_a1, pre_a2)
+      let pre_sa = 
+        SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) sa SAtom.empty 
+      in
+      let pre_a1 = pre_atom tau a1 in 
+      let pre_a2 = pre_atom tau a2 in 
+      Atom.Ite(pre_sa, pre_a1, pre_a2)
 
 (****************************************)
 (* Convert a transition into a function *)
@@ -110,37 +110,38 @@ let find_assign_vea memo tr tt =
   | Vea.Elem (x, sx) -> 
     let gu =
       if H.list_mem x tr.tr_nondets then 
-           (*raise (Remove_lit_var x)*)
-        try List.assoc (Hstring.view x) !memo with Not_found ->
-        let nv = UTerm (Vea(Elem (fresh_nondet (Smt.Symbol.type_of x), sx))) in
-        memo := (Hstring.view x,nv) :: !memo;
-        nv
-     else 
-       try fst (H.list_assoc_triplet x tr.tr_assigns) with Not_found -> 
-        UTerm (Vea(Elem (x, sx)))
-       in
-       begin match gu with
-        | UTerm t    -> Single t
-        | UCase swts -> Branch swts
-       end
+             (*raise (Remove_lit_var x)*)
+          try List.assoc (Hstring.view x) !memo with Not_found ->
+          let nv = UTerm (Vea(Elem (fresh_nondet (Smt.Symbol.type_of x), sx))) in
+          memo := (Hstring.view x,nv) :: !memo;
+          nv
+       else 
+         try fst (H.list_assoc_triplet x tr.tr_assigns) with Not_found -> 
+          (
+            UTerm (Vea(Elem (x, sx)))
+          )
+    in
+   
+    begin match gu with
+     | UTerm t    -> Single t
+     | UCase swts -> Branch swts
+    end
   | Vea.Access (a, li) -> 
       begin
         try find_update a li tr.tr_upds
         with Not_found -> Single (Vea tt)
       end
 
-let rec find_assign memo tr tt =
+let find_assign memo tr tt =
   match tt with 
   | Vea  (vea)    -> find_assign_vea memo tr vea
-  | Poly (cs, ts) -> 
-      if VMap.cardinal ts = 0 then Single tt 
-      else
+  | Poly (cs, ts) ->
         let res = 
           VMap.fold 
             (fun vea c acc -> 
               match find_assign_vea memo tr vea with
               | Single t -> term_add acc (term_mult_by_const t c)
-              (* TODO ICI :
+              (* TODO G ICI :
                 - Remplacer si Swts 
               *)
               | _ -> acc 
@@ -149,7 +150,6 @@ let rec find_assign memo tr tt =
             (Poly(cs, VMap.empty)) 
         in
         Single res        
-
   (*
     TODO G
   | Const i as a -> Single a
@@ -190,7 +190,7 @@ let rec find_assign memo tr tt =
 let make_tau tr =
   let memo = ref [] in
   (fun x op y ->
-  try 
+  try
     match find_assign memo tr x, find_assign memo tr y with
     | Single tx, Single ty -> Atom.Comp (tx, op, ty)
     | Single tx, Branch ls ->
@@ -327,9 +327,9 @@ let make_cubes_new (ls, post) rargs s tr cnp =
 (*****************************************************)
 
 let pre { tr_info = tri; tr_tau = tau; tr_reset = reset } unsafe =
-  (* let tau = tr.tr_tau in *)
   let pre_unsafe = 
-    SAtom.union (fst tri.tr_reqs) 
+    SAtom.union 
+      (fst tri.tr_reqs) 
       (SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) unsafe SAtom.empty)
   in
   let pre_u = Cube.create_normal pre_unsafe in
