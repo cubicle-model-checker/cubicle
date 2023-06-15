@@ -478,15 +478,12 @@ let apply_assigns assigns sigma =
         match gu with
         | UTerm t -> 
           let t = Term.subst sigma t in
-          Comp (nt, Eq, prime_term t)
-          (* TODO G : Comprendre ici
           begin match t with
-            | Arith (t, c) ->
-              let nt = Arith (nt, mult_const (-1) c) in
+            | Poly (cs, ts) ->
+              let nt = Poly (Const.neg cs, VMap.map Const.neg ts) in
               Comp (nt, Eq, prime_term t)
             | _ -> Comp (nt, Eq, prime_term t)
           end
-          *)
         | UCase swts -> swts_to_ites nt swts sigma
       in
       SAtom.add sa nsa, Term.Set.add nt terms)
