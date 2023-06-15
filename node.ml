@@ -124,40 +124,7 @@ let print fmt n = Cube.print fmt n.cube
 module Latex = struct
 (* Latex printing of nodes, experimental - to rewrite *)
 
-
-  let print_const fmt = 
-    failwith "todo print const"
-    (* TODO G
-    function
-    | ConstInt n | ConstReal n -> fprintf fmt "%s" (Num.string_of_num n)
-    | ConstName n -> fprintf fmt "%a" Hstring.print n
-    *)
-
-  let print_cs fmt cs =
-    failwith "todo print cs"
-    (* TODO G
-    MConst.iter 
-      (fun c i ->
-       fprintf fmt " %s %a" 
-	       (if i = 1 then "+" else if i = -1 then "-" 
-	        else if i < 0 then "- "^(string_of_int (abs i)) 
-	        else "+ "^(string_of_int (abs i)))
-	       print_const c) cs
-    *)
-
-  let rec print_term fmt = 
-    failwith "todo print_term"
-    (*
-    function
-    | Const cs -> print_cs fmt cs
-    | Elem (s, Var) -> fprintf fmt "%a" Hstring.print s
-    | Elem (s, Glob) -> fprintf fmt "\\texttt{%a}" Hstring.print s
-    | Elem (s, Constr) -> fprintf fmt "\\textsf{%a}" Hstring.print s
-    | Access (a, li) ->
-       fprintf fmt "\\texttt{%a}[%a]" Hstring.print a (Hstring.print_list ", ") li
-    | Arith (x, cs) -> 
-       fprintf fmt "@[%a%a@]" print_term x print_cs cs
-    *)
+  let print_term = Term.print
 
   let str_op_comp =
     function Eq -> "=" | Lt -> "<" | Le -> "\\le" | Neq -> "\\neq"

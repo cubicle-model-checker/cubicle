@@ -119,7 +119,7 @@ module AltErgo = struct
     | p :: r -> fprintf fmt "%a,%a" print_proc p print_args r
 
   let rec print_term ~prime fmt = function
-    (* TODO G | Const cs -> print_cs fmt cs *)
+    (* TODO LG | Const cs -> print_cs fmt cs *)
     | Vea(Elem (s, Var)) -> print_proc fmt s
     | Vea(Elem (s, Constr)) when Hstring.equal s Term.hfalse -> fprintf fmt "false"
     | Vea(Elem (s, Constr)) when Hstring.equal s Term.htrue -> fprintf fmt "true"
@@ -127,7 +127,7 @@ module AltErgo = struct
     | Vea(Elem (s, Glob)) -> fprintf fmt "%a%s" Hstring.print s (spr prime) 
     | Vea(Access (a, li)) ->
        fprintf fmt "%a%s(%a)" Hstring.print a (spr prime) print_args li
-    (* TODO G 
+    (* TODO LG 
     | Arith (x, cs) -> 
        fprintf fmt "@[%a%a@]" (print_term ~prime) x print_cs cs
     *)
@@ -638,15 +638,14 @@ module Why3 = struct
     | p :: r -> fprintf fmt "%a %a" print_proc p print_args r
 
   let rec print_term ~prime fmt = function
-    (* TODO G | Const cs -> print_cs fmt cs *)
     | Vea(Elem (s, Var)) -> print_proc fmt s
     | Vea(Elem (s, Constr)) -> fprintf fmt "%a" Hstring.print s
     | Vea(Elem (s, Glob)) -> fprintf fmt "%a%s" print_name s (spr prime) 
     | Vea(Access (a, li)) ->
        fprintf fmt "(%a%s %a)" print_name a (spr prime) print_args li
     | _ -> failwith "todo print_term"
-    (*
-      TODO G 
+    (* TODO G 
+    | Const cs -> print_cs fmt cs 
     | Arith (x, cs) -> 
        fprintf fmt "%a%a" (print_term ~prime) x (print_cs ~arith:true) cs
     *)
@@ -1449,14 +1448,14 @@ module Why3_INST = struct
     | p :: r -> fprintf fmt "%a %a" print_proc p print_args r
 
   let rec print_term ~prime fmt = function
-    (* TODO G | Const cs -> print_cs fmt cs *)
     | Vea(Elem (s, Var)) -> print_proc fmt s
     | Vea(Elem (s, Constr)) -> fprintf fmt "%a" Hstring.print s
     | Vea(Elem (s, Glob)) -> fprintf fmt "%a%s" print_name s (spr prime) 
     | Vea(Access (a, li)) ->
        fprintf fmt "(%a%s %a)" print_name a (spr prime) print_args li
     | _ -> failwith "todo print_term"
-    (*
+    (* TODO G 
+    | Const cs -> print_cs fmt cs 
     | Arith (x, cs) -> 
        fprintf fmt "@[(%a%a)@]" (print_term ~prime) x print_cs cs
     *)

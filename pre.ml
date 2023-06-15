@@ -150,8 +150,7 @@ let find_assign memo tr tt =
             (Poly(cs, VMap.empty)) 
         in
         Single res        
-  (*
-    TODO G
+  (* TODO DELETE LEGACY HERE 
   | Const i as a -> Single a
 
   | Arith (x, cs1) ->

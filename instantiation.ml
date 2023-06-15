@@ -60,8 +60,8 @@ let find_impossible a1 lx1 op c1 i2 a2 n2 impos obvs =
 	  i2 := n2
 
       | Atom.Comp (Vea(Access (a2, lx2)), Eq,
-	      (Vea(Elem (_, Constr)) | Vea(Elem (_, Glob)) (* TODO G | Arith _ as c2
-        *))), (Neq | Lt)
+	      (Vea(Elem (_, Constr)) | Vea(Elem (_, Glob)) | Arith _ as c2
+        )), (Neq | Lt)
 	  when Term.compare c1 c2 = 0 ->
 	  
 	  if List.for_all2 

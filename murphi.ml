@@ -272,12 +272,14 @@ let extra_procs_of_sys sys =
   List.fold_left extra_procs Hstring.HSet.empty (snd sys.t_init)
   |> Hstring.HSet.elements
 
-let rec is_const = function
-  (* TODO : Vérifier *)
-  | Poly(cs, ts) -> VMap.is_empty ts (* Humm *)
-  | Vea(Elem (_, (Var | Constr))) -> true
-  (* TODO G | Vea(Arith (t, _)) -> is_const t *)
-  | _ -> false
+let is_const t = 
+  let is_const_vea = function 
+    | Vea.Elem (_, (Constr | Var))  -> true
+    | _                             -> false
+  in match t with
+  | Vea v        -> is_const_vea v
+  | Poly (_, ts) -> VMap.for_all (fun k _ -> is_const_vea k) ts 
+
 
 module STS = Set.Make(T.Set)
 
