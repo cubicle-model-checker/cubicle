@@ -132,59 +132,42 @@ let find_assign_vea memo tr tt =
         with Not_found -> Single (Vea tt)
       end
 
+let rec create_switch_list ts vea_assign_map acc =
+  match VMap.choose_opt vea_assign_map with 
+  | Some (vea, ass) -> 
+      let without = VMap.remove vea vea_assign_map in
+      let c = VMap.find vea ts in 
+      let acc'    = 
+        match ass with 
+        | Single t ->
+            List.map 
+            (fun (sa',t') -> (sa', term_add (term_mult_by_const t c) t'))
+            acc
+        | Branch b ->
+            let r = 
+              List.map 
+              (fun (sa', t') -> 
+                List.map
+                (fun (sa, t) -> SAtom.inter sa sa', term_add (term_mult_by_const t c) t')
+                b)
+              acc
+            in List.flatten r
+      in
+      create_switch_list ts without acc'
+  | None            -> acc
+
 let find_assign memo tr tt =
   match tt with 
   | Vea  (vea)    -> find_assign_vea memo tr vea
   | Poly (cs, ts) ->
-        let res = 
-          VMap.fold 
-            (fun vea c acc -> 
-              match find_assign_vea memo tr vea with
-              | Single t -> term_add acc (term_mult_by_const t c)
-              (* TODO G ICI :
-                - Remplacer si Swts 
-              *)
-              | _ -> acc 
-            ) 
-            ts
-            (Poly(cs, VMap.empty)) 
-        in
-        Single res        
-  (* TODO DELETE LEGACY HERE 
-  | Const i as a -> Single a
-
-  | Arith (x, cs1) ->
-     begin
-       let t = find_assign memo tr x in
-       match t with
-       | Single (Const cs2) -> 
-        let c = 
-        Const (add_constants cs1 cs2)
-        in
-        Single c
-       | Single (Arith (y, cs2)) -> Single (Arith (y, add_constants cs1 cs2))
-       | Single y -> Single (Arith (y, cs1))
-       | Branch up_swts -> Branch (List.map (fun (sa, y) -> (sa, (Arith (y, cs1))))
-		           up_swts)
-     end
-  *)
-     (* List.map (fun i -> *)
-     (*   if H.list_mem i tr.tr_nondets then  *)
-     (*     (assert false; *)
-     (*     fresh_nondet (Smt.Symbol.type_of i)) *)
-     (*   else i *)
-     (*   try (match H.list_assoc i tr.tr_assigns with *)
-     (*     | Elem (ni, _) -> ni *)
-     (*     | Const _ | Arith _ | Access _ -> assert false) *)
-     (*   with Not_found -> i *)
-     (* ) li in *)
-			      (* let na =  *)
-			      (*   try (match H.list_assoc a tr.tr_assigns with *)
-			      (* 	 | Elem (na, _) -> na *)
-			      (* 	 | Const _ | Arith _ | Access _ -> assert false) *)
-			      (*   with Not_found -> a *)
-			      (* in *)
-			      (* Single (Access (na, nli)) *)
+        let vea_assign_map = VMap.mapi (fun vea _ -> find_assign_vea memo tr vea) ts in 
+        let true_satom = SAtom.add Atom.True SAtom.empty in
+        let empty_poly = Poly(cs, VMap.empty) in
+        let res = create_switch_list ts vea_assign_map [(true_satom, empty_poly)]
+        in 
+        match res with 
+        | (_, t) :: [] -> Single t 
+        | _            -> Branch res
 				
 let make_tau tr =
   let memo = ref [] in
