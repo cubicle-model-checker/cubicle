@@ -22,7 +22,7 @@ requires { A[x] = SDirty &&
 {
  A[j] := case 
       	  | j = x : Dirty
-	  | _ : A[j]
+					| _ : A[j]
 }
 
 transition t2 (x)
@@ -30,7 +30,7 @@ requires { A[x] = Invalid && forall_other j. A[j] = Invalid }
 {
  A[j] := case 
       	  | j = x : Exclusive
-	  | _ : A[j]
+	  			| _ : A[j]
 }
 
 transition t3 (x)
@@ -39,7 +39,7 @@ requires { A[x] = SClean &&
 {
  A[j] := case 
       	  | j = x : Dirty
-	  | _ : A[j]
+					| _ : A[j]
 }
 
 transition t4 (x)
@@ -47,7 +47,7 @@ requires { A[x] = Invalid && forall_other j. A[j] = Invalid }
 {
  A[j] := case 
       	  | j = x : Dirty
-	  | _ : A[j]
+					| _ : A[j]
 }
 
 transition t5_1 (x y)
@@ -55,8 +55,8 @@ requires { A[x] = SDirty && A[y] = SClean }
 {
  A[j] := case 
       	  | j = x : SDirty
-	  | A[j] = SDirty : SClean
-	  | _ : A[j]
+					| A[j] = SDirty : SClean
+					| _ : A[j]
 }
 
 
@@ -65,8 +65,8 @@ requires { A[x] = SDirty && A[y] = SDirty }
 {
  A[j] := case 
       	  | j = x : SDirty
-	  | A[j] = SDirty : SClean
-	  | _ : A[j]
+					| A[j] = SDirty : SClean
+					| _ : A[j]
 }
 
 transition t6 (x)
@@ -74,7 +74,7 @@ requires { A[x] = Exclusive }
 {
  A[j] := case 
       	  | j = x : Dirty
-	  | _ : A[j]
+					| _ : A[j]
 }
 
 transition t7_1 (x y)
@@ -82,8 +82,8 @@ requires { A[x] = SClean && A[y] = SClean }
 {
  A[j] := case 
       	  | j = x : SDirty
-	  | A[j] = SDirty : SClean
-	  | _ : A[j]
+					| A[j] = SDirty : SClean
+					| _ : A[j]
 }
 
 
@@ -92,8 +92,8 @@ requires { A[x] = SClean && A[y] = SDirty }
 {
  A[j] := case 
       	  | j = x : SDirty
-	  | A[j] = SDirty : SClean
-	  | _ : A[j]
+					| A[j] = SDirty : SClean
+					| _ : A[j]
 }
 
 transition t8 (x y)
@@ -101,9 +101,9 @@ requires { A[x] = Invalid && A[y] <> Invalid }
 {
  A[j] := case 
           | j = x : SClean
-	  | A[j] = Dirty : SDirty
-	  | A[j] = Exclusive : SClean
-	  | _ : A[j]
+					| A[j] = Dirty : SDirty
+					| A[j] = Exclusive : SClean
+					| _ : A[j]
 }
 
 transition t9 (x y)
@@ -111,6 +111,6 @@ requires { A[x] = Invalid && A[y] <> Invalid }
 {
  A[j] := case
       	  | j = x : SDirty
-	  | A[j] <> Invalid : SClean
-	  | _ : A[j]
+					| A[j] <> Invalid : SClean
+					| _ : A[j]
 }

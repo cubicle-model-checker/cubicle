@@ -18,9 +18,11 @@ transition t3 (x)
 requires { A[x] = L2 }
 { A[j] := case | j = x : L3 | A[j] = L1 : L4 | A[j] = L2 : L4 | _ : A[j]; }
 
+
 transition t4 (x)
 requires { A[x] = L4 }
-{ A[j] := case
+{ 
+	A[j] := case
   | j = x : L3 
   | A[j] = L2 : L4 
   | A[j] = L3 : L4

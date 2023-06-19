@@ -186,9 +186,9 @@ let simplify_comp i si op j sj =
     | Eq,  _ when H.equal i j -> Atom.True
     | Neq, _ when H.equal i j -> Atom.False
     | Eq, (Var, Var | Constr, Constr) ->
-      if H.equal i j then Atom.True else Atom.False
+        if H.equal i j then Atom.True else Atom.False
     | Neq, (Var, Var | Constr, Constr) ->
-      if not (H.equal i j) then Atom.True else Atom.False
+        if not (H.equal i j) then Atom.True else Atom.False
     | Le, _ when H.equal i j -> Atom.True
     | Lt, _ when H.equal i j -> Atom.False
     | (Eq | Neq) , _ ->
@@ -218,33 +218,31 @@ let simplify_poly cs ts =
                       else Poly(cs, ts)
     else Poly (cs, ts)
 
-
 let rec simplification np a =
   let a = redondant_or_false (SAtom.remove a np) a in
   match a with
-    | Atom.Comp (Vea(Elem (i, si)), op , Vea(Elem (j, sj))) -> simplify_comp i si op j sj
-    | Atom.Comp (Poly (cs1, ts1), (Eq | Le) , Poly (cs2, ts2)) 
+    | Atom.Comp (Vea(Elem (i, si)), op, Vea(Elem (j, sj))) -> simplify_comp i si op j sj
+    | Atom.Comp (Poly (cs1, ts1), (Eq | Le), Poly (cs2, ts2)) 
         when VMap.equal Const.equal ts1 ts2 && Const.equal cs1 cs2 ->
           Atom.True
-    | Atom.Comp (Poly (cs1, ts1), (Neq | Lt) , Poly (cs2, ts2)) 
+    | Atom.Comp (Poly (cs1, ts1), (Neq | Lt), Poly (cs2, ts2)) 
         when VMap.equal Const.equal ts1 ts2 && Const.equal cs1 cs2 ->
           Atom.False
    | Atom.Comp (Poly (cs1, ts1), Le, Poly (cs2, ts2)) 
         when VMap.equal Const.equal ts1 ts2 && Const.num_le cs1 cs2 ->
           Atom.True
-    | Atom.Comp (Poly (cs1, ts1), Lt , Poly (cs2, ts2)) 
+    | Atom.Comp (Poly (cs1, ts1), Lt, Poly (cs2, ts2)) 
         when VMap.equal Const.equal ts1 ts2 && Const.num_lt cs1 cs2 ->
           Atom.True
-    | Atom.Comp (Poly (cs1, ts1), Lt , Poly (cs2, ts2)) 
+    | Atom.Comp (Poly (cs1, ts1), Lt, Poly (cs2, ts2)) 
         when VMap.equal Const.equal ts1 ts2 && Const.num_le cs2 cs1 ->
           Atom.False
-    | Atom.Comp (Poly (cs1, ts1), Le , Poly (cs2, ts2)) 
+    | Atom.Comp (Poly (cs1, ts1), Le, Poly (cs2, ts2)) 
         when VMap.equal Const.equal ts1 ts2 && Const.num_lt cs2 cs1 ->
           Atom.False
     | Atom.Ite (sa, a1, a2) ->
-      let sa =
-        SAtom.fold
-          (fun a -> SAtom.add (simplification np a)) sa SAtom.empty
+      let sa = 
+        SAtom.fold (fun a -> SAtom.add (simplification np a)) sa SAtom.empty
       in
       let a1 = simplification np a1 in
       let a2 = simplification np a2 in
@@ -259,61 +257,6 @@ let rec simplification np a =
         in
         Atom.Comp (t1', op, Poly(Const.int_zero, VMap.empty))
     | _ -> a
-
-    (* TODO G : DELETE LEGACY
-    | Atom.Comp (Arith (i, csi), op, (Arith (j, csj)))
-      when compare_constants csi csj = 0 -> simplification np (Atom.Comp (i, op, j))
-    | Atom.Comp (Arith (i, csi), op, (Arith (j, csj))) ->
-        let cs = add_constants (mult_const (-1) csi) csj in
-        if MConst.is_empty cs then Atom.Comp (i, op, j)
-        else Atom.Comp (i, op, (Arith (j, cs)))
-    (* | Atom.Comp (Const cx, op, Arith (y, sy, cy)) -> *)
-    (* 	Atom.Comp (Const (add_constants (mult_const (-1) cx) cx), op, *)
-    (* 	      Arith (y, sy , (add_constants (mult_const (-1) cx) cy))) *)
-    (* | Atom.Comp ( Arith (x, sx, cx), op, Const cy) -> *)
-    (* 	Atom.Comp (Arith (x, sx , (add_constants (mult_const (-1) cy) cx)), op, *)
-    (* 	      Const (add_constants (mult_const (-1) cy) cy)) *)
-    | Atom.Comp (Arith (x, cx), op, Const cy) ->
-       let mcx = mult_const (-1) cx in
-       Atom.Comp (x, op, Const (add_constants cy mcx))
-    | Atom.Comp (Const cx, op, Arith (y, cy)) ->
-       let mcy = mult_const (-1) cy in
-       Atom.Comp (Const (add_constants cx mcy), op, y)
-    | Atom.Comp (x, op, Arith (y, cy)) when Term.compare x y = 0 ->
-        let cx = add_constants (mult_const (-1) cy) cy in
-        let c, i = MConst.choose cy in
-        let my = MConst.remove c cy in
-        let cy =
-	  if MConst.is_empty my then MConst.add c (i/(abs i)) my else cy in
-        Atom.Comp (Const cx, op, Const cy)
-    | Atom.Comp (Arith (y, cy), op, x) when Term.compare x y = 0 ->
-        let cx = add_constants (mult_const (-1) cy) cy in
-        let c, i = MConst.choose cy in
-        let my = MConst.remove c cy in
-        let cy =
-          if MConst.is_empty my then MConst.add c (i/(abs i)) my 
-                                else cy 
-          in
-          Atom.Comp (Const cy, op, Const cx)
-    | Atom.Comp (Const c1, (Eq | Le), Const c2) when compare_constants c1 c2 = 0 ->
-       Atom.True
-    | Atom.Comp (Const c1, Le, Const c2) ->
-       begin match MConst.is_num c1, MConst.is_num c2 with
-       | Some n1, Some n2 -> if Num.le_num n1 n2 then Atom.True else Atom.False
-       | _ -> a
-       end
-    | Atom.Comp (Const c1, Lt, Const c2) ->
-       begin match MConst.is_num c1, MConst.is_num c2 with
-       | Some n1, Some n2 -> if Num.lt_num n1 n2 then Atom.True else Atom.False
-       | _ -> a
-       end
-    | Atom.Comp (Const _ as c, Eq, y) -> Atom.Comp (y, Eq, c)
-    | Atom.Comp (x, Eq, y) when Term.compare x y = 0 -> Atom.True
-    | Atom.Comp (x, (Eq | Neq as op), y) when Term.compare x y < 0 -> Atom.Comp (y, op, x)
-    | Atom.Comp _ -> a
-    *)
-
-
 
 (***********************************)
 (* Cheap check of inconsitent cube *)
@@ -499,23 +442,23 @@ let rec break a =
   match a with
     | Atom.True | Atom.False | Atom.Comp _ -> [SAtom.singleton a]
     | Atom.Ite (sa, a1, a2) ->
-  	begin
-  	  match SAtom.elements sa with
-  	    | [] -> assert false
-  	    | c ->
-  	        let nc = List.map Atom.neg c in
-  		let l = break a2 in
-  		let a1_and_c = SAtom.add a1 sa in
-  		let a1_and_a2 = List.map (SAtom.add a1) l in
-  		let a2_and_nc_r =
-		  List.fold_left
-		    (fun acc c' ->
-  		       List.fold_left
-			 (fun acc li -> SAtom.add c' li :: acc) acc l)
-  		    a1_and_a2 nc
-		in
-  		a1_and_c :: a2_and_nc_r
-  	end
+      begin
+        match SAtom.elements sa with
+          | [] -> assert false
+          | c ->
+              let nc = List.map Atom.neg c in
+        let l = break a2 in
+        let a1_and_c = SAtom.add a1 sa in
+        let a1_and_a2 = List.map (SAtom.add a1) l in
+        let a2_and_nc_r =
+        List.fold_left
+          (fun acc c' ->
+               List.fold_left
+         (fun acc li -> SAtom.add c' li :: acc) acc l)
+            a1_and_a2 nc
+      in
+        a1_and_c :: a2_and_nc_r
+      end
 
 let add_without_redondancy sa l =
   if List.exists (fun sa' -> SAtom.subset sa' sa) l then l

@@ -136,7 +136,7 @@ let rec create_switch_list ts vea_assign_map acc =
   match VMap.choose_opt vea_assign_map with 
   | Some (vea, ass) -> 
       let without = VMap.remove vea vea_assign_map in
-      let c = VMap.find vea ts in 
+      let c       = VMap.find vea ts in 
       let acc'    = 
         match ass with 
         | Single t ->
@@ -161,10 +161,9 @@ let find_assign memo tr tt =
   | Vea  (vea)    -> find_assign_vea memo tr vea
   | Poly (cs, ts) ->
         let vea_assign_map = VMap.mapi (fun vea _ -> find_assign_vea memo tr vea) ts in 
-        let true_satom = SAtom.add Atom.True SAtom.empty in
+        let true_satom = SAtom.singleton Atom.True in
         let empty_poly = Poly(cs, VMap.empty) in
-        let res = create_switch_list ts vea_assign_map [(true_satom, empty_poly)]
-        in 
+        let res = create_switch_list ts vea_assign_map [(true_satom, empty_poly)] in
         match res with 
         | (_, t) :: [] -> Single t 
         | _            -> Branch res
@@ -265,18 +264,18 @@ let make_cubes (ls, post) rargs s tr cnp =
 		(ls, post)
 	      end
 	    else
-              let new_cube = Cube.create nargs np in
-              let new_s = Node.create ~from:(Some (tr, tr_args, s)) new_cube in
+        let new_cube = Cube.create nargs np in
+        let new_s = Node.create ~from:(Some (tr, tr_args, s)) new_cube in
 	      match post_strategy with
 	      | 0 -> add_list new_s ls, post
 	      | 1 -> 
-		 if List.length nargs > nb_uargs then
-		   ls, add_list new_s post
-		 else add_list new_s ls, post
+           if List.length nargs > nb_uargs then
+             ls, add_list new_s post
+           else add_list new_s ls, post
 	      | 2 -> 
-		 if not (SAtom.is_empty ureq) || postpone args p np 
-		 then ls, add_list new_s post
-		 else add_list new_s ls, post
+           if not (SAtom.is_empty ureq) || postpone args p np 
+           then ls, add_list new_s post
+           else add_list new_s ls, post
 	      | _ -> assert false
 	  with Exit -> ls, post
 	 ) (ls, post) lureq ) acc lnp

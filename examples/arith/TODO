@@ -7,8 +7,12 @@ Temporary TODO exclusively for arithmetic.
 	4 * A + 2 * B = 0
 	<=> 2 * A + B = 0
 
-- S'occuper des swts
-
 - Comprendre ce qu'est une "constante" ? 
 -> A corriger dans murphi et ... is_const
 
+- Trouver plus d'exemple de test, trouver des tests plus amusant (Sera utile
+	pour le rapport)
+
+- Faire rapport de stage 
+
+- S'occuper de obvious / impossible

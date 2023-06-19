@@ -500,14 +500,19 @@ end = struct
 
   let add a s = 
     match a with
-    | Atom.True -> s
+    | Atom.True -> if cardinal s = 0 then singleton Atom.True else s
     | Atom.False -> singleton Atom.False
     | _ -> if mem Atom.False s then s else add a s
-
 
   let equal sa1 sa2 = compare sa1 sa2 = 0
 
   let hash (sa:t) = Hashtbl.hash_param 100 500 sa
+
+  let print fmt sa =
+    fprintf fmt "@[<hov>%a@]" (Atom.print_atoms false "&&") (elements sa)
+
+  let print_inline fmt sa =
+    fprintf fmt "@[%a@]" (Atom.print_atoms true "&&") (elements sa)
 
   let subst sigma sa =
     if Variable.is_subst_identity sigma then sa
@@ -524,12 +529,6 @@ end = struct
     fold (fun a -> Variable.Set.union (Atom.variables a)) sa Variable.Set.empty
 
   let variables_proc sa = Variable.Set.filter Variable.is_proc (variables sa)
-
-  let print fmt sa =
-    fprintf fmt "@[<hov>%a@]" (Atom.print_atoms false "&&") (elements sa)
-
-  let print_inline fmt sa =
-    fprintf fmt "@[%a@]" (Atom.print_atoms true "&&") (elements sa)
 
 end
 

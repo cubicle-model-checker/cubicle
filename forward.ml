@@ -132,7 +132,6 @@ let find_const_value g init =
   | _ -> find_const_value g init
   *)
 
-
 let rec elim_prime_atom init = function
   | True  -> None 
   | False -> Some False
