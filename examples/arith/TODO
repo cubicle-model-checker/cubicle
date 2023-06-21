@@ -1,14 +1,12 @@
 Temporary TODO exclusively for arithmetic.
 
-- Décomposition des Constante en facteurs premiers afin de permettre une
+- Possible:
+	Décomposition des Constante en facteurs premiers afin de permettre une
 	simplification de ceux ci
 	Ex :
 
 	4 * A + 2 * B = 0
 	<=> 2 * A + B = 0
-
-- Comprendre ce qu'est une "constante" ? 
--> A corriger dans murphi et ... is_const
 
 - Trouver plus d'exemple de test, trouver des tests plus amusant (Sera utile
 	pour le rapport)
@@ -16,3 +14,12 @@ Temporary TODO exclusively for arithmetic.
 - Faire rapport de stage 
 
 - S'occuper de obvious / impossible
+
+# Benchmark:
+
+- S'occuper de gérer les cas d'utilisation des const : Les deux Cubicle ne
+	parsent pas les mêmes choses...
+- Sauvegarder dans un tableur également les réponses : Safe, Unsafe, Spurious
+	trace...
+- Changer le format des données pour avoir uniquement des secondes pour créer le
+	tableur facilement...

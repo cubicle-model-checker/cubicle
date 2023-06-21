@@ -2,7 +2,6 @@ var A : int
 var B : int
 
 init () { A < 0 }
-
 unsafe () { A > 0 }
 
 transition add ()

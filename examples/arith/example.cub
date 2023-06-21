@@ -1,0 +1,19 @@
+array Proprio[proc] : proc
+array Capital[proc] : int
+var CapitalEtat : int
+
+(*
+	Initialement, une entreprise n'appartient a personne, et possède un capital
+	nul.
+*)
+
+init (i) { Proprio[i] = i && Capital[i] = 0 }
+
+(*
+	On considère un modèle comme non sûr si il est possible pour un propriétaire
+	de posséder toutes les entreprise (i.e d'avoir un monopole total)
+*)
+unsafe (i) { forall j. Proprio[j] = i }
+
+transition produire (i)
+{ Capital[i] := Capital[i] + 1; }

@@ -1,0 +1,24 @@
+array Proprio[proc] : proc
+array Capital[proc] : int
+
+(*
+	We start by saying that nobody own nobody and that everyone
+	have 0 capital.
+*)
+init (i) { Proprio[i] = i && Capital[i] = 0 }
+
+(* A model that allow monopoly is considered unsafe *)
+unsafe (i) { forall j. Proprio[j] = i }
+
+(* It is possible for someone to produce something, to increase their capital. *)
+transition produire (i)
+{ Capital[i] := Capital[i] + 1; }
+
+transition buy (i j)
+requires { Capital[i] > Capital[j] && Proprio[j] = Proprio[i] }
+{
+	Capital[x] := case 
+								| x = i : Capital[i] - Capital[j]
+								| x = j : 0
+								| _		  : Capital[x]
+}

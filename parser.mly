@@ -289,7 +289,7 @@ assignment:
 ;
 
 nondet:
-  | mident AFFECT DOT { Nondet $1 }
+  | mident AFFECT DOT   { Nondet $1 }
   | mident AFFECT QMARK { Nondet $1 }
 ;
 

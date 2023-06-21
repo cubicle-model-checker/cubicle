@@ -1,0 +1,52 @@
+array Prod[proc] 	: proc
+array Power[proc] : int
+array Task[proc] : int
+array Working[proc] : bool
+
+var Rand : int
+var Pr : proc
+
+init (i) { Task[i] = 0 && Working[i] = False }
+
+unsafe (i j) 
+{
+			Working[i] = True
+	&&  Power[j] > Power[i]
+	&&  Working[j] = False
+}
+
+transition rand ()
+{
+	Rand := .;
+}
+
+transition start(i)
+requires { Task[i] <= 0 }
+{
+	Task[i] := Rand;
+}
+
+transition work(i j)
+requires { Prod[i] = j && Task[j] > 0 }
+{
+	Task[j] := Task[j] - Power[i];
+}
+
+transition end_work(i j)
+requires { Working[i] = True && Task[j] <= 0 && Prod[i] = j}
+{
+	Working[i] := False;
+}
+
+(*
+	If process j have some work to be done,
+	allocate the strongest worker to do the job
+*)
+transition allocate(i j)
+requires { 
+	forall k. (Working[j] = True || Power[k] < Power[i])
+	&& Task[j] > 0 && Working[i] = False }
+{
+	Prod[i] := j;
+	Working[i] := True;
+}
