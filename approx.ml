@@ -205,7 +205,8 @@ let cube_known_bad c =
 (* Potential approximations for a node s *)
 (*****************************************)
 
-let approx_arith a = match a with
+let approx_arith a = 
+  match a with
   | Atom.Comp (t, Eq, Poly(cs, ts)) when VMap.cardinal ts = 0 ->
       begin match Const.sign cs with 
       | 0 -> a 

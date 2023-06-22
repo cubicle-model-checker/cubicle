@@ -15,11 +15,25 @@ Temporary TODO exclusively for arithmetic.
 
 - S'occuper de obvious / impossible
 
-# Benchmark:
+# Rien a voir avec arith 
 
-- S'occuper de gérer les cas d'utilisation des const : Les deux Cubicle ne
-	parsent pas les mêmes choses...
-- Sauvegarder dans un tableur également les réponses : Safe, Unsafe, Spurious
-	trace...
-- Changer le format des données pour avoir uniquement des secondes pour créer le
-	tableur facilement...
+- Serait intéréssant d'autoriser
+
+array P[proc] : proc
+array T[proc] : int
+
+T[P[i]] -> Pas autorisé actuellement
+
+- Serait intéréssant de pouvoir écrire
+
+var A : bool
+
+requires (A)
+
+plutôt que 
+
+requires (A = True)
+
+- Permettre mise a jour non déterministe de array
+
+T[i] = .; -> Pas autorisé actuellement

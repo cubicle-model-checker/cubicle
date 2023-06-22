@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # Note : Require "GNU time"
 
 BASEDIR=$(dirname "$0")

@@ -28,15 +28,15 @@ module Debug = struct
   let fixpoint = 
     if not debug then fun _ -> () else 
       fun ls ->
-	eprintf "\nAfter simplification, subsumption and fixpoint check : @.";
-	match ls with
-	  | [] -> eprintf "No new branches@."
-	  | _ -> 
+        eprintf "\nAfter simplification, subsumption and fixpoint check : @.";
+        match ls with
+          | [] -> eprintf "No new branches@."
+          | _ -> 
 	      List.iter (eprintf "@.New branch : %a@." Node.print) ls
 
   let unsafe = 
-    if not debug then fun _ -> () else 
-      fun s -> eprintf "    %a@." Node.print s
+    if not debug then fun _ -> () 
+                 else fun s -> eprintf "    %a@." Node.print s
 
   let invariant = 
       fun s -> eprintf "Invariant ?@. %a@." Cube.print s
@@ -44,15 +44,15 @@ module Debug = struct
   let pre = 
     if not debug then fun _ _ -> () else 
       fun tr p ->
-	eprintf "\nResult of the pre for transition %s (%a):@.%a@."
-	  (H.view tr.tr_name)
-	  Variable.print_vars tr.tr_args
-	  SAtom.print p
+      eprintf "\nResult of the pre for transition %s (%a):@.%a@."
+        (H.view tr.tr_name)
+        Variable.print_vars tr.tr_args
+        SAtom.print p
 
   let pre_cubes = 
     if not debug then fun _ _ -> () else 
       fun p args ->
-	eprintf "Cubes (%a) :%a@." Variable.print_vars args SAtom.print p
+      eprintf "Cubes (%a) :%a@." Variable.print_vars args SAtom.print p
 
 end
 
