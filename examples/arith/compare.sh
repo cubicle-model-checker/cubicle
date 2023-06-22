@@ -25,7 +25,7 @@ tfunction ()
 		echo -n ";ParseError" >> $NODECSV
 		echo -n ";ParseError" >> $TIMECSV	
 	else
-		COUT=$(timeout 2 /bin/time -f "time:%e" $1 $2 2>&1)
+		COUT=$(timeout 5m /bin/time -f "time:%e" $1 $2 2>&1)
 		# Time taken 
 		CTIME=$(echo "$COUT" | grep "time")
 		if [ -z "$CTIME" ];
@@ -41,11 +41,12 @@ tfunction ()
 			if [ -z "$CSOL" ];
 			then
 				CSOL=$(echo "$COUT" | grep "UNSAFE")
-				#if [ -z "$CSOL" ];
-				#then
-				#	CSOL=$(echo "$COUT" | grep "trace")
-				#fi
-	
+				if [ -z "$CSOL" ];
+				then
+					CSOL=$(echo "$COUT" | grep "trace")
+					echo "Couldn't figure out if safe or unsafe. COUT is $COUT"
+					echo "Is it $CSOL ?"
+				fi
 			else
 				CSOL="${CSOL:14}"
 			fi
