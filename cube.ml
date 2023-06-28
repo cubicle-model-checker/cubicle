@@ -256,6 +256,7 @@ let rec simplification np a =
           | t            -> t
         in
         Atom.Comp (t1', op, Poly(Const.int_zero, VMap.empty))
+    (* TODO : Comparaison entre Poly et Vea *)
     | _ -> a
 
 (***********************************)

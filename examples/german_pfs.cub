@@ -43,8 +43,6 @@ init (z) {
 (*unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] = Exclusive }*)
 unsafe (z1 z2) { Cache[z1] = Exclusive && Cache[z2] <> Invalid }
 
-
-
 transition t1(x)
 requires { Curcmd = Reqs && Exgntd = False && Chan2[x] = Empty2 &&
 	   Curptr[x] = True && Flag = False }
@@ -148,7 +146,6 @@ requires { Chan2[x] = Inv && Chan3[x] = Empty3 && Flag = False }
   Chan2[j] := case | j = x : Empty2 | _ : Chan2[j] ;
   Chan3[j] := case | j = x : Invack | _ : Chan3[j] 
 }
-
 
 transition t13(x)
 requires { Chan2[x] = Gnts && Flag = False }

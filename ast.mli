@@ -94,9 +94,8 @@ type system = {
 type kind = 
   | Approx (** approximation *)
   | Orig   (** original unsafe formula *)
-  | Node   (** reguar node *)
+  | Node   (** regular node *)
   | Inv    (** or user supplied invariant*)
-
 
 type node_cube =
     { 

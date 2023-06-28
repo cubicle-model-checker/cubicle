@@ -56,7 +56,6 @@ module Debug = struct
 
 end
 
-
 (***********************************************************************)
 (* Pre-image of an atom w.r.t a transition, simply represented here by *)
 (* a function tau						                                           *)
@@ -95,8 +94,7 @@ let rec find_update a li = function
         List.map 
         (fun (ci, ti) ->
           let sigma  = List.combine lj li in
-          SAtom.subst sigma ci,
-          Term.subst  sigma ti
+          SAtom.subst sigma ci, Term.subst sigma ti
         ) 
         ls 
       in
@@ -108,29 +106,24 @@ exception Remove_lit_var of Hstring.t
 let find_assign_vea memo tr tt = 
   match tt with 
   | Vea.Elem (x, sx) -> 
-    let gu =
-      if H.list_mem x tr.tr_nondets then 
-             (*raise (Remove_lit_var x)*)
-          try List.assoc (Hstring.view x) !memo with Not_found ->
+      let gu =
+        if H.list_mem x tr.tr_nondets then 
+          try List.assoc (Hstring.view x) !memo 
+          with Not_found ->
           let nv = UTerm (Vea(Elem (fresh_nondet (Smt.Symbol.type_of x), sx))) in
           memo := (Hstring.view x,nv) :: !memo;
           nv
-       else 
-         try fst (H.list_assoc_triplet x tr.tr_assigns) with Not_found -> 
-          (
-            UTerm (Vea(Elem (x, sx)))
-          )
-    in
-   
-    begin match gu with
-     | UTerm t    -> Single t
-     | UCase swts -> Branch swts
-    end
-  | Vea.Access (a, li) -> 
-      begin
-        try find_update a li tr.tr_upds
-        with Not_found -> Single (Vea tt)
+        else 
+          try fst (H.list_assoc_triplet x tr.tr_assigns) 
+          with Not_found -> UTerm (Vea tt)
+      in
+      begin match gu with
+       | UTerm t    -> Single t
+       | UCase swts -> Branch swts
       end
+  | Vea.Access (a, li) -> 
+      try find_update a li tr.tr_upds
+      with Not_found -> Single (Vea tt)
 
 let rec create_switch_list ts vea_assign_map acc =
   match VMap.choose_opt vea_assign_map with 

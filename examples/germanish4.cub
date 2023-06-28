@@ -27,7 +27,7 @@ requires { Chan1[n] = Empty && Cache[n] = Invalid }
 { 
   Chan1[j] := case 
   	       | j = n : Reqs 
-	       | _ : Chan1[j] 
+					 | _ : Chan1[j] 
 }
 
 transition recv_shared (n)

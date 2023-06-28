@@ -74,7 +74,7 @@ let _ =
          printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
          Trace.Selected.certificate system visited;
          close_dot ();
-	 exit 0
+         exit 0
 
       | Bwd.Unsafe (faulty, candidates) ->
          if (not quiet || profiling) then
@@ -82,7 +82,7 @@ let _ =
          begin try
              if not quiet then Stats.error_trace system faulty;
              printf "\n\n@{<b>@{<bg_red>UNSAFE@} !@}\n@.";
-           with Exit -> ()
+         with Exit -> ()
          end;
          close_dot ();
          exit 1

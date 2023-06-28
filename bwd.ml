@@ -111,8 +111,6 @@ module Make ( Q : PriorityNodeQueue ) : Strategy = struct
 
 end
 
-
-
 module MakeParall ( Q : PriorityNodeQueue ) : Strategy = struct
 
   module Fixpoint = Fixpoint.FixpointTrie
@@ -266,7 +264,7 @@ module MakeParall ( Q : PriorityNodeQueue ) : Strategy = struct
          if delete then
            visited :=
              Cubetrie.delete_subsumed ~cpt:Stats.cpt_delete n !visited;
-	 postponed := List.rev_append post !postponed;
+         postponed := List.rev_append post !postponed;
          visited := Cubetrie.add_node n !visited;
          Q.push_list ls q;
          Stats.remaining (nb_remaining q postponed);
@@ -276,8 +274,6 @@ module MakeParall ( Q : PriorityNodeQueue ) : Strategy = struct
     if do_sync_barrier then []
     else gentasks_hard system (empty_queue q) !visited
 
-
-   
   let search ?(invariants=[]) ?(candidates=[]) system =
     
     let visited = ref Cubetrie.empty in
@@ -314,7 +310,6 @@ module MakeParall ( Q : PriorityNodeQueue ) : Strategy = struct
     with Safety.Unsafe faulty ->
       if dot then Dot.error_trace faulty;
       Unsafe (faulty, !candidates)
-
 end
 
 

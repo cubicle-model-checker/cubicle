@@ -8,5 +8,3 @@ unsafe () { A = 1 }
 transition up ()
 { A := A + 2 }
 
-transition down () 
-{ A := A - 2 }
