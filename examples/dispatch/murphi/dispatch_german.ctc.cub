@@ -8,7 +8,8 @@ type pc = Empty | L2_1 | L2_2 | L2_3 | L3_1 | L3_2 | L3_3 | L4_1 | L4_2 | L4_3 |
 (*---- German CTC ----*)
 type state = Invalid | Shared | Exclusive
 type msg = Empty2 | Reqs | Reqe | Inv | Invack | Gnts | Gnte
-type data
+type data1
+type data = ABSTRACT
 
 (*------------------*)
 

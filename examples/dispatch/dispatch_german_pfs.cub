@@ -45,6 +45,54 @@ array Invset[proc] : bool
 
 (*------------------*)
 
+(*
+(1)  Exgntd = @MFalse && Cache[#1] = Exclusive
+(2)  Cache[#1] = Exclusive && Shrset[#1] = @MFalse
+(3)  Cache[#1] <> Invalid && Shrset[#1] = @MFalse
+(4)  Exgntd = @MFalse && Chan2[#1] = Gnte
+(5)  Chan2[#1] = Gnts && Shrset[#1] = @MFalse
+(6)  Cache[#1] = Exclusive && Chan3[#1] = Invack
+(7)  Chan2[#1] = Gnte && Shrset[#1] = @MFalse
+(8)  Cache[#1] <> Invalid && Chan3[#1] = Invack
+(9)  Chan2[#1] = Gnte && Chan3[#1] = Invack
+(10)  Chan2[#1] = Gnts && Chan3[#1] = Invack
+(11)  Chan3[#1] = Invack && Shrset[#1] = @MFalse
+(12)  Chan2[#1] = Inv && Shrset[#1] = @MFalse
+(13)  Curcmd = Empty1 && Chan3[#1] = Invack
+(14)  Chan2[#1] = Inv && Chan3[#1] = Invack
+(15)  Shrset[#1] = @MFalse && Invset[#1] = @MTrue
+(16)  Curcmd = Empty1 && Chan2[#1] = Inv
+(17)  Chan3[#1] = Invack && Invset[#1] = @MTrue
+(18)  Flag = @MTrue && Chan3[#1] = Invack
+(19)  Chan2[#1] = Inv && Invset[#1] = @MTrue
+(20)  Flag = @MTrue && Chan2[#1] = Inv
+(21)  Exgntd = @MFalse && Curcmd = Reqs && Chan3[#1] = Invack
+(22)  Exgntd = @MFalse && Curcmd = Reqs && Chan2[#1] = Inv
+(23)  Cache[#1] = Exclusive && Chan2[#2] = Gnts
+(24)  Cache[#1] = Exclusive && Chan2[#2] = Gnte
+(25)  Cache[#2] <> Invalid && Chan2[#1] = Gnte
+(26)  Chan2[#1] = Gnte && Chan2[#2] = Gnts
+(27)  Chan2[#1] = Gnte && Chan2[#2] = Gnte
+(28)  Chan2[#1] = Gnte && Chan3[#2] = Invack
+(29)  Cache[#1] = Exclusive && Chan3[#2] = Invack
+(30)  Chan2[#1] = Gnte && Chan2[#2] = Inv
+(31)  Cache[#1] = Exclusive && Chan2[#2] = Inv
+(32)  Chan2[#1] = Gnte && Invset[#2] = @MTrue
+(33)  Cache[#1] = Exclusive && Invset[#2] = @MTrue
+(34)  Chan2[#1] = Gnte && Shrset[#2] = @MTrue
+(35)  Cache[#1] = Exclusive && Shrset[#2] = @MTrue
+(36)  Curcmd = Reqs && Chan2[#1] = Inv && Chan3[#2] = Invack
+(37)  Curcmd = Reqs && Chan3[#1] = Invack && Chan3[#2] = Invack
+(38)  Curcmd = Reqs && Chan3[#2] = Invack && Invset[#1] = @MTrue
+(39)  Curcmd = Reqs && Chan2[#1] = Inv && Chan2[#2] = Inv
+(40)  Curcmd = Reqs && Chan2[#2] = Inv && Invset[#1] = @MTrue
+(41)  Exgntd = @MTrue && Invset[#1] = @MTrue && Invset[#2] = @MTrue
+(42)  Exgntd = @MTrue && Shrset[#2] = @MTrue && Invset[#1] = @MTrue
+(43)  Exgntd = @MTrue && Shrset[#1] = @MTrue && Shrset[#2] = @MTrue
+
+
+*)
+
 
 init (i j) { C = None && Cmd[i] = None && Data[i] = Z && PC1[i] = Empty && PC2[i] = Empty && Sync = False &&
 

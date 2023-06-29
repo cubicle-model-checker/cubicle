@@ -49,11 +49,11 @@ requires { A[x] = L6 && forall_other j. (x <= j || S[j] = False) }
 { A[x] := L7 }*)
 
 transition t6 (x)
-requires { Sync = True && A[x] = L6 && forall_other j. (x <= j) }
+requires {  A[x] = L6 && forall_other j. (x <= j) }
 { A[x] := L7 }
 
 transition t6_or (x)
-requires { Sync = True && A[x] = L6 && forall_other j. (S[j] = False) }
+requires {  A[x] = L6 && forall_other j. (S[j] = False) }
 { A[x] := L7 }
 
 transition t7 (x)

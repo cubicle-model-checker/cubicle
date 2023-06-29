@@ -56,28 +56,28 @@ unsafe (x y) { PC[x] = CS && PC[y] = CS }
 
 
 transition choix1(i)
-requires { Cmd[i] = None }
+requires {Sync = False && Cmd[i] = None }
 {
  Cmd[i] := A1
 }
 
 
 transition choix2(i)
-requires { Cmd[i] = None }
+requires {Sync = False && Cmd[i] = None }
 {
  Cmd[i] := A2
 }
 
 
 transition choix3(i)
-requires { Cmd[i] = None }
+requires {Sync = False && Cmd[i] = None }
 {
  Cmd[i] := A3
 }
 
 
 transition choix4(i)
-requires { Cmd[i] = None }
+requires {Sync = False && Cmd[i] = None }
 {
  Cmd[i] := A4
 }
@@ -117,7 +117,7 @@ requires { PC1[i] <> Empty  ||  PC2[i] <> Empty }
 }
 *)
 transition cmd1(i)
-requires { Cmd[i] = A1 && C = None }
+requires {Sync = False && Cmd[i] = A1 && C = None }
 {
  C := A1;
  Cmd[i] := None;
@@ -126,7 +126,7 @@ requires { Cmd[i] = A1 && C = None }
 
 
 transition cmd2(i)
-requires { Cmd[i] = A2 && C = None}
+requires {Sync = False && Cmd[i] = A2 && C = None}
 {
  C := A2;
  Cmd[i] := None;
@@ -135,7 +135,7 @@ requires { Cmd[i] = A2 && C = None}
 
 
 transition cmd3(i)
-requires { Cmd[i] = A3 && C = None}
+requires {Sync = False && Cmd[i] = A3 && C = None}
 {
  C := A3;
  Cmd[i] := None;
@@ -143,7 +143,7 @@ requires { Cmd[i] = A3 && C = None}
 }
 
 transition cmd4(i)
-requires { Cmd[i] = A4 && C = None}
+requires {Sync = False && Cmd[i] = A4 && C = None}
 {
  C := A4;
  Cmd[i] := None;
@@ -151,78 +151,78 @@ requires { Cmd[i] = A4 && C = None}
 }
 
 transition process_A1(i)
-requires { C = A1 && P = i && PC1[i] = Empty }
+requires {Sync = False && C = A1 && P = i && PC1[i] = Empty }
 { PC1[i] := L2_1 ; C := None; P := ?;  }
 
 
 transition process_A2(i)
-requires { C = A2 && P = i && PC1[i] = Empty }
+requires {Sync = False && C = A2 && P = i && PC1[i] = Empty }
 { PC1[i] := L3_1 ; C := None; P := ?; }
 
 transition process_A3(i)
-requires { C = A3 && P = i && PC1[i] = Empty }
+requires {Sync = False && C = A3 && P = i && PC1[i] = Empty }
 { PC1[i] := L4_1 ; C := None; P := ?; }
 
 transition process_A4(i)
-requires { C = A4 && P = i && PC1[i] = Empty }
+requires {Sync = False && C = A4 && P = i && PC1[i] = Empty }
 { PC1[i] := L5_1 ; C := None; P := ?; }
 
 transition seq2_1(i)
-requires { PC1[i] = L2_1 }
+requires {Sync = False && PC1[i] = L2_1 }
 { PC1[i] := L2_1_1; }
 
 transition seq2_1_1(i)
-requires { PC1[i] = L2_1_1 }
+requires {Sync = False && PC1[i] = L2_1_1 }
 { PC1[i] := L2_2; }
 
 transition seq2_2(i)
-requires { PC1[i] = L2_2 }
+requires {Sync = False && PC1[i] = L2_2 }
 { PC1[i] := Empty;
   PC2[i] := L2_3; }
 
 transition seq2_3(i)
-requires { PC2[i] = L2_3 }
+requires {Sync = False && PC2[i] = L2_3 }
 { PC2[i] := Empty; }
 
 transition seq3_1(i)
-requires { PC1[i] = L3_1 }
+requires {Sync = False && PC1[i] = L3_1 }
 { PC1[i] := L3_2; }
 
 transition seq3_2(i)
-requires { PC1[i] = L3_2 }
+requires {Sync = False && PC1[i] = L3_2 }
 { PC1[i] := Empty;
   PC2[i] := L3_3; }
 
 transition seq3_3(i)
-requires { PC2[i] = L3_3 }
+requires {Sync = False && PC2[i] = L3_3 }
 { PC2[i] := Empty; }
 
 
 transition seq4_1(i)
-requires { PC1[i] = L4_1 }
+requires {Sync = False && PC1[i] = L4_1 }
 { PC1[i] := L4_2; }
 
 transition seq4_2(i)
-requires { PC1[i] = L4_2 }
+requires {Sync = False && PC1[i] = L4_2 }
 { PC1[i] := Empty;
   PC2[i] := L4_3; }
 
 transition seq4_3(i)
-requires { PC2[i] = L4_3 }
+requires {Sync = False && PC2[i] = L4_3 }
 { PC2[i] := Empty; }
 
 
 transition seq5_1(i)
-requires { PC1[i] = L5_1 }
+requires {Sync = False && PC1[i] = L5_1 }
 { PC1[i] := L5_2; }
 
 transition seq5_2(i)
-requires { PC1[i] = L5_2 }
+requires {Sync = False && PC1[i] = L5_2 }
 { PC1[i] := Empty;
   PC2[i] := L5_3; }
 
 transition seq5_3(i)
-requires { PC2[i] = L5_3 }
+requires { Sync = False && PC2[i] = L5_3 }
 { PC2[i] := Empty; }
 
 transition sync(i j m)
@@ -235,7 +235,7 @@ requires {Sync = False && PC2[i] = L5_3 && PC1[j] = L5_1 && PC2[m] = L4_3 && for
 
 
 transition next_ticket ()
-requires { Sync = True }
+requires { Sync = True && forall_other j. Num[j] < Max }
 { 
   Ticket[j] := case | _ : Max;
   Max := Max + 1;
