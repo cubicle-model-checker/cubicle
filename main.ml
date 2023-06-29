@@ -27,19 +27,25 @@ let () =
   Sys.set_signal Sys.sigint 
     (Sys.Signal_handle 
        (fun _ ->
-        eprintf "@{<n>@}@."; (* Remove colors *)
-         Stats.print_report ~safe:false [] [];
+         eprintf "@{<n>@}@."; (* Remove colors *)
+	 if not Options.bench then
+	   begin
+             Stats.print_report ~safe:false [] [];
     
-        eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGINT@.";
+             eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGINT@.";
+	   end ;
         exit 1)) 
 
 let () = 
   Sys.set_signal Sys.sigterm
     (Sys.Signal_handle 
        (fun _ ->
-        eprintf "@{<n>@}@."; (* Remove colors *)
-        Stats.print_report ~safe:false [] [];
-        eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGTERM@.";
+         eprintf "@{<n>@}@."; (* Remove colors *)
+	 if not Options.bench then
+	   begin
+           Stats.print_report ~safe:false [] [];
+             eprintf "\n\n@{<b>@{<fg_red>ABORT !@}@} Received SIGTERM@.";
+	   end;
         exit 1)) 
 
 (** intercepts SIGUSR1 to display progress *)
@@ -75,7 +81,8 @@ let _ =
       | Bwd.Safe (visited, candidates) ->
          if (not quiet || profiling) then
            Stats.print_report ~safe:true visited candidates;
-         printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
+	if not Options.bench then 
+          printf "\n\nThe system is @{<b>@{<fg_green>SAFE@}@}\n@.";
          Trace.Selected.certificate system visited;
          close_dot ();
 	 exit 0
