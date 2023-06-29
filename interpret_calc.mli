@@ -2,7 +2,7 @@ val eval_arith : Types.term ->
 Interpret_types.interpret_value Interpret_types.Env.t ->
 Hstring.t -> Interpret_types.conc_value
 
-val check_unsafe_prover : Interpret_types.global -> ('d * Hstring.t list * Types.SAtom.t) list -> unit
+(*val check_unsafe_prover : Interpret_types.global -> ('d * Hstring.t list * Types.SAtom.t) list -> unit*)
 
 val check_unsafe : Interpret_types.global-> Types.SAtom.t list -> unit
 
@@ -30,7 +30,14 @@ val apply_transition : Variable.t list ->
 Interpret_types.Trans.key ->
 Ast.transition_info Interpret_types.Trans.t ->
 Interpret_types.global ->
+  Interpret_types.global
+
+val apply_transition_forward : Variable.t list ->
+Interpret_types.Trans.key ->
+Ast.transition_info Interpret_types.Trans.t ->
+Interpret_types.global ->
 Interpret_types.global
+
 
 
 val all_possible_transitions : Interpret_types.global ->

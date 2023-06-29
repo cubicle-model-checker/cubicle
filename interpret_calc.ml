@@ -164,7 +164,24 @@ let check_unsafe_prover (env,_,_,_) unsafe =
     ) all_procs      
   ) unsafe
 
+exception UnsafeSeen
 
+let comp_uns me term list =
+  let rec aux l  =
+    match l with
+      | [] -> true 
+      | hd::tl ->
+	if Term.compare term hd = 0 then aux tl 
+	else false
+  in aux list
+
+let check_unsafe1 glob unsafes =
+  let env, _,_,_ = glob in  assert false
+  (*unsafe = (loc * variable * satom) list *)
+  
+  
+
+    
 let check_unsafe glob unsafes =
   let env, _,_,_ = glob in
   (*unsafe = (loc * variable * satom) list *)
@@ -187,7 +204,7 @@ let check_unsafe glob unsafes =
   in
   List.iter (fun satom  ->
     if SAtom.subset satom v then raise (TopError Unsafe)
-  ) unsafes    
+  ) unsafes 
 
 
 
@@ -279,7 +296,9 @@ let hash_env env=
     Env.fold (fun key {value = el; typ = typ } acc ->
       let h = 
 	match el with
-	  | VInt i -> i 
+	  | VInt i -> 
+	    if Options.num_range_up < i then Options.set_num_range_up i;
+	    i 
 	  | VReal f -> let f = string_of_float f in Hashtbl.hash f
 	  | VBool b -> Hashtbl.hash b
 	  | VConstr hs | VProc hs | VGlob hs -> 
@@ -2062,7 +2081,7 @@ let apply_transition_forward args trname trans (env,lock_queue,cond_sets, semaph
     raise (TopError (WrongArgs (trname,arg_length)));
   let sigma = Variable.build_subst tr.tr_args args in 
   check_actor_suspension sigma env tr.tr_process;
-  let new_env = check_reqs tr.tr_reqs env sigma trname in
+  (*let new_env = check_reqs tr.tr_reqs env sigma trname in
   let procs = Variable.give_procs (Options.get_interpret_procs ()) in
   let trargs = List.map (fun x -> Variable.subst sigma x) tr.tr_args in
   let ureqs = uguard sigma procs trargs tr.tr_ureq in
@@ -2071,10 +2090,10 @@ let apply_transition_forward args trname trans (env,lock_queue,cond_sets, semaph
     so instead of iter, it has to be a function because one of the elements has to satisfy 
   *)
   (*let () = List.iter (fun u -> check_reqs u env sigma trname) ureqs in*)
-  let new_env = check_ureqs ureqs new_env sigma trname in 
-  let nv = update_vals new_env tr.tr_assigns sigma in
-  let nv = update_arrs sigma new_env nv tr.tr_upds in
-  let nv, lockq,cond_sets, semaphores = update_locks_unlocks sigma new_env nv tr lock_queue cond_sets semaphores in 
+  let new_env = check_ureqs ureqs new_env sigma trname in *)
+  let nv = update_vals env tr.tr_assigns sigma in
+  let nv = update_arrs sigma env nv tr.tr_upds in
+  let nv, lockq,cond_sets, semaphores = update_locks_unlocks sigma env nv tr lock_queue cond_sets semaphores in 
   upd_non_dets nv tr.tr_nondets,lockq,cond_sets, semaphores
     
     
@@ -2258,7 +2277,7 @@ let all_possible_transitions (env,_,_,_) trans all_procs flag=
 	      raise (TopError StopExecution)
 	    else raise Exit
 	  | s -> let e = Printexc.to_string s in Format.printf "%s @." e;
-		 assert false
+		 acc
       end
     else
       begin

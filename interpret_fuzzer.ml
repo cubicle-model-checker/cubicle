@@ -472,6 +472,9 @@ let force_procs_forward code glob_env trans all_procs p_proc all_unsafes =
     with
       | Dead h ->
 	Format.printf "Deadlock reached.";
+	TimerFuzz.pause ();
+	Format.printf "%a@." print_time (TimerFuzz.get ());
+	TimerFuzz.start ();
 	steps := depth;
 	dead_states := h::!dead_states
       | Stdlib.Sys.Break | Exit ->  steps := depth; raise Exit
@@ -610,6 +613,9 @@ let markov_entropy_detailed glob tsys all_procs trans steps matr =
     with
       | TopError Deadlock ->
 	Format.eprintf "Deadlock reached [M]@.";
+	TimerFuzz.pause ();
+	Format.printf "%a@." print_time (TimerFuzz.get ());
+	TimerFuzz.start ();
 	raise (TopError Deadlock)
       | TopError (FalseReq _) -> incr tried; incr taken; if !tried > 1000 then running := false 
   done;
@@ -892,7 +898,10 @@ let markov_entropy code glob all_procs trans all_unsafes=
 	end(*;
       incr taken*)
     with
-      | TopError Deadlock ->	
+      | TopError Deadlock ->
+	TimerFuzz.pause ();
+	Format.printf "%a@." print_time (TimerFuzz.get ());
+	TimerFuzz.start ();
 	taken := steps;
 	
       | Stdlib.Sys.Break | Stdlib.Exit ->
@@ -1109,9 +1118,16 @@ let run_smart code node all_procs trans all_unsafes =
     with
       | Dead h ->
 	Format.printf "Deadlock reached.@.";
+	TimerFuzz.pause ();
+	Format.printf "%a@." print_time (TimerFuzz.get ());
+	TimerFuzz.start ();
 	steps := max_depth;
 	dead_states := h::!dead_states
-      | TopError Deadlock -> Format.printf "Deadlock reached."; steps := max_depth
+      | TopError Deadlock -> Format.printf "Deadlock reached.";
+	TimerFuzz.pause ();
+	Format.printf "%a@." print_time (TimerFuzz.get ());
+	TimerFuzz.start ();
+	steps := max_depth
       | Stdlib.Sys.Break | Exit ->  steps := max_depth; raise Exit
   done ;
   Format.printf "Smart states seen: %d. New added to pool: %d Removed from pool %d@." !new_seen !add_pool !rem_pool
@@ -1474,6 +1490,9 @@ let run_forward code node all_procs trans all_unsafes =
     with
       | Dead h ->
 	Format.printf "Deadlock reached.@.";
+	TimerFuzz.pause ();
+	Format.printf "%a@." print_time (TimerFuzz.get ());
+	TimerFuzz.start ();
 	steps := max_depth;
 	dead_states := h::!dead_states
       | Stdlib.Sys.Break | Exit ->  steps := max_depth; raise Exit
@@ -2096,6 +2115,9 @@ let decide_how_many_procs tsys sys trans pick_min =
 
       | TopError Deadlock ->
 	Format.eprintf "Deadlock reached...@.";
+	TimerFuzz.pause ();
+	Format.printf "%a@." print_time (TimerFuzz.get ());
+	TimerFuzz.start ();
 	incr deadlock_count;
 	if !deadlock_count > 5 then raise (ParamFuzz (TooDead !deadlock_count));
 	calc_proc := !curr_proc; 
