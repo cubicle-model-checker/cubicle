@@ -3,7 +3,6 @@ open Types
 open Interpret_errors
 open Interpret_types
 open Interpret_calc
-open OcamlCanvas.V1
 
 
 
