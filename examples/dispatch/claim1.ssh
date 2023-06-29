@@ -1,0 +1,112 @@
+#!/bin/bash
+
+# BFS tests
+
+SAFE=0
+TIMEOUT=0
+CFL="CFL"
+RAND="Random"
+
+
+# Define an indexed array of files and sleep durations
+files=(
+    "dispatch_dekker.cub"
+    "dispatch_german.cub"
+    "dispatch_szymansk_na.cub"
+    "dispatch_dekker.cub"
+    "dispatch_german.cub"
+    "dispatch_szymansk_na.cub"
+    "dispatch_dekker.cub"
+    "dispatch_german.cub"
+    "dispatch_szymansk_na.cub"
+    "dispatch_dekker.cub"
+    "dispatch_german.cub"
+    "dispatch_szymansk_na.cub"
+)
+options=(
+    "-brab 3 -quiet -enum bfs -bench"
+    "-brab 3 -quiet -enum bfs -bench"
+    "-brab 3 -quiet -enum bfs -bench"
+    "-brab 3 -quiet -enum dfs -bench"
+    "-brab 3 -quiet -enum dfs -bench"
+    "-brab 3 -quiet -enum dfs -bench"
+    "-int-brab 3 -fuzz-bench 10 -fuzz-limit 1000000 2 2 -quiet -bench -bench-random"
+    "-int-brab 3 -fuzz-bench 10 -fuzz-limit 1000000 2 2 -quiet -bench -bench-random"
+    "-int-brab 3 -fuzz-bench 10 -fuzz-limit 1000000 2 2 -quiet -bench -bench-random"
+    "-int-brab 3 -fuzz-bench 10 -fuzz-limit 1000000 2 2 -quiet -bench"
+    "-int-brab 3 -fuzz-bench 10 -fuzz-limit 1000000 2 2 -quiet -bench"
+    "-int-brab 3 -fuzz-bench 10 -fuzz-limit 1000000 2 2 -quiet -bench"
+)
+durations=(
+    10
+    10
+    10
+    10
+    10
+    10
+    10
+    10
+    10
+    10
+    10
+    10
+)
+strats=(
+    "BFS"
+    "BFS"
+    "BFS"
+    "DFS"
+    "DFS"
+    "DFS"
+    "Random"
+    "Random"
+    "Random"
+    "CFL"
+    "CFL"
+    "CFL"
+)
+
+previous_pid=""
+
+# Iterate over each file and execute the program
+for index in "${!files[@]}"; do
+  file="${files[$index]}"
+  sleep_duration="${durations[$index]}"
+  option="${options[$index]}"
+  strat="${strats[$index]}"
+
+  #if [[ -n "$previous_pid" ]]; then
+  #    kill -INT "$previous_pid"
+  #    wait "$previous_pid" || true
+  #fi
+  echo -e ""
+  echo "Running $strat for $file" 
+  
+  timeout 3m ../../cubicle.opt $file $option &
+  
+  program_pid=$!
+  
+  sleep $sleep_duration
+
+  if [ "$strat" != "$CFL" ] || [ "$strat" != "$RAND" ]
+  then 
+      kill -INT $program_pid
+  fi
+
+  wait $program_pid
+
+  if [ $? -eq 0 ]
+  then
+      echo "$file with $strat is Safe"
+      SAFE=$[$SAFE+1]
+  else
+      echo "$file with $strat has timed out"
+      TIMEOUT=$[$TIMEOUT+1]
+  fi
+  
+  previous_pid="$program_pid"
+
+done
+echo -e ""
+echo "Total Safe: $SAFE"
+echo "Total Timeout: $TIMEOUT"

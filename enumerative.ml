@@ -1262,9 +1262,11 @@ let install_sigint () =
   Sys.set_signal Sys.sigint 
     (Sys.Signal_handle 
        (fun _ ->
-          printf "\n\n@{<b>@{<fg_red>ABORTING ENUMERATIVE!@}@} \
+	 if not Options.bench then begin
+           printf "\n\n@{<b>@{<fg_red>ABORTING ENUMERATIVE!@}@} \
                   Received SIGINT@.";
-          printf "Finalizing search.@.";
+           printf "Finalizing search.@.";
+	 end;
           raise Exit
        ))
 

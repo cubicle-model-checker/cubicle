@@ -1,0 +1,47 @@
+#!/bin/bash
+
+# Define an indexed array of files and sleep durations
+files=(
+    "dispatch_dekker.cub"
+    "dispatch_german.cub"
+    "dispatch_szymansk_na.cub"
+    "dispatch_dekker.cub"
+    "dispatch_german.cub"
+    "dispatch_szymansk_na.cub"
+)
+options=(
+    "-quiet -bench"
+    "-quiet -bench"
+    "-quiet -bench"
+    "-fuzz -interpret-proc 3 -fuzz-limit 1000000 2 2 -quiet -bench"
+    "-fuzz -interpret-proc 3 -fuzz-limit 1000000 2 2 -quiet -bench"
+    "-fuzz -interpret-proc 3 -fuzz-limit 1000000 2 2 -quiet -bench"
+)
+strats=(
+    "Cubicle"
+    "Cubicle"
+    "Cubicle"
+    "CFL"
+    "CFL"
+    "CFL"
+)
+
+previous_pid=""
+
+# Iterate over each file and execute the program
+for index in "${!files[@]}"; do
+  file="${files[$index]}"
+  option="${options[$index]}"
+  strat="${strats[$index]}"
+
+  echo -e ""
+  echo "Looking for unsafe state using $strat for $file" 
+  
+  timeout 10 ../../cubicle.opt $file $option &
+  
+  program_pid=$!
+  
+  wait $program_pid
+
+ 
+done

@@ -51,6 +51,7 @@ let install_sigint () =
   Sys.set_signal Sys.sigint 
     (Sys.Signal_handle 
        (fun _ ->
+	 if not Options.bench then
          Format.printf "\n@{<b>@{<fg_magenta>Stopping search@}@}@.";
          raise Exit
        ))
@@ -431,6 +432,7 @@ let force_procs_forward code glob_env trans all_procs p_proc all_unsafes =
 	steps := depth
       | Stdlib.Sys.Break | Exit ->  steps := depth; raise Exit
   done ;
+  if not Options.bench then
   Format.printf "Force proc: new states seen: %d. New added to pool: %d Removed from pool %d@." !new_seen !add_pool !rem_pool
 
 
@@ -441,6 +443,7 @@ let markov_entropy code glob all_procs trans =
   let transitions = ref (Array.of_list (all_possible_transitions glob.state trans all_procs false))
   in
   let steps = Random.int 1000 in
+  if not Options.bench then 
   Format.printf "Chose Markov for a depth of %d steps@." steps; 
   let pool = ref 0 in
   let rem_pool = ref 0 in 
@@ -585,6 +588,7 @@ let markov_entropy code glob all_procs trans =
 	  Format.eprintf "Accepted: %d, Rejected: %d@." !accept !reject;
 	raise Exit	
   done;
+  if not Options.bench then
   Format.printf "Markov: new seen states: %d, added to pool: %d, Removed from pool %d@." !new_seen !pool !rem_pool
   
 
@@ -717,6 +721,7 @@ let choose_random_of_equal l =
 
 let run_smart code node all_procs trans unsafes =
   let max_depth = Random.int 100 in
+  if not Options.bench then
   Format.printf "Chosen depth for smart run: %d@." max_depth;
   let steps = ref 0 in
   let new_seen = ref 0 in
@@ -863,6 +868,7 @@ let run_smart code node all_procs trans unsafes =
 	steps := max_depth
       | Stdlib.Sys.Break | Exit ->  steps := max_depth; raise Exit
   done ;
+  if not Options.bench then
   Format.printf "Smart states seen: %d. New added to pool: %d Removed from pool %d@." !new_seen !add_pool !rem_pool
 
 
@@ -987,6 +993,7 @@ let further_bfs code node transitions all_procs all_unsafes =
     done;
     (*Queue.iter (fun (_,x) -> incr pool_size; Hashtbl.add remaining_pool (fresh ()) x) to_do;*)
     finish_queue to_do transitions all_procs;
+    if not Options.bench then
     Format.printf "Further BFS: %d new states added to visited, %d added to remaining pool@." !curr !rem;
   with
     | Stdlib.Sys.Break | Exit -> raise Exit
@@ -1004,6 +1011,7 @@ let interpreter_bfs original_env transitions all_procs all_unsafes =
     let to_do = Queue.create () in
     Queue.push (he, 0,original_env) to_do;
     Hashtbl.add parents he (true, None, he, original_env);
+    if not Options.bench then
     Format.printf "[VISITED][REMAINING][DEPTH]@.";
     let time = Unix.time () in
     while (!curr_depth < max_depth) &&
@@ -1047,6 +1055,7 @@ let interpreter_bfs original_env transitions all_procs all_unsafes =
 	    incr visit_count;
 	    incr node;
 	    incr rem;
+	    if not Options.bench then
 	    Format.printf "[%d][%d][%d]\r%!" !node !rem env_d;
 	    Queue.push (he, env_d + 1, e) to_do
 	   ) possible;
@@ -1088,6 +1097,7 @@ let interpret_bfs original_env transitions all_procs all_unsafes =
     let to_do = Queue.create () in
     Queue.push (he, 0,original_env) to_do;
     Hashtbl.add parents he (true, None, he, original_env);
+    if not Options.bench then
     Format.printf "[VISITED][REMAINING][DEPTH]@.";
     let time = Unix.time () in
     while (!curr_depth < max_depth) &&
@@ -1193,7 +1203,8 @@ let extract_procs sa =
 
 
 let run_forward code node all_procs trans unsafes =
-  let max_depth = Random.int 1000 in
+  let max_depth = if Options.bench_rand then 1000000000 else Random.int 1000 in
+  if not Options.bench then 
   Format.printf "Chosen depth for random: %d@." max_depth;
   let steps = ref 0 in
   let new_seen = ref 0 in
@@ -1309,6 +1320,7 @@ let run_forward code node all_procs trans unsafes =
       | TopError Deadlock -> Format.printf "@{<b>@{<fg_red>WARNING: Deadlock reached@}@}@."; steps := max_depth
       | Stdlib.Sys.Break | Exit ->  steps := max_depth; raise Exit
   done;
+  if not Options.bench then
   Format.printf "New states seen: %d. New added to pool: %d Removed from pool %d@." !new_seen !add_pool !rem_pool
     
 
@@ -1335,6 +1347,7 @@ let do_new_exit code node all_procs trans unsafes =
 	begin
 	  Hashtbl.remove remaining_pool code;
 	  decr pool_size;
+	  if not Options.bench then
 	  Format.printf "Removed state from pool.@.";
 	  raise StopExit
 	end 
@@ -1396,6 +1409,7 @@ let do_new_exit code node all_procs trans unsafes =
 	Hashtbl.add remaining_pool f nd;
 	incr pool_size
       end;
+      if not Options.bench then
       Format.printf "Unused Exit: Added %d state(s). Removed %d state(s) from pool@." !added !removed
   with
     | StopExit -> () 
@@ -1407,6 +1421,7 @@ let choose_random_proc arr n =
   arr.(r)      
   
 let recalibrate_states () =
+  if not Options.bench then 
   Format.printf "Recalibrating remaining states...@.";
   let h' = Hashtbl.copy remaining_pool in
   let c = ref 0 in
@@ -1426,7 +1441,7 @@ let continue_from_bfs all_procs transitions all_unsafes =
   let num_procs = Options.get_int_brab () in
   let procs = Variable.give_procs num_procs in
   let arr_procs = Array.of_list procs in
-   
+  if not Options.bench then 
   Format.printf "Current number of states: %d@." !visit_count(*(List.length !visited_states)*);
   try 
   let running = ref true in
@@ -1447,12 +1462,12 @@ let continue_from_bfs all_procs transitions all_unsafes =
        - run smart for X steps starting from node
        - recalibrate remaining_pool occasionally 
     *)
-    let choice = Random.int 7 in
+    let choice =  Random.int 7 in
+    
     TimerFuzz.pause () ;
     if Options.fuzz_bench_time && (TimerFuzz.get ()) >= Options.fuzz_bench then raise Exit
     else 
     TimerFuzz.start ();
-    
     match choice with
       | 0 -> run_forward rand node all_procs transitions all_unsafes
       | 5 -> run_forward rand node all_procs transitions all_unsafes 
@@ -1498,15 +1513,35 @@ let initial_seeds original_env transitions all_procs all_unsafes =
 let go_from_bfs original_env transitions all_procs all_unsafes tsys =
   List.iter (fun x -> Hashtbl.add initial_tr_count x.tr_name 0) tsys;
   (*initial_seeds original_env transitions all_procs all_unsafes;*)
-  interpret_bfs original_env transitions all_procs all_unsafes;
+  if Options.bench_rand then
+    begin
+      try 
+      incr pool_size;
+      let he = hash_full_env original_env in
+      let poss = all_possible_transitions original_env transitions all_procs false in
+      let l = List.length poss in
+      let mapped_exits = List.map (fun (x,y) -> (x.tr_name, y)) poss in 
+      let s= { state = original_env;
+	       seen = 1;
+	       exit_number = l;
+	       exit_transitions = mapped_exits;
+	       exit_remaining = mapped_exits;
+	       taken_transitions = ExitMap.empty }
+      in
+      Hashtbl.add bfs_visited he s;
+      Hashtbl.add remaining_pool (fresh ()) s;
+      run_forward 0 s all_procs transitions all_unsafes
+      with
+	| Exit -> ()
+    end 
+  else
+    begin
+      interpret_bfs original_env transitions all_procs all_unsafes;
 
-
-  
-  
   (*if BFS finished to_do queue, there's no need to keep exploring down*)
-  if !pool_size = 0 then ()
-  else continue_from_bfs all_procs transitions all_unsafes 
-      
+      if !pool_size = 0 then ()
+      else continue_from_bfs all_procs transitions all_unsafes 
+    end  
 
 let semaphore_init s =
   match s with
@@ -1613,12 +1648,14 @@ let brab original_env t_transitions transitions procs unsafe all_unsafes tsys =
   (*Format.eprintf "----------------Transitions----------------@.";
   Hashtbl.iter (fun key el -> Format.eprintf "%a ---- %d@." Hstring.print key el) fuzz_tr_count;
     Format.eprintf "-------------------------------------------@.";*)
-   Format.eprintf "VISITED STATES : %d %d@."  !visit_count (List.length !visited_states);
+   Format.eprintf "Total forward nodes: %d@."  !visit_count (*(List.length !visited_states)*);
    TimerFuzz.pause () ;
-   Format.eprintf "Fuzzer ran for %a@." print_time (TimerFuzz.get ());
-   Format.eprintf "Processing states...@.";
-
-  Format.eprintf "UP: %d@." (Options.get_num_range_up ()); 
+   if not Options.bench then
+     begin
+       Format.eprintf "Fuzzer ran for %a@." print_time (TimerFuzz.get ());
+       Format.eprintf "Processing states...@.";
+     end ;
+  (*Format.eprintf "UP: %d@." (Options.get_num_range_up ());*) 
   
   let en_env = Enumerative.mk_env_int (Options.get_int_brab ()) tsys in
 

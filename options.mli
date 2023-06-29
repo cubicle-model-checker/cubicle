@@ -110,7 +110,8 @@ val fuzz_t : int
 
 val fuzz_bench : float
 val fuzz_bench_time : bool
-val bench : bool 
+val bench : bool
+val bench_rand : bool
 
 val js_mode : unit -> bool
 
