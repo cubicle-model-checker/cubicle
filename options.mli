@@ -56,6 +56,7 @@ val candidate_heuristic : int
 val forward_sym : bool
 
 val abstr_num : bool
+val num_range_up : int
 val num_range : int * int
 
 val post_strategy : int
@@ -69,6 +70,7 @@ val refine_universal : bool
 val cores : int
 
 val mode : string
+val enum_mode : string
 
 val debug : bool
 val dot : bool
@@ -106,6 +108,9 @@ val fuzz_s : int
 val fuzz_d : int
 val fuzz_t : int
 
+val fuzz_bench : float
+val fuzz_bench_time : bool
+
 val js_mode : unit -> bool
 
 
@@ -117,3 +122,11 @@ val get_interpret_procs : unit -> int
   
 val set_int_brab : int -> unit
 val get_int_brab : unit -> int
+
+val set_num_range_low : int -> unit
+val set_num_range_up : int -> unit
+val get_num_range_up : unit -> int
+val get_num_range_low : unit -> int
+
+
+val get_num_range : unit -> int * int

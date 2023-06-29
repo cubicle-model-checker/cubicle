@@ -43,6 +43,8 @@ let enumsolver = ref false
 let fuzz_s = ref 100000
 let fuzz_d = ref 10
 let fuzz_t = ref 10
+let fuzz_bench = ref 10
+let fuzz_bench_time = ref false
 
 let unDepth = ref 1
 let interpretProcs = ref 3
@@ -69,7 +71,7 @@ let forward_inv = ref (-1)
 let enumerative = ref (-1)
 let murphi = ref false
 let murphi_uopts = ref ""
-let mu_cmd = ref "mu"
+let mu_cmd = ref "/Users/alexandrina/Downloads/cmurphi5.5.0/src/mu"
 let mu_opts = ref ""
 let cpp_cmd = ref "g++ -O4"
 
@@ -119,6 +121,14 @@ let set_mode m =
   match m with
   | "bfs" | "bfsh" | "bfsa" | "dfs" | "dfsh" | "dfsa" -> ()
   | _ -> raise (Arg.Bad ("search strategy "^m^" not supported"))
+
+let enum_mode = ref "bfs"
+let set_enum_mode m =
+  mode := m;
+  match m with
+  | "bfs" | "dfs"  -> ()
+  | _ -> raise (Arg.Bad ("forward search strategy "^m^" not supported"))
+  
 
 let smt_solver = ref AltErgo
 let set_smt_solver s =
@@ -170,6 +180,7 @@ let specs =
     "-brab", Arg.Set_int brab,
     "<nb> Backward reachability with approximations and backtrack helped \
      with a finite model of size <nb>";
+    "-enum",  Arg.Set_string enum_mode, " <bfs(defaul) | dfs> forward strategies";
     "-int-brab", Arg.Set_int int_brab, " <nb> procs <nb> rounds <nb> depth <bool> smart";
     "-int-brab-debug", Arg.Set int_brab_quiet, " Activate interpreter brab";
     "-int-deadlock", Arg.Set int_deadlock, " Deadlock details for interpreter forward";
@@ -234,6 +245,8 @@ let specs =
     "-fuzz-limit", Arg.Tuple [Arg.Set_int fuzz_s;
 			      Arg.Set_int fuzz_d;
 			      Arg.Set_int fuzz_t;], "<states> <depth> <time in s>";
+    "-fuzz-bench", Arg.Tuple [Arg.Set_int fuzz_bench;
+			      Arg.Set fuzz_bench_time], " time for fuzzer benches";
   ]
 
 let alspecs = Arg.align specs
@@ -321,6 +334,7 @@ let int_deadlock = !int_deadlock
 
 
 let mode = !mode
+let enum_mode = !enum_mode 
 let smt_solver = !smt_solver
 
 let verbose = !verbose
@@ -334,8 +348,16 @@ let post_strategy =
     | _ -> 1
 
 let abstr_num = !abstr_num
-let num_range = (!num_range_low, !num_range_up)
+let set_num_range_low n = num_range_low := n
+let set_num_range_up n = num_range_up := n
 
+let get_num_range_up () = !num_range_up
+let get_num_range_low () = !num_range_low
+    
+let get_num_range () = (!num_range_low, !num_range_up)
+  
+let num_range = (!num_range_low, !num_range_up)
+let num_range_up = !num_range_up
 let quiet = !quiet
 let bitsolver = !bitsolver
 let enumsolver = !enumsolver
@@ -360,7 +382,10 @@ let out_trace = !out
 
 let fuzz_s = !fuzz_s
 let fuzz_d = !fuzz_d
-let fuzz_t = !fuzz_t 
+let fuzz_t = !fuzz_t
+
+let fuzz_bench = float !fuzz_bench
+let fuzz_bench_time = !fuzz_bench_time
 
 
 (* Setters *)
@@ -371,6 +396,8 @@ let set_js_mode b = js_mode := b
 let js_mode () = !js_mode
 
 
+(* Interpreter *)
+  
 let set_interpret_procs n = interpretProcs := n
 let get_interpret_procs () = if !int_brab > -1 then !int_brab else !interpretProcs
 

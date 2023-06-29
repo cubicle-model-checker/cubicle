@@ -69,6 +69,8 @@ let equal_state a1 a2 =
 let hash_state st = Hashtbl.hash_param 100 500 st
 
 
+    
+
 module HST = Hashtbl.Make 
   (struct 
     type t = state
@@ -105,7 +107,12 @@ module HQueue = struct
 end
 
 
+module TimerFuzz = Timer.Make (struct let profiling = true end)
 
+let print_time fmt sec =
+  let minu = floor (sec /. 60.) in
+  let extrasec = sec -. (minu *. 60.) in
+  Format.fprintf fmt "%dm%2.3fs" (int_of_float minu) extrasec  
 
 type st_req = int * op_comp * int
 
@@ -340,6 +347,7 @@ let find_subst_for_norm env st =
   done;
   let not_met = List.filter (fun v -> not (List.mem v !met)) env.proc_ids in
   List.iter2 (fun v r -> if v <> r then HI.add sigma v r) not_met !remaining;
+  (*HI.iter (fun k el -> Format.eprintf "%d -- %d @." k el ) sigma;*)
   sigma
 
 let rec map_with_procs acc procs ord = match procs, ord with
@@ -390,7 +398,8 @@ let make_range (low, up) =
   done;
   !l
 
-let abstr_range = make_range num_range
+let abstr_range  ()=
+  make_range (get_num_range_low (), get_num_range_up ())
 
 let abstr_add env x y =
   let r =
@@ -514,7 +523,7 @@ let init_tables ?(alloc=true) procs s =
   List.iter (fun c ->
     HT.add ht (Const (MConst.add (ConstInt (Num.Int c)) 1 MConst.empty)) !i;
     HT.add ht (Const (MConst.add (ConstReal (Num.Int c)) 1 MConst.empty)) !i;
-    incr i) abstr_range;
+    incr i) (abstr_range ());
   let a_up = !i - 1 in
 
   (* This is some bookeeping to allow in place substitutions *)
@@ -991,7 +1000,12 @@ let transitions_to_func procs env =
 
 
 
+let print_time fmt sec =
+  let minu = floor (sec /. 60.) in
+  let extrasec = sec -. (minu *. 60.) in
+  Format.fprintf fmt "%dm%2.3fs" (int_of_float minu) extrasec
 
+    
 
 let post st visited trs acc cpt_q depth =
   if limit_forward_depth && depth >= forward_depth then acc
@@ -1005,13 +1019,30 @@ let post st visited trs acc cpt_q depth =
         ) acc sts
       with Not_applicable -> acc) acc trs
 
-
+let cpt = ref 0
+  
 let post_bfs env st visited trs q cpt_q depth =
   if not limit_forward_depth || depth < forward_depth then
     List.iter (fun st_tr ->
-        try
+      try
         let sts = st_tr.st_f st in
         List.iter (fun s ->
+	  if Options.fuzz_bench_time && (TimerFuzz.get ()) >= Options.fuzz_bench
+	  then
+	    begin
+	      Format.printf "%a@." print_time (TimerFuzz.get());
+	      raise Exit
+	    end ;
+
+	  
+
+	  (*if Hstring.equal st_tr.st_name (Hstring.make "sync") then
+              (*  assert false;*)
+            begin
+              incr cpt;
+	      
+              (*Format.eprintf "Cpt : %d@." !cpt*)
+            end;*)
           if forward_sym then normalize_state env s;
           if not (HST.mem visited s) then begin
             (* incr cpt_q; *)
@@ -1026,6 +1057,20 @@ let post_dfs st visited trs q cpt_q depth =
       try 
         let sts = st_tr.st_f st in
         List.iter (fun s ->
+	  TimerFuzz.pause ();
+	  if Options.fuzz_bench_time && (TimerFuzz.get ()) >= Options.fuzz_bench
+	  then
+	    begin
+	      Format.printf "%a@." print_time (TimerFuzz.get());
+	      raise Exit
+	    end
+	  else TimerFuzz.start ();
+	  (*if Hstring.equal st_tr.st_name (Hstring.make "sync") then
+              (*  assert false;*)
+              begin
+                incr cpt;
+                Format.eprintf "Cpt : %d@." !cpt
+              end;*)
           if not (HST.mem visited s) then begin
             incr cpt_q;
             Stack.push (depth + 1, s) q
@@ -1070,7 +1115,8 @@ let post_bfs_switches st visited trs q cpt_q cpt_f depth prev_vars =
 
 
 let check_cand env state cand = 
-  not (List.for_all (fun l -> check_req env state l) cand)
+  not (List.for_all (fun l ->
+    check_req env state l) cand)
 
 let remove_first h =
   try HST.iter (fun hst _ -> HST.remove h hst; raise Exit) h
@@ -1095,7 +1141,11 @@ let forward_dfs s procs env l =
   let to_do = Stack.create () in
   List.iter (fun td -> Stack.push td to_do) l;
   while not (Stack.is_empty to_do) &&
-          (max_forward = -1 || !cpt_f < max_forward) do
+    (max_forward = -1 || !cpt_f < max_forward) do
+    (*TimerFuzz.pause () ;
+    if (TimerFuzz.get ()) >= Options.fuzz_bench then raise Exit
+    else 
+    TimerFuzz.start ();*)
     let depth, st = Stack.pop to_do in
     decr cpt_q;
     if not (HST.mem h_visited st) then begin
@@ -1230,8 +1280,12 @@ let search procs init =
   let env = { env with st_trs = transitions_to_func procs env init.t_trans } in
   global_envs := env :: !global_envs;
   install_sigint ();
+  TimerFuzz.start ();
   begin try
-    forward_bfs init procs env st_inits;
+	  match Options.enum_mode with
+	    | "bfs" -> forward_bfs init procs env st_inits
+	    | "dfs" -> forward_dfs init procs env st_inits
+	    | _ -> failwith ("The forward strategy "^Options.enum_mode^" is not implemented.")
     with Exit -> ()
   end ;
   finalize_search env
@@ -1304,6 +1358,7 @@ let alpha_renamings env procs s =
   List.fold_left (fun p sigma ->
     let c = Cube.subst sigma s.cube in
     let s' = Node.create ~kind:Approx c in
+    (*Format.eprintf "Alpha: %a@." Node.print s';*)
     (satom_to_cand env (Node.litterals s'), s') :: p
   ) [] d
 
@@ -1340,7 +1395,7 @@ let resist_on_trace_size progress_inc ls env =
 	match clas with
 	| [] -> acc
 	| (_, s) :: _ -> s :: acc) [] !cands in
-      List.rev_append remain too_big
+	List.rev_append remain too_big 
     with 
       | Exit | Not_found -> too_big
 
@@ -1385,23 +1440,38 @@ let state_impossible env st s =
       | Not_found -> false
 
 let one_resist_on_trace_size s env =
+  (*Format.eprintf "ehruehreuwf@.";
+    Format.eprintf "---------------------@.";
+    let ss = env.states in
+    let rec p s =
+      match s with
+      | [] -> ()
+      | hd::tl -> Format.eprintf "%a\n**************@." SAtom.print (state_to_cube env hd); p tl
+    in p ss;
+    Format.eprintf "---------------------@.";*)
     if Node.dim s <= env.model_cardinal then 
       try
+	(*Format.eprintf "Nodee: %a@." Node.print s;*)
         let procs = List.rev (List.tl (List.rev env.all_procs)) in
         let ls = alpha_renamings env procs s in
         List.iter (fun st ->
-          if not (List.for_all (fun (c, _) -> check_cand env st c) ls) then
-            raise (EBad (st, env));
+          if not (List.for_all (fun (c, _) ->
+	    check_cand env st c) ls) then
+              raise (EBad (st, env));
         ) env.states;
       with 
       | Not_found -> raise ECantSay
 
 
-let check_first_and_filter_rest = function
+let check_first_and_filter_rest blugh =
+  (*Format.eprintf "candidates: @.";
+  List.iter (fun x -> Format.eprintf  "%a@." Node.print x ) blugh;*)
+  match blugh with
   | [] -> []
   | s :: rs ->
      try
        List.iter (one_resist_on_trace_size s) !global_envs;
+       (*Format.eprintf "look what I picked mom <3 %a@." Node.print s;*)
        raise (Sustainable [s])
      with
      | ECantSay -> rs
@@ -1483,6 +1553,12 @@ let mk_env nbprocs sys =
   (* create mappings but don't allocate hashtable *)
   let procs = Variable.give_procs nbprocs in
   let env = init_tables ~alloc:false procs sys in
+  global_envs := env :: !global_envs;
+  env
+
+let mk_env_int nbprocs sys =
+  let procs = Variable.give_procs nbprocs in
+  let env = init_tables procs sys in
   global_envs := env :: !global_envs;
   env
 

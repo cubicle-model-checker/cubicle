@@ -50,6 +50,8 @@ val mk_env : int -> t_system -> env
 (** [mk_env nb sys] creates an environment for the enumerative exploration of
     the transition system [sys] with a fixed number [nb] of processes. *)
 
+val mk_env_int : int -> t_system -> env
+
 val int_of_term : env -> Types.term -> int
 (** Encoding of a term in the enumerative environment. *)
 
