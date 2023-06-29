@@ -1238,7 +1238,7 @@ let no_scan_states env =
 
 let finalize_search env =
   let st = HST.stats env.explicit_states in
-  if not quiet then printf "Total forward nodes : %d@." st.Hashtbl.num_bindings;
+  if (not quiet || bench) then printf "Total forward nodes : %d@." st.Hashtbl.num_bindings;
   if verbose > 0 || profiling then begin
     printf "\n%a" Pretty.print_line ();
     printf "@{<b>Statistics@}\n";

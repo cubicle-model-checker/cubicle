@@ -45,6 +45,7 @@ let fuzz_d = ref 10
 let fuzz_t = ref 10
 let fuzz_bench = ref 10
 let fuzz_bench_time = ref false
+let bench = ref false
 
 let unDepth = ref 1
 let interpretProcs = ref 3
@@ -247,6 +248,7 @@ let specs =
 			      Arg.Set_int fuzz_t;], "<states> <depth> <time in s>";
     "-fuzz-bench", Arg.Tuple [Arg.Set_int fuzz_bench;
 			      Arg.Set fuzz_bench_time], " time for fuzzer benches";
+    "-bench", Arg.Set bench, " benching version";
   ]
 
 let alspecs = Arg.align specs
@@ -386,6 +388,7 @@ let fuzz_t = !fuzz_t
 
 let fuzz_bench = float !fuzz_bench
 let fuzz_bench_time = !fuzz_bench_time
+let bench = !bench
 
 
 (* Setters *)

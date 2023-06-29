@@ -443,6 +443,7 @@ let force_procs_forward code glob_env trans all_procs p_proc all_unsafes =
 		TimerFuzz.pause ();
 		Format.printf "%a@." print_time (TimerFuzz.get ());
 		TimerFuzz.start ();
+		if Options.bench then raise Exit;
 		unsafe_states := hash :: !unsafe_states;
 	  end;
 	  if (List.length exits) > 1 && (!steps < depth - 2) then
@@ -471,10 +472,12 @@ let force_procs_forward code glob_env trans all_procs p_proc all_unsafes =
       
     with
       | Dead h ->
-	Format.printf "Deadlock reached.";
+	Format.printf "\n@{<b>@{<bg_red>WARNING@}@}";
+	Format.printf "@{<fg_red> Deadlock reached@}@.";
 	TimerFuzz.pause ();
 	Format.printf "%a@." print_time (TimerFuzz.get ());
 	TimerFuzz.start ();
+	if Options.bench then raise Exit;
 	steps := depth;
 	dead_states := h::!dead_states
       | Stdlib.Sys.Break | Exit ->  steps := depth; raise Exit
@@ -538,7 +541,7 @@ let markov_entropy_detailed glob tsys all_procs trans steps matr =
       tried := 0;
       let w2 = entropy_env temp_env trans all_procs in       
       
-      let flag =
+      let _flag =
 	if w2 > !w1 then
 	  begin
 	    (*Format.eprintf "-@.";*)
@@ -612,10 +615,12 @@ let markov_entropy_detailed glob tsys all_procs trans steps matr =
 	
     with
       | TopError Deadlock ->
-	Format.eprintf "Deadlock reached [M]@.";
+	Format.printf "\n@{<b>@{<bg_red>WARNING@}@}";
+	Format.printf "@{<fg_red> Deadlock reached@}@.";
 	TimerFuzz.pause ();
 	Format.printf "%a@." print_time (TimerFuzz.get ());
 	TimerFuzz.start ();
+	if Options.bench then raise Exit;
 	raise (TopError Deadlock)
       | TopError (FalseReq _) -> incr tried; incr taken; if !tried > 1000 then running := false 
   done;
@@ -751,7 +756,7 @@ let markov_entropy code glob all_procs trans all_unsafes=
   let transitions = ref (Array.of_list (all_possible_transitions glob.state trans all_procs false))
   in
   let steps = Random.int 1000 in
-  Format.printf "Chose Markov for a depth of %d steps@." steps; 
+  Format.printf "Chose Maximize for a depth of %d steps@." steps; 
   let pool = ref 0 in
   let rem_pool = ref 0 in 
   let running_env = ref glob.state in
@@ -868,6 +873,7 @@ let markov_entropy code glob all_procs trans all_unsafes=
 		  TimerFuzz.pause ();
 		  Format.printf "%a@." print_time (TimerFuzz.get ());
 		  TimerFuzz.start ();
+		  if Options.bench then raise Exit; 
 		  (*reconstruct_trace parents hash;
 		  raise ReachedUnsafe*)
 		end;
@@ -899,9 +905,12 @@ let markov_entropy code glob all_procs trans all_unsafes=
       incr taken*)
     with
       | TopError Deadlock ->
+	Format.printf "\n@{<b>@{<bg_red>WARNING@}@}";
+	Format.printf "@{<fg_red> Deadlock reached@}@.";
 	TimerFuzz.pause ();
 	Format.printf "%a@." print_time (TimerFuzz.get ());
 	TimerFuzz.start ();
+	if Options.bench then raise Exit;
 	taken := steps;
 	
       | Stdlib.Sys.Break | Stdlib.Exit ->
@@ -1093,6 +1102,7 @@ let run_smart code node all_procs trans all_unsafes =
 		  TimerFuzz.pause ();
 		  Format.printf "%a@." print_time (TimerFuzz.get ());
 		  TimerFuzz.start ();
+		  if Options.bench then raise Exit; 
 		  unsafe_states := hash :: !unsafe_states
 	    (*reconstruct_trace parents hash;
 	      raise ReachedUnsafe*)
@@ -1117,10 +1127,12 @@ let run_smart code node all_procs trans all_unsafes =
     transitions := Array.of_list exits;
     with
       | Dead h ->
-	Format.printf "Deadlock reached.@.";
+	Format.printf "\n@{<b>@{<bg_red>WARNING@}@}";
+	Format.printf "@{<fg_red> Deadlock reached@}@.";
 	TimerFuzz.pause ();
 	Format.printf "%a@." print_time (TimerFuzz.get ());
 	TimerFuzz.start ();
+	if Options.bench then raise Exit;
 	steps := max_depth;
 	dead_states := h::!dead_states
       | TopError Deadlock -> Format.printf "Deadlock reached.";
@@ -1239,6 +1251,7 @@ let further_bfs code node transitions all_procs all_unsafes =
 		  TimerFuzz.pause ();
 		  Format.printf "%a@." print_time (TimerFuzz.get ());
 		  TimerFuzz.start ();
+		  if Options.bench then raise Exit;
 		  unsafe_states := he :: !unsafe_states
 		  (*reconstruct_trace parents he;
 		  raise ReachedUnsafe*)
@@ -1343,7 +1356,7 @@ let interpret_bfs original_env transitions all_procs all_unsafes =
 		  TimerFuzz.pause ();
 		  Format.printf "%a@." print_time (TimerFuzz.get ());
 		  TimerFuzz.start();
-
+		  if Options.bench then raise Exit; 
 		  unsafe_states := he :: !unsafe_states
 		  (*reconstruct_trace parents he;
 		  raise ReachedUnsafe*)
@@ -1467,7 +1480,7 @@ let run_forward code node all_procs trans all_unsafes =
 		  TimerFuzz.pause ();
 		  Format.printf "%a@." print_time (TimerFuzz.get ());
 		  TimerFuzz.start ();
-
+		  if Options.bench then raise Exit;
 		  unsafe_states := hash :: !unsafe_states;
 
 	    end;
@@ -1489,10 +1502,12 @@ let run_forward code node all_procs trans all_unsafes =
       transitions := Array.of_list (exits);
     with
       | Dead h ->
-	Format.printf "Deadlock reached.@.";
+	Format.printf "\n@{<b>@{<bg_red>WARNING@}@}";
+	Format.printf "@{<fg_red> Deadlock reached@}@.";
 	TimerFuzz.pause ();
 	Format.printf "%a@." print_time (TimerFuzz.get ());
 	TimerFuzz.start ();
+	if Options.bench then raise Exit;
 	steps := max_depth;
 	dead_states := h::!dead_states
       | Stdlib.Sys.Break | Exit ->  steps := max_depth; raise Exit
@@ -1586,7 +1601,7 @@ let do_new_exit code node all_procs trans all_unsafes =
 	      TimerFuzz.pause ();
 	      Format.printf "%a@." print_time (TimerFuzz.get ());
 	      TimerFuzz.start ();
-
+	      if Options.bench then raise Exit;
 	      unsafe_states := new_hash :: !unsafe_states;
 	      (*reconstruct_trace parents new_hash;
 	      raise ReachedUnsafe*)
@@ -1870,16 +1885,17 @@ let fuzz original_env transitions procs all_unsafes t_transitions =
   
   go_from_bfs original_env transitions procs all_unsafes t_transitions;
   TimerFuzz.pause ();
-  Format.printf "├─Time elapsed       : %a@." print_time (TimerFuzz.get ());
-  Format.printf "├─States seen        : %d@." !visit_count;
-
-
-  Hashtbl.iter (fun key el -> Format.eprintf "%a:--> %d@." Hstring.print key el) fuzz_tr_count;
-  let j = Hashtbl.stats fuzz_tr_count in
-  Format.eprintf "--> %d@." j.num_bindings;
-  write_file dfile open_file;
-  close_out open_file;
-  write_states_to_file dfile;
+  if not Options.bench then
+    begin
+      Format.printf "├─Time elapsed       : %a@." print_time (TimerFuzz.get ());
+      Format.printf "├─States seen        : %d@." !visit_count;
+      Hashtbl.iter (fun key el -> Format.eprintf "%a:--> %d@." Hstring.print key el) fuzz_tr_count;
+      let j = Hashtbl.stats fuzz_tr_count in
+      Format.eprintf "--> %d@." j.num_bindings;
+      write_file dfile open_file;
+      close_out open_file;
+      write_states_to_file dfile;
+    end ;
   raise Done
   
 
@@ -2150,6 +2166,8 @@ let init tsys sys =
 
   install_sigint ();
 
+  if not Options.bench then 
+
   Format.printf "Please enter the number of procs you would like the fuzzer to use.\n\
                  If you would like the fuzzer to decide, please enter 0\n\
                  \n\
@@ -2170,11 +2188,14 @@ let init tsys sys =
 	  n  	
       | None -> Format.printf "Invalid input. Please enter a valid integer@."; decide ()
   in
-  let dec = decide () in
+  let dec = if Options.bench then (Options.get_interpret_procs ()) else decide () in
   ignore (Sys.command "clear");
-  Format.printf "@{<b>@{<fg_red>%s@}@}" s1;
-  Format.printf "%sCubicle Fuzzer%s@." s2 s2;
-  Format.printf "@{<b>@{<fg_red>%s@}@}@." s1;
+  if not Options.bench then
+    begin 
+      Format.printf "@{<b>@{<fg_red>%s@}@}" s1;
+      Format.printf "%sCubicle Fuzzer%s@." s2 s2;
+      Format.printf "@{<b>@{<fg_red>%s@}@}@." s1;
+    end ;
   if dec <> 0 then
     begin
       let procs = Variable.give_procs dec in
@@ -2246,3 +2267,4 @@ let init tsys sys =
   with
     | Exit -> Format.printf "@{<b>@{<fg_blue>Exiting fuzzer. @}@."; raise Done
     | End_of_file -> raise Done
+
