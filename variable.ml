@@ -252,7 +252,8 @@ let give_procs n =
 
 let print fmt v = Hstring.print fmt v
 
-let rec print_vars fmt = function
+let rec print_vars fmt v =
+  match v with 
   | [] -> ()
   | [a] ->
      let s = Hstring.view a in

@@ -280,21 +280,22 @@ module Term = struct
          first := false;
       ) cs
 
-  let rec print fmt = function
-    | Const cs -> print_cs true fmt cs
-    | Elem (s, _) -> fprintf fmt "%a" Hstring.print s
-    | Access (a, li) ->
-       fprintf fmt "%a[%a]" Hstring.print a (Hstring.print_list ", ") li
-    | Arith (x, cs) -> 
-      fprintf fmt "@[%a%a@]" print x (print_cs false) cs
-    | ProcManip([t],PlusOne) ->
-      fprintf fmt "add_proc(%a)" print t
-    | ProcManip([t],MinusOne) ->
+  let rec print fmt tr =
+    match tr with 
+      | Const cs -> print_cs true fmt cs
+      | Elem (s, _) -> fprintf fmt "%a" Hstring.print s
+      | Access (a, li) ->
+	fprintf fmt "%a[%a]" Hstring.print a (Hstring.print_list ", ") li
+      | Arith (x, cs) -> 
+	fprintf fmt "@[%a%a@]" print x (print_cs false) cs
+      | ProcManip([t],PlusOne) ->
+	fprintf fmt "add_proc(%a)" print t
+      | ProcManip([t],MinusOne) ->
       
-      fprintf fmt "sub_proc(%a)" print t
+	fprintf fmt "sub_proc(%a)" print t
 	  
-    | ProcManip([t1;t2], CompProcs) ->
-      fprintf fmt "compare_procs(%a,%a)" print t1 print t2
+      | ProcManip([t1;t2], CompProcs) ->
+	fprintf fmt "compare_procs(%a,%a)" print t1 print t2
       (*begin
 	match t1,t2 with
 	  | Elem(n, Var), Elem(n1,Var) ->
@@ -302,7 +303,7 @@ module Term = struct
 	  | _ -> assert false
       end*)
       
-    | ProcManip _ -> assert false
+      | ProcManip _ -> assert false
       
 
 end

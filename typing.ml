@@ -40,7 +40,8 @@ type error =
   | NotATerm of Hstring.t
   | WrongNbArgs of Hstring.t * int
   | Smt of Smt.error
-  | SingleLockMechanism 
+  | SingleLockMechanism
+  | LivelockTransition
 
 exception Error of error * loc
 
@@ -97,6 +98,8 @@ let report fmt = function
     fprintf fmt "unknown symbol %a" Hstring.print s
   | SingleLockMechanism ->
     fprintf fmt "only one lock-related (acquire, release, wait, notify, notify_all) allowed per transition"
+  | LivelockTransition ->
+    fprintf fmt "at least one transition needs to appear in livelock declaration"
 
 let error e l = raise (Error (e,l))
 
@@ -126,6 +129,7 @@ let infer_type x1 x2 =
     let h1 = match x1 with
       | Const _ | Arith _ -> raise Exit
       | Elem (h1, _) | Access (h1, _) -> h1
+      | _ -> assert false
     in
     let ref_ty, ref_cs =
       try Hstring.H.find refinements h1 with Not_found -> [], [] in
@@ -183,6 +187,7 @@ let rec term loc args = function
 	    error (MustBeOfTypeProc i) loc;
 	) li;
       [], ty_a
+  | ProcManip(_,_) -> assert false
 
 let assignment ?(init_variant=false) g x (_, ty) = 
   if ty = Smt.Type.type_proc 
@@ -291,7 +296,22 @@ let locks loc tlocks =
   if List.length tlocks <> 1 then error SingleLockMechanism loc;
   let el = List.hd tlocks in
   match el with
-    | Lock l | Unlock l | Wait l | Notify l | *)
+  | Lock l | Unlock l | Wait l | Notify l | *)
+
+let type_livelocks ll tr =
+  let names = List.map ( fun t -> t.tr_name) tr in
+  List.map (fun (loc, h, hl) ->
+    if hl = [] then error LivelockTransition loc;
+    let b = List.exists (fun x -> Hstring.equal x h) names
+    in
+    if not b then error (UnknownName h) loc;
+    List.iter (fun x ->
+      let b = List.exists (fun y -> Hstring.equal x y) names in
+      if not b then error (UnknownName x) loc ) hl;
+    (h,hl)
+  ) ll
+    
+    
     
 let transitions =
   let h = ref [] in
@@ -553,6 +573,8 @@ let system s =
   let init_woloc = let _,v,i = s.init in v,i in
   let invs_woloc =
     List.map (fun (_,v,i) -> create_node_rename Inv v i) s.invs in
+  let livelock_woloc = type_livelocks s.livelock s.trans in
+    
   let unsafe_woloc =
     List.map (fun (_,v,u) -> create_node_rename Orig v u) s.unsafe in
   let init_instances = create_init_instances init_woloc invs_woloc in
@@ -566,5 +588,6 @@ let system s =
     t_init_instances = init_instances;
     t_invs = invs_woloc;
     t_unsafe = unsafe_woloc;
+    t_livelock = livelock_woloc;
     t_trans = List.map add_tau s.trans;
   }
