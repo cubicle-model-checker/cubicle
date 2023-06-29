@@ -45,6 +45,7 @@
 	"number_procs", SIZEPROC;
 	"let", LET;
 	"in", IN;
+	"livelock", LIVELOCK;
 	"-status", STATUS;
 	"-help", HELP;
 	"-clear", CLEAR;

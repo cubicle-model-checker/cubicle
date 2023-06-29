@@ -100,6 +100,7 @@ type system = {
   init : loc * Variable.t list * dnf;
   invs : (loc * Variable.t list * SAtom.t) list;
   unsafe : (loc * Variable.t list * SAtom.t) list;
+  livelock: (loc * Hstring.t * Hstring.t list) list; 
   trans : transition_info list;
 }
 
@@ -160,6 +161,8 @@ type t_system = {
   (** user supplied invariants in negated form *)
   t_unsafe : node_cube list;
   (** unsafe formulas (in the form of cubes *)
+  t_livelock : (Hstring.t * Hstring.t list) list;
+  (** livelock conditions to check*)
   t_trans : transition list;
   (** transition relation in the form of a list of transitions *)
 }

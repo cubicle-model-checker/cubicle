@@ -93,7 +93,7 @@
 %token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE
 %token FORALL EXISTS FORALL_OTHER EXISTS_OTHER
 %token SIZEPROC
-%token REQUIRE UNSAFE PREDICATE
+%token REQUIRE UNSAFE PREDICATE LIVELOCK
 %token OR AND COMMA PV DOT QMARK IMP EQUIV
 %token <string*string> CONSTPROC
 %token <string> LIDENT
@@ -161,6 +161,7 @@ decl :
   | init { PInit $1 }
   | invariant { PInv $1 }
   | unsafe { PUnsafe $1 }
+  | livelock { PLivelock $1 }
   | transition { PTrans $1 }
   | function_decl { PFun  }
 
@@ -245,6 +246,10 @@ unsafe:
   | UNSAFE LEFTBR expr RIGHTBR { loc (), [], $3 }
   | UNSAFE LEFTPAR lidents RIGHTPAR LEFTBR expr RIGHTBR { loc (), $3, $6 }
 ;
+
+livelock:
+  | LIVELOCK LEFTSQ lident RIGHTSQ LEFTBR lidents RIGHTBR { loc (), $3, $6 }
+
 
 transition_name:
   | lident {$1}

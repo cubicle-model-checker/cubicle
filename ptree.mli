@@ -104,6 +104,7 @@ type psystem = {
   pinit : loc * Variable.t list * cformula;
   pinvs : (loc * Variable.t list * cformula) list;
   punsafe : (loc * Variable.t list * cformula) list;
+  plivelock : (loc * Hstring.t * Hstring.t list) list;
   ptrans : ptransition list;
 }
 
@@ -112,6 +113,7 @@ type pdecl =
   | PInit of (loc * Variable.t list * cformula)
   | PInv of (loc * Variable.t list * cformula)
   | PUnsafe of (loc * Variable.t list * cformula)
+  | PLivelock of (loc * Hstring.t * Hstring.t list)
   | PTrans of ptransition
   | PFun
 

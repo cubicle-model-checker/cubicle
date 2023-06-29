@@ -46,5 +46,5 @@ let check s n =
         raise (Unsafe n)
       end
   with
-    | Smt.Unsat _ -> ()
+    | Smt.Unsat l -> (*Format.eprintf "here@."; List.iter (fun x -> Format.eprintf "Bro %d@." x)l;*) ()
 

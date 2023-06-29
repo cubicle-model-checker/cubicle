@@ -49,16 +49,6 @@ let extract_procs sa =
   let sorted = List.sort_uniq Hstring.compare procs in
   (*List.iter (fun x -> Format.eprintf "%a@." Hstring.print x) sorted;*)
   sorted
-    
-
-
-
-
-
-
-
-
-  
 
 let semaphore_init s =
   match s with
@@ -133,9 +123,7 @@ let init_vals env init =
 		  Env.add x t1 acc3 ) sacc arr
 	      | Elem(_, Glob) , Elem(_, SystemProcs) -> Env.add t1 t2 sacc
 	      | Elem(_, Glob), Arith(tt, im) ->
-		Env.add t1 t2 sacc
-		
-		
+		Env.add t1 t2 sacc				
 	      | _ -> assert false		  	     		    
 	  end 	    	   	  
 	| Comp (t1, Neq, t2) ->
@@ -234,6 +222,7 @@ let print_val fmt v =
     | UNDEF -> Format.fprintf fmt "%s" "\'UNDEF\'"
     | VAccess(l,t) -> Format.fprintf fmt "\'%a[%a]\'" Hstring.print l (Hstring.print_list ", ") t
     | VArith _ -> ()
+    | VAbstract _ -> ()
 
 let print_wait fmt el =
   List.iter (fun x -> Format.fprintf fmt "%a " Term.print x) el
@@ -305,7 +294,7 @@ let execute_random3 fmt glob_env trans all_procs unsafe applied_trans main_bt_en
       let rand = Random.int l in
       let (apply,apply_procs) = !transitions.(rand) in
       let tr_num = fresh_back () in
-      let new_env = apply_transition apply_procs apply.tr_name trans !running_env in
+      let new_env = apply_transition_forward apply_procs apply.tr_name trans !running_env in
 
       running_env := new_env;
       incr steps;

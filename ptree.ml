@@ -180,6 +180,7 @@ type psystem = {
   pinit : loc * Variable.t list * cformula;
   pinvs : (loc * Variable.t list * cformula) list;
   punsafe : (loc * Variable.t list * cformula) list;
+  plivelock : (loc * Hstring.t * Hstring.t list) list;
   ptrans : ptransition list;
 }
 
@@ -188,6 +189,7 @@ type pdecl =
   | PInit of (loc * Variable.t list * cformula)
   | PInv of (loc * Variable.t list * cformula)
   | PUnsafe of (loc * Variable.t list * cformula)
+  | PLivelock of (loc * Hstring.t * Hstring.t list)
   | PTrans of ptransition
   | PFun
 
@@ -610,7 +612,7 @@ let encode_ptransition
 let encode_psystem
     {pglobals; pconsts; parrays; ptype_defs;
      pinit = init_loc, init_vars, init_f;
-     pinvs; punsafe; ptrans} =
+     pinvs; punsafe; plivelock; ptrans} =
   let other_vars, init_dnf = inits_of_formula init_f in
   let init = init_loc, init_vars @ other_vars, init_dnf in
   let invs =
@@ -652,20 +654,22 @@ let encode_psystem
     init;
     invs;
     unsafe;
+    livelock = plivelock;
     trans;
   }
       
 
 
 let psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs pdecls =
-  let inits, pinvs, punsafe, ptrans =
-    List.fold_left (fun (inits, invs, unsafes, trans) -> function
-        | PInit i -> i :: inits, invs, unsafes, trans
-        | PInv i -> inits, i :: invs, unsafes, trans
-        | PUnsafe u -> inits, invs, u :: unsafes, trans
-        | PTrans t -> inits, invs, unsafes, t :: trans
-        | PFun -> inits, invs, unsafes, trans
-      ) ([],[],[],[]) pdecls
+  let inits, pinvs, punsafe, plivelock, ptrans =
+    List.fold_left (fun (inits, invs, unsafes, livelocks, trans) -> function
+        | PInit i -> i :: inits, invs, unsafes, livelocks, trans
+        | PInv i -> inits, i :: invs, unsafes, livelocks, trans
+        | PUnsafe u -> inits, invs, u :: unsafes, livelocks, trans
+	| PLivelock l -> inits, invs, unsafes, l::livelocks, trans
+        | PTrans t -> inits, invs, unsafes, livelocks, t :: trans
+        | PFun -> inits, invs, unsafes, livelocks, trans
+      ) ([],[],[],[], []) pdecls
   in
   let pinit = match inits with
     | [i] -> i
@@ -679,6 +683,7 @@ let psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs pdecls =
     pinit;
     pinvs;
     punsafe;
+    plivelock;
     ptrans }
   
   

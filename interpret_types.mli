@@ -72,10 +72,10 @@ end
 
 type term_map = interpret_value Env.t
 type lockq = Types.Term.t PersistentQueue.t LockQueues.t
-type conds = Types.Term.t list Conditions.t
+type conds  = Types.Term.t list Conditions.t
 type semaphs = Types.Term.t list Semaphores.t
 
-type global = term_map * lockq * conds * semaphs 
+type global = term_map * lockq * conds * semaphs
 
   
 (*

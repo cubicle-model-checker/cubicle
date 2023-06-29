@@ -427,17 +427,20 @@ let random_value h =
     | false, false, true, false, false, false, false, false -> let r = Random.int 12 in
 				   if r mod 2 = 0 then VBool true
 				   else VBool false
-    | false, false, false, true,false, false, false, false -> let r = (Random.int 25) mod (Options.get_interpret_procs () )in
-				   let s = "#"^(string_of_int (r+1)) in
-				   VProc (Hstring.make s)
+    | false, false, false, true,false, false, false, false ->
+      let r = (Random.int 25) mod (Options.get_interpret_procs () )in
+      let s = "#"^(string_of_int (r+1)) in
+      VProc (Hstring.make s)
     | false, false, false, false,false, false, false, false -> 
       let constrs = Smt.Type.constructors h in
-      if (List.length constrs) = 0 then VConstr(Hstring.make "ABSTRACT")
+      let len = List.length constrs in
+      if len = 0 then VConstr(Hstring.make "ABSTRACT")
+      else if len = 1 then VConstr(List.hd constrs)
       else
 	begin
-      let arr = Array.of_list constrs in
-      let r = Random.int (List.length constrs -1) in
-      let el = arr.(r) in
+      (*let arr = Array.of_list constrs in*)
+      let r = Random.int (len -1) in
+      let el = List.nth constrs r in
       VConstr(el)
 	end 
     | false,false,false,false,true, false, false, false -> VLock (false, None)
@@ -508,7 +511,7 @@ let to_interpret term =
       let _, ty = Smt.Symbol.type_of el in {value = VConstr el; typ = ty }
     | Elem( el, Var) -> {value = VProc el; typ = ty_proc }
     | Access(el,vl) -> let _, ty = Smt.Symbol.type_of el in {value = VAccess (el,vl); typ = ty }
-    | Const cs -> let x = int_of_consts cs in {value = VInt x; typ = ty_int}
+    | Const cs ->  let x = int_of_consts cs in {value = VInt x; typ = ty_int}
     | Arith(t,cs) -> assert false
     | Elem(_, SystemProcs) -> {value = VInt !sys_procs; typ = Smt.Type.type_int}
     | ProcManip([t], PlusOne) ->
