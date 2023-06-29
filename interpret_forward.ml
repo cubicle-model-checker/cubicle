@@ -1150,6 +1150,7 @@ let interpret_bfs original_env transitions all_procs all_unsafes =
 	    incr visit_count;
 	    incr node;
 	    incr rem;
+	    if not Options.bench then 
 	    Format.printf "[%d][%d][%d]\r%!" !node !rem env_d;
 	    Queue.push (he, env_d + 1, e) to_do
 	  end ) possible;
