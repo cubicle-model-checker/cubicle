@@ -312,9 +312,10 @@ let force_procs_forward code glob_env trans all_procs p_proc all_unsafes =
   while !steps < depth do
     incr overall;
     try
-      if (List.length !visited_states) > Options.fuzz_s then
-      begin
-	Format.printf "\n\nSet limit reached@."; raise Exit
+      if (List.length !visited_states) >= Options.fuzz_s then
+	begin
+	  if not Options.bench then 
+	    Format.printf "\n\nSet limit reached@."; raise Exit
       end;
       TimerFuzz.pause () ;
 	  if Options.fuzz_bench_time && (TimerFuzz.get ()) >= Options.fuzz_bench then raise Exit
@@ -456,8 +457,9 @@ let markov_entropy code glob all_procs trans =
   let w1 = ref (entropy_env glob.state trans all_procs) in 
   while !taken < steps do
     try
-      if (!visit_count) > Options.fuzz_s then
-      begin
+      if (!visit_count) >= Options.fuzz_s then
+	begin
+	  if not Options.bench then 
 	Format.printf "\n\nSet limit reached@."; raise Exit
       end;
       TimerFuzz.pause () ;
@@ -735,8 +737,9 @@ let run_smart code node all_procs trans unsafes =
     ref (Array.of_list (all_possible_transitions node.state trans all_procs false)) in
   while !steps < max_depth do
     try
-      if (!visit_count) > Options.fuzz_s then
-      begin
+      if (!visit_count) >= Options.fuzz_s then
+	begin
+	  if not Options.bench then 
 	Format.printf "\n\nSet limit reached@."; raise Exit
       end;
       TimerFuzz.pause () ;
@@ -969,8 +972,9 @@ let further_bfs code node transitions all_procs all_unsafes =
 	    
 	    visited_states := e::!visited_states;
 	    incr visit_count;
-	    if (!visit_count) > Options.fuzz_s then
-      begin
+	    if (!visit_count) >= Options.fuzz_s then
+	      begin
+		if not Options.bench then 
 	Format.printf "\n\nSet limit reached@."; raise Exit
       end;
 
@@ -1219,8 +1223,9 @@ let run_forward code node all_procs trans unsafes =
     ref (Array.of_list (all_possible_transitions node.state trans all_procs false)) in
   while !steps < max_depth do
     try
-      if (!visit_count) > Options.fuzz_s then
-      begin
+      if (!visit_count) >= Options.fuzz_s then
+	begin
+	  if not Options.bench then
 	Format.printf "\n\nSet limit reached@."; raise Exit
       end;
       TimerFuzz.pause () ;
@@ -1332,8 +1337,9 @@ let do_new_exit code node all_procs trans unsafes =
   let added = ref 0 in
   
   try
-    if (!visit_count) > Options.fuzz_s then
+    if (!visit_count) >= Options.fuzz_s then
       begin
+	if not Options.bench then 
 	Format.printf "\n\nSet limit reached@."; raise Exit
       end;
     TimerFuzz.pause () ;
@@ -1447,8 +1453,9 @@ let continue_from_bfs all_procs transitions all_unsafes =
   try 
   let running = ref true in
   while !running do
-    if !visit_count > Options.fuzz_s then
+    if !visit_count >= Options.fuzz_s then
       begin
+	if not Options.bench then
 	Format.printf "\n\nSet limit reached@."; raise Exit
       end;
 
