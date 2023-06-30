@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# BFS tests
+
+SAFE=0
+TIMEOUT=0
+CFL="CFL"
+RAND="Random"
+
+# Define an indexed array of files and options
+files=(
+    "dispatch_dekker.cub"
+    "dispatch_german.cub"
+    "dispatch_szymansk_na.cub"
+)
+options=(
+    "-int-brab 3 -quiet -bench -fuzz-limit 48000 1 1"
+    "-int-brab 3 -quiet -bench -fuzz-limit 33000 1 1"
+    "-int-brab 3 -quiet -bench -fuzz-limit 26000 1 1"
+)
+
+for index in "${!files[@]}"; do
+  file="${files[$index]}"
+  option="${options[$index]}"
+
+  echo -e ""
+  echo "Running $file"
+
+  for ((i=1; i<=10; i++)); do
+    timeout 10 ../../../cubicle.opt $file $option
+
+    if [ $? -eq 0 ]; then
+      echo "Run $i: $file is Safe"
+      SAFE=$((SAFE+1))
+    else
+      echo "Run $i: $file has timed out"
+      TIMEOUT=$((TIMEOUT+1))
+    fi
+  done
+  echo -e ""
+  echo "$file succeeded $SAFE out of 10 times"
+  SAFE=0
+  TIMEOUT=0
+done
