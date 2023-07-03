@@ -76,7 +76,6 @@ let subst sigma { vars = vs; array = ar } =
 (***************************************)
 
 
-
 let normal_form ({ litterals = sa; array = ar } as c) =
   let vars = Variable.Set.elements (SAtom.variables_proc sa) in
   if !size_proc <> 0 && List.length vars > !size_proc then
@@ -93,7 +92,6 @@ let normal_form ({ litterals = sa; array = ar } as c) =
       litterals = new_sa;
       array = new_ar;
     }
-
 
 let create_norma_sa_ar sa ar =
   let vars = Variable.Set.elements (SAtom.variables_proc sa) in
@@ -118,7 +116,6 @@ let dim c = List.length c.vars
 let size c = Array.length c.array
 
 
-
 (******************************************************************)
 (* Simplifcation of atoms in a cube based on the hypothesis that  *)
 (* indices #i are distinct and the type of elements is an	        *)
@@ -127,6 +124,7 @@ let size c = Array.length c.array
 (* simplify comparison atoms, according to the assumption that	  *)
 (* variables are all disctincts					                          *)
 (******************************************************************)
+
 
 let redondant_or_false others a = match a with
   | Atom.Comp (t1, Neq, (Vea(Elem (x, (Var | Constr))) as t2))
@@ -199,36 +197,30 @@ let simplify_comp i si op j sj =
     | _ ->
         Atom.Comp (Vea(Elem (i, si)), op, Vea(Elem (j, sj)))
 
-let simplify_poly cs ts =
-  (* 1. Remove every null vea *)
-  let ts = 
-    VMap.fold
-    (fun vea const acc -> 
-      if not (Const.is_zero const) then VMap.add vea const acc 
-                                   else acc 
-    )
-    ts
-    VMap.empty
-  in
+let simplify_vea v1 op v2 =
+  match v1, v2 with 
+  | Vea.Elem(i, si), Vea.Elem(j, sj) -> simplify_comp i si op j sj
+  | _ -> Atom.Comp(Vea(v1), op, Vea(v2))
 
+let simplify_poly cs ts =
+
+  (* 1. Remove every null vea *)
+  let ts = VMap.filter (fun _ c -> not (Const.is_zero c)) ts in 
+ 
   (* 2. Check if poly contains only one Vea *)
   if Const.is_zero cs && VMap.cardinal ts = 1 then
     let vea, c = VMap.choose ts in 
     if Const.is_one c then Vea(vea)
                       else Poly(cs, ts)
-    else Poly (cs, ts)
+  else Poly (cs, ts)
 
 let rec simplification np a =
   let a = redondant_or_false (SAtom.remove a np) a in
   match a with
-    | Atom.Comp (Vea(Elem (i, si)), op, Vea(Elem (j, sj))) -> simplify_comp i si op j sj
-    | Atom.Comp (Poly (cs1, ts1), (Eq | Le), Poly (cs2, ts2)) 
-        when VMap.equal Const.equal ts1 ts2 && Const.equal cs1 cs2 ->
-          Atom.True
-    | Atom.Comp (Poly (cs1, ts1), (Neq | Lt), Poly (cs2, ts2)) 
-        when VMap.equal Const.equal ts1 ts2 && Const.equal cs1 cs2 ->
-          Atom.False
-   | Atom.Comp (Poly (cs1, ts1), Le, Poly (cs2, ts2)) 
+    | Atom.Comp (t1, (Eq | Le), t2)  when Term.equal t1 t2 -> Atom.True
+    | Atom.Comp (t1, (Neq | Lt), t2) when Term.equal t1 t2 -> Atom.False 
+    | Atom.Comp (Vea v1, op, Vea v2) -> simplify_vea v1 op v2 
+    | Atom.Comp (Poly (cs1, ts1), Le, Poly (cs2, ts2)) 
         when VMap.equal Const.equal ts1 ts2 && Const.num_le cs1 cs2 ->
           Atom.True
     | Atom.Comp (Poly (cs1, ts1), Lt, Poly (cs2, ts2)) 
@@ -249,14 +241,13 @@ let rec simplification np a =
       if SAtom.is_empty sa || SAtom.subset sa np then a1
       else if SAtom.mem Atom.False sa then a2
       else a
-    | Atom.Comp ((Poly _ as t1), op, (Poly _ as t2)) ->
+    | Atom.Comp (t1, op, t2) ->
         let t1' = 
           match term_add t1 (term_neg t2) with 
           | Poly (cs,ts) -> simplify_poly cs ts 
           | t            -> t
         in
         Atom.Comp (t1', op, Poly(Const.int_zero, VMap.empty))
-    (* TODO : Comparaison entre Poly et Vea *)
     | _ -> a
 
 (***********************************)
@@ -281,29 +272,28 @@ let inconsistent_list l =
     | Atom.Comp (t1, Eq, (Vea(Elem (x, s)) as t2)) :: l
     | Atom.Comp ((Vea(Elem (x, s)) as t2), Eq, t1) :: l ->
       (match s with
-	| Var | Constr ->
-	  if assoc_neq t1 values t2
-	    || assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1
-	  then raise Exit
-	  else check ((t1, t2)::values) eqs neqs les lts ges gts l
-	| _ ->
-	  if assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1
-	  then raise Exit
-	  else check values ((t1, t2)::eqs) neqs les lts ges gts l)
+        | Var | Constr ->
+          if assoc_neq t1 values t2 || assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1
+          then raise Exit
+          else check ((t1, t2)::values) eqs neqs les lts ges gts l
+        | _ ->
+          if assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1
+          then raise Exit
+          else check values ((t1, t2)::eqs) neqs les lts ges gts l)
     | Atom.Comp (t1, Eq, t2) :: l ->
       if assoc_eq t1 neqs t2 || assoc_eq t2 neqs t1
       then raise Exit
       else check values ((t1, t2)::eqs) neqs les lts ges gts l
     | Atom.Comp (t1, Neq, t2) :: l ->
       if assoc_eq t1 values t2 || assoc_eq t2 values t1
-	|| assoc_eq t1 eqs t2 || assoc_eq t2 eqs t1
+      || assoc_eq t1 eqs t2 || assoc_eq t2 eqs t1
       then raise Exit
       else check values eqs ((t1, t2)::(t2, t1)::neqs) les lts ges gts l
     | Atom.Comp (t1, Lt, t2) :: l ->
       if assoc_eq t1 values t2 || assoc_eq t2 values t1
-	|| assoc_eq t1 eqs t2 || assoc_eq t2 eqs t1
-	|| assoc_eq t1 ges t2 || assoc_eq t2 les t1
-	|| assoc_eq t1 gts t2 || assoc_eq t2 lts t1
+      || assoc_eq t1 eqs t2 || assoc_eq t2 eqs t1
+      || assoc_eq t1 ges t2 || assoc_eq t2 les t1
+      || assoc_eq t1 gts t2 || assoc_eq t2 lts t1
       then raise Exit
       else check values eqs neqs les ((t1, t2)::lts) ges ((t2, t1)::gts) l
     | Atom.Comp (t1, Le, t2) :: l ->

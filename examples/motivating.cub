@@ -11,9 +11,7 @@ array Shr[proc] : bool
 init (z) { Cache[z] = I && Shr[z] = False &&
            Exg = False && Cmd = Epsilon }
 
-
 unsafe (z1 z2) { Cache[z1] = E && Cache[z2] <> I  }
-
 
 transition t1 (n)
 requires { Cmd = Epsilon && Cache[n] = I }
@@ -34,7 +32,7 @@ requires { Shr[n]=True  &&  Cmd = RE }
 { 
   Exg := False;
   Cache[n] := I;
-  Shr[n] :=False;
+  Shr[n] := False;
 }
 
 transition t4 (n)

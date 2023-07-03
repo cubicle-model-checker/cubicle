@@ -1,0 +1,515 @@
+
+node [1m1[22m: [35munsafe[1][39m
+                                                               [2m5 (2+3) remaining[0m
+
+node [1m2[22m: tr2(#2) -> [35munsafe[1][39m
+                                                               [2m7 (1+6) remaining[0m
+
+================================================================================
+* [1mSTATS[22m
+--------------------------------------------------------------------------------
+Number of visited nodes          : 2
+Fixpoints                        : 7
+Number of solver calls           : 2
+Max Number of processes          : 2
+Number of deleted nodes          : 0
+Restarts                         : 0
+================================================================================
+
+
+The system is [1m[32mSAFE[39m[22m
+
+time:0.01
+node [1m1[22m: [35munsafe[2][39m
+                                                             [2m19 (7+12) remaining[0m
+
+node [1m2[22m: turn(#2) -> [35munsafe[2][39m
+                                                            [2m34 (10+24) remaining[0m
+
+node [1m3[22m: turn(#2) -> [35munsafe[2][39m
+                                                            [2m48 (12+36) remaining[0m
+
+node [1m4[22m: turn(#2) -> [35munsafe[2][39m
+                                                            [2m63 (15+48) remaining[0m
+
+node [1m5[22m: turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                            [2m73 (13+60) remaining[0m
+
+node [1m6[22m: turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                            [2m87 (15+72) remaining[0m
+
+node [1m7[22m: wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                           [2m102 (18+84) remaining[0m
+
+node [1m8[22m: wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                           [2m115 (19+96) remaining[0m
+
+node [1m9[22m: wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m126 (18+108) remaining[0m
+
+node [1m10[22m: wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m139 (19+120) remaining[0m
+
+node [1m11[22m: wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m151 (19+132) remaining[0m
+
+node [1m12[22m: wait(#1) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m164 (20+144) remaining[0m
+
+node [1m13[22m: turn(#1) -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m177 (21+156) remaining[0m
+
+node [1m14[22m: turn(#1) -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m191 (23+168) remaining[0m
+
+node [1m15[22m: take_ticket(#2) -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m206 (26+180) remaining[0m
+
+node [1m16[22m: next_ticket() -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m220 (29+191) remaining[0m
+
+node [1m17[22m: turn(#1) -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m233 (30+203) remaining[0m
+
+node [1m18[22m: turn(#1) -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m246 (31+215) remaining[0m
+
+node [1m19[22m: turn(#1) -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m259 (32+227) remaining[0m
+
+node [1m20[22m: next_ticket() -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m272 (34+238) remaining[0m
+
+node [1m21[22m: turn(#1) -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m285 (35+250) remaining[0m
+
+node [1m22[22m: turn(#1) -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m298 (36+262) remaining[0m
+
+node [1m23[22m: next_ticket() -> wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m312 (38+274) remaining[0m
+
+node [1m24[22m: wait(#1) -> wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m326 (40+286) remaining[0m
+
+node [1m25[22m: next_ticket() -> wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m339 (41+298) remaining[0m
+
+node [1m26[22m: wait(#1) -> wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m352 (42+310) remaining[0m
+
+node [1m27[22m: take_ticket(#2) -> wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m366 (44+322) remaining[0m
+
+node [1m28[22m: next_ticket() -> wait(#1) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m378 (45+333) remaining[0m
+
+node [1m29[22m: wait(#1) -> turn(#1) -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m390 (45+345) remaining[0m
+
+node [1m30[22m: wait(#1) -> turn(#1) -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m401 (44+357) remaining[0m
+
+node [1m31[22m: next_ticket() -> take_ticket(#2) -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m416 (47+369) remaining[0m
+
+node [1m32[22m: turn(#1) -> next_ticket() -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m423 (43+380) remaining[0m
+
+node [1m33[22m: turn(#1) -> next_ticket() -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m435 (44+391) remaining[0m
+
+node [1m34[22m: turn(#1) -> next_ticket() -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m447 (45+402) remaining[0m
+
+node [1m35[22m: wait(#1) -> turn(#1) -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m459 (45+414) remaining[0m
+
+node [1m36[22m: wait(#1) -> turn(#1) -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m470 (44+426) remaining[0m
+
+node [1m37[22m: wait(#1) -> turn(#1) -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m481 (43+438) remaining[0m
+
+node [1m38[22m: turn(#1) -> next_ticket() -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m492 (43+449) remaining[0m
+
+node [1m39[22m: turn(#1) -> next_ticket() -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m504 (44+460) remaining[0m
+
+node [1m40[22m: wait(#1) -> turn(#1) -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m517 (45+472) remaining[0m
+
+node [1m41[22m: wait(#1) -> turn(#1) -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m529 (45+484) remaining[0m
+
+node [1m42[22m: wait(#1) -> next_ticket() -> wait(#2) -> turn(#1) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m542 (46+496) remaining[0m
+
+node [1m43[22m: next_ticket() -> wait(#1) -> wait(#2) -> turn(#1) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m555 (47+508) remaining[0m
+
+node [1m44[22m: take_ticket(#2) -> wait(#1) -> wait(#2) -> turn(#1) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m569 (49+520) remaining[0m
+
+node [1m45[22m: wait(#1) -> next_ticket() -> wait(#2) -> turn(#1) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m579 (47+532) remaining[0m
+
+node [1m46[22m: take_ticket(#2) -> wait(#1) -> wait(#2) -> turn(#1) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m590 (46+544) remaining[0m
+
+node [1m47[22m: take_ticket(#1) -> wait(#1) -> wait(#2) -> turn(#1) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m602 (46+556) remaining[0m
+
+node [1m48[22m: next_ticket() -> take_ticket(#2) -> wait(#2) -> turn(#1) ->
+         turn(#2) -> [35munsafe[2][39m
+                                                          [2m616 (48+568) remaining[0m
+
+node [1m49[22m: wait(#1) -> take_ticket(#2) -> wait(#2) -> turn(#1) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m628 (48+580) remaining[0m
+
+node [1m50[22m: exit(#2) -> take_ticket(#2) -> wait(#2) -> turn(#1) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m644 (52+592) remaining[0m
+
+node [1m51[22m: wait(#1) -> turn(#1) -> next_ticket() -> wait(#2) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m643 (39+604) remaining[0m
+
+node [1m52[22m: wait(#1) -> turn(#1) -> next_ticket() -> wait(#2) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m654 (38+616) remaining[0m
+
+node [1m53[22m: wait(#1) -> turn(#1) -> next_ticket() -> wait(#2) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m665 (37+628) remaining[0m
+
+node [1m54[22m: take_ticket(#2) -> wait(#1) -> turn(#1) -> wait(#2) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m677 (37+640) remaining[0m
+
+node [1m55[22m: take_ticket(#1) -> wait(#1) -> turn(#1) -> wait(#2) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m689 (37+652) remaining[0m
+
+node [1m56[22m: take_ticket(#2) -> wait(#1) -> turn(#1) -> wait(#2) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m701 (37+664) remaining[0m
+
+node [1m57[22m: take_ticket(#2) -> wait(#1) -> turn(#1) -> wait(#2) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m713 (37+676) remaining[0m
+
+node [1m58[22m: wait(#1) -> turn(#1) -> next_ticket() -> wait(#2) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m726 (38+688) remaining[0m
+
+node [1m59[22m: wait(#1) -> turn(#1) -> next_ticket() -> wait(#2) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m738 (38+700) remaining[0m
+
+node [1m60[22m: next_ticket() -> wait(#1) -> turn(#1) -> wait(#2) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m752 (40+712) remaining[0m
+
+node [1m61[22m: take_ticket(#2) -> wait(#1) -> turn(#1) -> wait(#2) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m766 (42+724) remaining[0m
+
+node [1m62[22m: take_ticket(#1) -> wait(#1) -> turn(#1) -> wait(#2) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m780 (44+736) remaining[0m
+
+node [1m63[22m: next_ticket() -> wait(#1) -> turn(#1) -> wait(#2) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m792 (45+747) remaining[0m
+
+node [1m64[22m: take_ticket(#2) -> wait(#1) -> turn(#1) -> wait(#2) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m805 (46+759) remaining[0m
+
+node [1m65[22m: take_ticket(#2) -> next_ticket() -> wait(#1) -> wait(#2) ->
+         turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m815 (44+771) remaining[0m
+
+node [1m66[22m: wait(#1) -> next_ticket() -> take_ticket(#2) -> wait(#2) ->
+         turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m821 (38+783) remaining[0m
+
+node [1m67[22m: exit(#2) -> next_ticket() -> take_ticket(#2) -> wait(#2) ->
+         turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m837 (42+795) remaining[0m
+
+node [1m68[22m: exit(#2) -> wait(#1) -> take_ticket(#2) -> wait(#2) -> turn(#1) ->
+         turn(#2) -> [35munsafe[2][39m
+                                                          [2m851 (44+807) remaining[0m
+
+node [1m69[22m: turn(#2) -> exit(#2) -> take_ticket(#2) -> wait(#2) -> turn(#1) ->
+         turn(#2) -> [35munsafe[2][39m
+                                                          [2m864 (45+819) remaining[0m
+
+node [1m70[22m: exit(#2) -> take_ticket(#2) -> wait(#1) -> turn(#1) -> wait(#2) ->
+         turn(#2) -> [35munsafe[2][39m
+                                                          [2m872 (41+831) remaining[0m
+
+node [1m71[22m: exit(#1) -> take_ticket(#1) -> wait(#1) -> turn(#1) -> wait(#2) ->
+         turn(#2) -> [35munsafe[2][39m
+                                                          [2m886 (43+843) remaining[0m
+
+node [1m72[22m: take_ticket(#2) -> next_ticket() -> wait(#1) -> turn(#1) ->
+         wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m892 (37+855) remaining[0m
+
+node [1m73[22m: take_ticket(#1) -> next_ticket() -> wait(#1) -> turn(#1) ->
+         wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m906 (39+867) remaining[0m
+
+
+Unsafe trace: take_ticket(#1) -> take_ticket(#2) -> wait(#1) -> turn(#1) ->
+               wait(#2) -> turn(#2) -> [35munsafe[2][39m
+================================================================================
+* [1mSTATS[22m
+--------------------------------------------------------------------------------
+Number of visited nodes          : 73
+Fixpoints                        : 84
+Number of solver calls           : 758
+Max Number of processes          : 2
+Number of deleted nodes          : 8
+Restarts                         : 0
+================================================================================
+
+[31mError trace[39m: Init -> take_ticket(#1) -> take_ticket(#2) -> wait(#1) -> 
+             turn(#1) -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+
+
+[1m[41mUNSAFE[49m ![22m
+
+Command exited with non-zero status 1
+time:0.07
+node [1m1[22m: [35munsafe[2][39m
+                                                             [2m19 (7+12) remaining[0m
+
+node [1m2[22m: turn(#2) -> [35munsafe[2][39m
+                                                            [2m34 (10+24) remaining[0m
+
+node [1m3[22m: turn(#2) -> [35munsafe[2][39m
+                                                            [2m48 (12+36) remaining[0m
+
+node [1m4[22m: turn(#2) -> [35munsafe[2][39m
+                                                            [2m62 (14+48) remaining[0m
+
+node [1m5[22m: turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                            [2m72 (12+60) remaining[0m
+
+node [1m6[22m: turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                            [2m86 (14+72) remaining[0m
+
+node [1m7[22m: wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                            [2m89 (14+75) remaining[0m
+
+node [1m8[22m: wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                            [2m90 (12+78) remaining[0m
+
+node [1m9[22m: wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                            [2m91 (10+81) remaining[0m
+
+node [1m10[22m: wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                            [2m95 (11+84) remaining[0m
+
+node [1m11[22m: wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                            [2m98 (11+87) remaining[0m
+
+node [1m12[22m: wait(#1) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                           [2m102 (12+90) remaining[0m
+
+node [1m13[22m: take_ticket(#2) -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m117 (15+102) remaining[0m
+
+node [1m14[22m: next_ticket() -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m119 (15+104) remaining[0m
+
+node [1m15[22m: next_ticket() -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m121 (15+106) remaining[0m
+
+node [1m16[22m: next_ticket() -> wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m126 (17+109) remaining[0m
+
+node [1m17[22m: wait(#1) -> wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m131 (19+112) remaining[0m
+
+node [1m18[22m: next_ticket() -> wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m135 (20+115) remaining[0m
+
+node [1m19[22m: wait(#1) -> wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m139 (21+118) remaining[0m
+
+node [1m20[22m: take_ticket(#2) -> wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m153 (23+130) remaining[0m
+
+node [1m21[22m: next_ticket() -> wait(#1) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m156 (24+132) remaining[0m
+
+node [1m22[22m: next_ticket() -> take_ticket(#2) -> wait(#2) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m171 (27+144) remaining[0m
+
+node [1m23[22m: wait(#1) -> next_ticket() -> wait(#2) -> turn(#1) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m169 (22+147) remaining[0m
+
+node [1m24[22m: next_ticket() -> wait(#1) -> wait(#2) -> turn(#1) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m173 (23+150) remaining[0m
+
+node [1m25[22m: take_ticket(#2) -> wait(#1) -> wait(#2) -> turn(#1) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m178 (25+153) remaining[0m
+
+node [1m26[22m: wait(#1) -> next_ticket() -> wait(#2) -> turn(#1) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m179 (23+156) remaining[0m
+
+node [1m27[22m: take_ticket(#2) -> wait(#1) -> wait(#2) -> turn(#1) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m181 (22+159) remaining[0m
+
+node [1m28[22m: take_ticket(#1) -> wait(#1) -> wait(#2) -> turn(#1) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m184 (22+162) remaining[0m
+
+node [1m29[22m: next_ticket() -> take_ticket(#2) -> wait(#2) -> turn(#1) ->
+         turn(#2) -> [35munsafe[2][39m
+                                                          [2m198 (24+174) remaining[0m
+
+node [1m30[22m: wait(#1) -> take_ticket(#2) -> wait(#2) -> turn(#1) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m201 (24+177) remaining[0m
+
+node [1m31[22m: exit(#2) -> take_ticket(#2) -> wait(#2) -> turn(#1) -> turn(#2) ->
+         [35munsafe[2][39m
+                                                          [2m217 (28+189) remaining[0m
+
+node [1m32[22m: take_ticket(#2) -> next_ticket() -> wait(#1) -> wait(#2) ->
+         turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m211 (19+192) remaining[0m
+
+node [1m33[22m: wait(#1) -> next_ticket() -> take_ticket(#2) -> wait(#2) ->
+         turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m208 (13+195) remaining[0m
+
+node [1m34[22m: exit(#2) -> next_ticket() -> take_ticket(#2) -> wait(#2) ->
+         turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m224 (17+207) remaining[0m
+
+node [1m35[22m: exit(#2) -> wait(#1) -> take_ticket(#2) -> wait(#2) -> turn(#1) ->
+         turn(#2) -> [35munsafe[2][39m
+                                                          [2m226 (16+210) remaining[0m
+
+node [1m36[22m: turn(#2) -> exit(#2) -> take_ticket(#2) -> wait(#2) -> turn(#1) ->
+         turn(#2) -> [35munsafe[2][39m
+                                                          [2m239 (17+222) remaining[0m
+
+node [1m37[22m: exit(#2) -> take_ticket(#2) -> next_ticket() -> wait(#1) ->
+         wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m239 (14+225) remaining[0m
+
+node [1m38[22m: take_ticket(#1) -> take_ticket(#2) -> next_ticket() -> wait(#1) ->
+         wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m253 (16+237) remaining[0m
+
+node [1m39[22m: next_ticket() -> wait(#1) -> next_ticket() -> take_ticket(#2) ->
+         wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m258 (18+240) remaining[0m
+
+node [1m40[22m: exit(#2) -> wait(#1) -> next_ticket() -> take_ticket(#2) ->
+         wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m262 (19+243) remaining[0m
+
+node [1m41[22m: take_ticket(#1) -> wait(#1) -> next_ticket() -> take_ticket(#2) ->
+         wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m276 (21+255) remaining[0m
+
+node [1m42[22m: turn(#2) -> exit(#2) -> next_ticket() -> take_ticket(#2) ->
+         wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m289 (22+267) remaining[0m
+
+node [1m43[22m: wait(#1) -> turn(#2) -> exit(#2) -> take_ticket(#2) -> wait(#2) ->
+         turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m287 (17+270) remaining[0m
+
+node [1m44[22m: exit(#2) -> next_ticket() -> wait(#1) -> next_ticket() ->
+         take_ticket(#2) -> wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m285 (12+273) remaining[0m
+
+node [1m45[22m: take_ticket(#1) -> exit(#2) -> wait(#1) -> next_ticket() ->
+         take_ticket(#2) -> wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m299 (14+285) remaining[0m
+
+node [1m46[22m: exit(#1) -> take_ticket(#1) -> wait(#1) -> next_ticket() ->
+         take_ticket(#2) -> wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m313 (16+297) remaining[0m
+
+node [1m47[22m: wait(#1) -> turn(#2) -> exit(#2) -> next_ticket() ->
+         take_ticket(#2) -> wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m316 (16+300) remaining[0m
+
+node [1m48[22m: turn(#2) -> take_ticket(#1) -> exit(#2) -> wait(#1) ->
+         next_ticket() -> take_ticket(#2) -> wait(#2) -> turn(#1) ->
+         turn(#2) -> [35munsafe[2][39m
+                                                          [2m326 (14+312) remaining[0m
+
+node [1m49[22m: turn(#2) -> take_ticket(#1) -> exit(#2) -> wait(#1) ->
+         next_ticket() -> take_ticket(#2) -> wait(#2) -> turn(#1) ->
+         turn(#2) -> [35munsafe[2][39m
+                                                          [2m340 (16+324) remaining[0m
+
+node [1m50[22m: turn(#2) -> take_ticket(#1) -> exit(#2) -> wait(#1) ->
+         next_ticket() -> take_ticket(#2) -> wait(#2) -> turn(#1) ->
+         turn(#2) -> [35munsafe[2][39m
+                                                          [2m354 (18+336) remaining[0m
+
+node [1m51[22m: next_ticket() -> wait(#1) -> turn(#2) -> exit(#2) -> next_ticket() ->
+         take_ticket(#2) -> wait(#2) -> turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                          [2m353 (14+339) remaining[0m
+
+node [1m52[22m: take_ticket(#1) -> wait(#1) -> turn(#2) -> exit(#2) ->
+         next_ticket() -> take_ticket(#2) -> wait(#2) -> turn(#1) ->
+         turn(#2) -> [35munsafe[2][39m
+                                                          [2m366 (15+351) remaining[0m
+
+node [1m53[22m: exit(#1) -> turn(#2) -> take_ticket(#1) -> exit(#2) -> wait(#1) ->
+         next_ticket() -> take_ticket(#2) -> wait(#2) -> turn(#1) ->
+         turn(#2) -> [35munsafe[2][39m
+                                                          [2m380 (17+363) remaining[0m
+
+node [1m54[22m: turn(#1) -> exit(#1) -> turn(#2) -> take_ticket(#1) -> exit(#2) ->
+         wait(#1) -> next_ticket() -> take_ticket(#2) -> wait(#2) ->
+         turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                           [2m380 (5+375) remaining[0m
+
+node [1m55[22m: turn(#1) -> exit(#1) -> turn(#2) -> take_ticket(#1) -> exit(#2) ->
+         wait(#1) -> next_ticket() -> take_ticket(#2) -> wait(#2) ->
+         turn(#1) -> turn(#2) -> [35munsafe[2][39m
+                                                           [2m394 (7+387) remaining[0m
+
+================================================================================
+* [1mSTATS[22m
+--------------------------------------------------------------------------------
+Number of visited nodes          : 55
+Fixpoints                        : 490
+Number of solver calls           : 472
+Max Number of processes          : 2
+Number of deleted nodes          : 6
+Restarts                         : 0
+================================================================================
+
+
+The system is [1m[32mSAFE[39m[22m
+
+time:0.06

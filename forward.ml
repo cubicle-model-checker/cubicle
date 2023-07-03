@@ -138,8 +138,9 @@ let rec elim_prime_atom init = function
   | False -> Some False
   | Comp (t1, Eq, t2)  ->
       let t1, t2 = 
-      if is_prime_term t1 && not (is_prime_term t2) then t2, t1
-                                                    else t1, t2 
+      if is_prime_term t1 && not (is_prime_term t2) 
+      then t2, t1
+      else t1, t2 
       in
       assert (not (is_prime_term t1));
       if not (is_prime_term t2) then Some (Comp (t1, Eq, t2))

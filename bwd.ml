@@ -191,7 +191,6 @@ module MakeParall ( Q : PriorityNodeQueue ) : Strategy = struct
     | Smt.UnknownSymb h ->
        eprintf "Unknown symbol %a@." Hstring.print h
 
-
   let worker_fix system = function
     | Task_node (n, visited) ->
        try
