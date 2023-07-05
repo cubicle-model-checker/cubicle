@@ -118,11 +118,11 @@ let size c = Array.length c.array
 
 (******************************************************************)
 (* Simplifcation of atoms in a cube based on the hypothesis that  *)
-(* indices #i are distinct and the type of elements is an	        *)
-(* enumeration							                                      *)
-(* 								                                                *)
-(* simplify comparison atoms, according to the assumption that	  *)
-(* variables are all disctincts					                          *)
+(* indices #i are distinct and the type of elements is an         *)
+(* enumeration                                                    *)
+(*                                                                *)
+(* simplify comparison atoms, according to the assumption that    *)
+(* variables are all disctincts                                   *)
 (******************************************************************)
 
 
@@ -194,8 +194,7 @@ let simplify_comp i si op j sj =
        let tj = Vea(Elem (j, sj)) in
        if Term.compare ti tj < 0 then Atom.Comp (tj, op, ti)
        else Atom.Comp (ti, op, tj)
-    | _ ->
-        Atom.Comp (Vea(Elem (i, si)), op, Vea(Elem (j, sj)))
+    | _ -> Atom.Comp (Vea(Elem (i, si)), op, Vea(Elem (j, sj)))
 
 let simplify_vea v1 op v2 =
   match v1, v2 with 
@@ -217,6 +216,7 @@ let simplify_poly cs ts =
 let rec simplification np a =
   let a = redondant_or_false (SAtom.remove a np) a in
   match a with
+    | Atom.True | Atom.False -> a
     | Atom.Comp (t1, (Eq | Le), t2)  when Term.equal t1 t2 -> Atom.True
     | Atom.Comp (t1, (Neq | Lt), t2) when Term.equal t1 t2 -> Atom.False 
     | Atom.Comp (Vea v1, op, Vea v2) -> simplify_vea v1 op v2 
@@ -238,9 +238,11 @@ let rec simplification np a =
       in
       let a1 = simplification np a1 in
       let a2 = simplification np a2 in
-      if SAtom.is_empty sa || SAtom.subset sa np then a1
+      if SAtom.is_empty sa 
+      || SAtom.subset sa np 
+      || SAtom.subset sa (SAtom.singleton Atom.True) then a1
       else if SAtom.mem Atom.False sa then a2
-      else a
+      else Atom.Ite(sa,a1,a2)
     | Atom.Comp (t1, op, t2) ->
         let t1' = 
           match term_add t1 (term_neg t2) with 
@@ -248,7 +250,6 @@ let rec simplification np a =
           | t            -> t
         in
         Atom.Comp (t1', op, Poly(Const.int_zero, VMap.empty))
-    | _ -> a
 
 (***********************************)
 (* Cheap check of inconsitent cube *)

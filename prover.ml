@@ -146,15 +146,12 @@ let make_formula_set satom =
   TimeFormula.pause ();
   f
 
-
 let make_disjunction nodes = F.make F.Or (List.map make_formula nodes)
-
 
 let make_conjuct atoms1 atoms2 =
   let l = Array.fold_left (fun l a -> make_literal a::l) [] atoms1 in
   let l = Array.fold_left (fun l a -> make_literal a::l) l atoms2 in
   F.make F.And l
-
 
 let make_init_dnfs s nb_procs =
   let { init_cdnf } = Hashtbl.find s.t_init_instances nb_procs in
@@ -223,7 +220,6 @@ let assume_goal n =
 let assume_node n ap =
   assume_node_no_check n ap;
   SMT.check  ()
-
 
 let run () = SMT.check ()
 

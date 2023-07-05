@@ -22,7 +22,6 @@
   
   let _ = Smt.set_cc false; Smt.set_arith false; Smt.set_sum false
 
-
   (* Helper functions for location info *)
  
   let loc () = (symbol_start_pos (), symbol_end_pos ())
@@ -171,8 +170,8 @@ var_decl:
 ;
 
 const_decl:
-  | CONST mident EQ INT  { Consts.add $2 (ConstInt $4) }
-  | CONST mident EQ REAL { Consts.add $2 (ConstReal $4) } 
+  | CONST mident EQ INT  { Smt.set_arith true; Consts.add $2 (ConstInt $4) }
+  | CONST mident EQ REAL { Smt.set_arith true; Consts.add $2 (ConstReal $4) } 
 ;
 
 array_decl:
@@ -343,16 +342,16 @@ sterm:
       | _                 -> Vea(Elem ($1, sort $1))
     }
   | mident LEFTSQ proc_name_list_plus RIGHTSQ { Vea(Access ($1, $3)) }
-  | sterm TIMES sterm { term_mult_by_term $1 $3 }
-  | MINUS sterm { term_neg $2 }
+  | sterm TIMES sterm { Smt.set_arith true; term_mult_by_term $1 $3 }
+  | MINUS sterm { Smt.set_arith true; term_neg $2 }
   | LEFTPAR term RIGHTPAR { $2 }
 ;
 
 term:
   | proc_name { Vea (Elem ($1, Var)) }
   | sterm     { $1 }
-  | term PLUS sterm  { term_add $1 $3 }
-  | term MINUS sterm { term_add $1 (term_neg $3) }
+  | term PLUS sterm  { Smt.set_arith true; term_add $1 $3 }
+  | term MINUS sterm { Smt.set_arith true; term_add $1 (term_neg $3) }
 ;
 
 lident:

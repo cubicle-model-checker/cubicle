@@ -141,7 +141,7 @@ let rec create_switch_list ts vea_assign_map acc =
               List.map 
               (fun (sa', t') -> 
                 List.map
-                (fun (sa, t) -> SAtom.inter sa sa', term_add (term_mult_by_const t c) t')
+                (fun (sa, t) -> SAtom.union sa sa', term_add (term_mult_by_const t c) t')
                 b)
               acc
             in List.flatten r
@@ -293,8 +293,6 @@ let make_cubes (ls, post) rargs s tr cnp =
 *)
 let make_cubes_new (ls, post) rargs s tr cnp =
   failwith "To implement"
-
-
 
 (*****************************************************)
 (* Pre-image of an unsafe formula w.r.t a transition *)

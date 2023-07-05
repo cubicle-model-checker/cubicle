@@ -30,7 +30,8 @@ tfunction ()
 	if [ $? -ne 0 ];
 	then
 		echo "Error while typing/parsing."
-    for csv in $NODECSV $TIMECSV $CALLCSV do
+    for csv in $NODECSV $TIMECSV $CALLCSV
+    do
       echo -n ";ParseError" >> $csv
     done
 	else
@@ -40,7 +41,8 @@ tfunction ()
 		if [ -z "$CTIME" ];
 		then
 			echo "Timed out."
-      for csv in $NODECSV $TIMECSV $CALLCSV do
+      for csv in $NODECSV $TIMECSV $CALLCSV 
+      do
         echo -n ";TO" >> $csv
       done
 		else
@@ -78,11 +80,7 @@ echo > $DUMP
 
 for csv in $NODECSV $TIMECSV $CALLCSV
 do
-  if [ -z $1 ]; then
     echo "filename;arith;base" > $csv
-  else
-    echo "filename;arith" > $csv
-  fi;
 done
 
 for filetotest in $(ls $DIRTOTEST | grep .cub)
@@ -94,10 +92,7 @@ do
   done
 
 	tfunction $CUBICLEOPT $DIRTOTEST/$filetotest
-  
-  if [ ! -z $1]; then
-    tfunction $CUBICLE $DIRTOTEST/$filetotest
-  fi;
+  tfunction $CUBICLE $DIRTOTEST/$filetotest
 
   for csv in $NODECSV $TIMECSV $CALLCSV
   do

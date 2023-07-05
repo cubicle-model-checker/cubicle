@@ -45,51 +45,45 @@ let list_rev_split =
 let list_rev_combine =
   List.fold_left2 (fun acc x1 x2 -> (x1, x2) :: acc) []
 
-
 exception NoPermutations
 
 let find_impossible a1 lx1 op c1 i2 a2 n2 impos obvs =
-  failwith "todo find impossible"
-  
-  (* TODO G 
   let i2 = ref i2 in
   while !i2 < n2 do
     let a2i = a2.(!i2) in
-    (match a2i, op with
-      | Atom.Comp (Vea(Access (a2, _)), _, _), _ when not (H.equal a1 a2) ->
-	  i2 := n2
+    begin match a2i, op with
+    | Atom.Comp (Vea(Access (a2, _)), _, _), _ when not (H.equal a1 a2) ->
+      i2 := n2
+    | Atom.Comp (Vea(Access (a2, lx2)), 
+      Eq,
+      (Vea(Elem (_, Constr)) | Vea(Elem (_, Glob)) as c2)),
+      (Neq | Lt)
+      when Term.compare c1 c2 = 0 ->
+      
+      if List.for_all2 (fun x1 x2 -> H.list_mem_couple (x1, x2) obvs) lx1 lx2 
+      then raise NoPermutations;
+      impos := (list_rev_combine lx1 lx2) :: !impos
+          
+    | Atom.Comp (Vea(Access (a2, lx2)), (Neq | Lt),
+      (Vea(Elem (_, Constr)) | Vea(Elem (_, Glob)) as c2)),
+      Eq
+      when Term.compare c1 c2 = 0 ->
 
-      | Atom.Comp (Vea(Access (a2, lx2)), Eq,
-	      (Vea(Elem (_, Constr)) | Vea(Elem (_, Glob)) | Arith _ as c2
-        )), (Neq | Lt)
-	  when Term.compare c1 c2 = 0 ->
-	  
-	  if List.for_all2 
-            (fun x1 x2 -> H.list_mem_couple (x1, x2) obvs) lx1 lx2 then
-            raise NoPermutations;
-          impos := (list_rev_combine lx1 lx2) :: !impos
-	      
-      | Atom.Comp (Vea(Access (a2, lx2)), (Neq | Lt),
-	      (Vea(Elem (_, Constr)) | Vea(Elem (_, Glob)) | Arith _ as c2)), Eq
-	  when Term.compare c1 c2 = 0 ->
+      if List.for_all2 (fun x1 x2 -> H.list_mem_couple (x1, x2) obvs) lx1 lx2 
+      then raise NoPermutations;
+      impos := (list_rev_combine lx1 lx2) :: !impos
 
-	  if List.for_all2
-            (fun x1 x2 -> H.list_mem_couple (x1, x2) obvs) lx1 lx2 then
-            raise NoPermutations;
-          impos := (list_rev_combine lx1 lx2) :: !impos
-
-      | Atom.Comp (Vea(Access (a2, lx2)), Eq, (Vea(Elem (_, Constr)) as c2)), Eq 
-	  when Term.compare c1 c2 <> 0 ->
-	  
-	  if List.for_all2
-            (fun x1 x2 -> H.list_mem_couple (x1, x2) obvs) lx1 lx2 then
-            raise NoPermutations;
-          impos := (list_rev_combine lx1 lx2) :: !impos
-	    
-      | _ -> ());
+    | Atom.Comp (Vea(Access (a2, lx2)), Eq, (Vea(Elem (_, Constr)) as c2)), 
+      Eq 
+      when Term.compare c1 c2 <> 0 ->
+  
+      if List.for_all2 (fun x1 x2 -> H.list_mem_couple (x1, x2) obvs) lx1 lx2 
+      then raise NoPermutations;
+      impos := (list_rev_combine lx1 lx2) :: !impos
+    | _ -> ()
+    end;
     incr i2
   done
-  *)
 
 let clash_binding (x,y) l =
   try not (H.equal (H.list_assoc_inv y l) x)
@@ -97,8 +91,8 @@ let clash_binding (x,y) l =
     
 let add_obv ((x,y) as p) obvs =
   begin
-    try if clash_binding p !obvs || not (H.equal (H.list_assoc x !obvs) y) then 
-	raise NoPermutations
+    try if clash_binding p !obvs || not (H.equal (H.list_assoc x !obvs) y) 
+        then raise NoPermutations
     with Not_found -> obvs := p :: !obvs
   end
 
@@ -109,34 +103,48 @@ let obvious_impossible a1 a2 =
   let impos = ref [] in
   let i1 = ref 0 in
   let i2 = ref 0 in
+
+  let obvious_impossible_vea 
+    (v11 : Vea.t) op1 (v12 : Vea.t) 
+    (v21 : Vea.t) op2 (v22 : Vea.t) 
+    =
+    match v11, op1, v12, v21, op2, v22 with 
+    | Elem (x1, sx1), Eq, Elem (y1, sy1),
+      Elem (x2, sx2), Eq, Elem (y2, sy2) ->
+        begin match sx1, sy1, sx2, sy2 with
+          | Glob, Constr, Glob, Constr when H.equal x1 x2 && not (H.equal y1 y2)
+            -> raise NoPermutations
+          | Glob, Var, Glob, Var when H.equal x1 x2 -> add_obv (y1,y2) obvs
+          | Glob, Var, Var, Glob when H.equal x1 y2 -> add_obv (y1,x2) obvs
+          | Var, Glob, Glob, Var when H.equal y1 x2 -> add_obv (x1,y2) obvs
+          | Var, Glob, Var, Glob when H.equal y1 y2 -> add_obv (x1,x2) obvs
+          | _ -> ()
+       end
+    | Elem (x1, sx1),         Eq, Elem (y1, sy1),
+      Elem (x2, sx2), (Neq | Lt), Elem (y2, sy2) ->
+        begin match sx1, sy1, sx2, sy2 with
+        | Glob, Constr, Glob, Constr when H.equal x1 x2 && H.equal y1 y2 ->
+          raise NoPermutations
+        | _ -> ()
+        end  
+    (* TODO G :
+    Ici : Ré-activer pour Poly
+    *)
+    | Access (a1, lx1), op, (Elem (_, Constr) | Elem (_, Glob) as c1 ),
+      Access (a, _),     _, (Elem (_, Constr) | Elem (_, Glob))
+      when H.equal a1 a -> 
+      find_impossible a1 lx1 op (Vea c1) !i2 a2 n2 impos !obvs
+    | _ -> ()
+  in
+
   while !i1 < n1 && !i2 < n2 do
     let a1i = a1.(!i1) in
     let a2i = a2.(!i2) in
-    (match a1i, a2i with
-       | Atom.Comp (Vea(Elem (x1, sx1)), Eq, Vea(Elem (y1, sy1))), 
-	       Atom.Comp (Vea(Elem (x2, sx2)), Eq, Vea(Elem (y2, sy2))) ->
-	        begin match sx1, sy1, sx2, sy2 with
-    	      | Glob, Constr, Glob, Constr when H.equal x1 x2 && not (H.equal y1 y2) ->
-    		        raise NoPermutations
-    	      | Glob, Var, Glob, Var when H.equal x1 x2 -> add_obv (y1,y2) obvs
-    	      | Glob, Var, Var, Glob when H.equal x1 y2 -> add_obv (y1,x2) obvs
-    	      | Var, Glob, Glob, Var when H.equal y1 x2 -> add_obv (x1,y2) obvs
-    	      | Var, Glob, Var, Glob when H.equal y1 y2 -> add_obv (x1,x2) obvs
-    	      | _ -> ()
-    	   end
-       | Atom.Comp (Vea(Elem (x1, sx1)), Eq, Vea(Elem (y1, sy1))), 
-	       Atom.Comp (Vea(Elem (x2, sx2)), (Neq | Lt), Vea(Elem (y2, sy2))) ->
-    	    begin match sx1, sy1, sx2, sy2 with
-    	    | Glob, Constr, Glob, Constr when H.equal x1 x2 && H.equal y1 y2 ->
-    		    raise NoPermutations
-    	    | _ -> ()
-	        end
-      (* TODO G 
-       | Atom.Comp (Vea(Access (a1, lx1)), op, (Vea(Elem (_, Constr)) | Vea(Elem (_, Glob)) | Arith _ as c1)),
-	       Atom.Comp (Vea(Access (a, _)), _, (Vea(Elem (_, Constr)) | Vea(Elem (_, Glob)) | Arith _ ))
-    	   when H.equal a1 a -> find_impossible a1 lx1 op c1 !i2 a2 n2 impos !obvs
-       *)
-       | _ -> ());
+    begin match a1i, a2i with
+    | Atom.Comp (Vea v11, op1, Vea v12), Atom.Comp(Vea v21, op2, Vea v22) ->
+      obvious_impossible_vea v11 op1 v12 v21 op2 v22
+    | _ -> ()
+    end;
     if Atom.compare a1i a2i <= 0 then incr i1 else incr i2
   done;
   !obvs, !impos

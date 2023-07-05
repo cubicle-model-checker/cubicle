@@ -37,17 +37,11 @@ module Debug = struct
 
 end
 
-
-
-
-
 (* TODO ici *)
 
 (********************************************************)
 (* Incremental fixpoint check : s => \/_{p \in nodes} p *)
 (********************************************************)
-
-
 
 exception Fixpoint of int list
 
@@ -102,10 +96,11 @@ end = struct
       let ars = Node.array s in
       ignore (List.exists 
 	        (fun sp -> 
-		 if ArrayAtom.subset (Node.array sp) ars then
-		 begin db := Some [sp.tag]; true end
-		 else false
-                ) nodes);
+           if ArrayAtom.subset (Node.array sp) ars 
+           then (db := Some [sp.tag]; true)
+           else false
+          ) 
+          nodes);
       !db
 
   let hard_fixpoint s nodes =
@@ -117,7 +112,6 @@ end = struct
     | Exit -> None
     | Smt.Unsat db -> Some db
 
-
   let pure_smt_check s nodes =
     try
       check_fixpoint ~pure_smt:true s nodes;
@@ -127,8 +121,6 @@ end = struct
     | Exit -> None
     | Smt.Unsat db -> Some db
                            
-
-
   let check s visited =
     Debug.unsafe s;
     TimeFix.start ();
@@ -141,7 +133,6 @@ end = struct
     r
 
 end
-
 
 (*************** Certificates from fixpoints  *******************)
 
@@ -301,7 +292,7 @@ end = struct
   let assume =
     match Prover.SMT.check_strategy with
     | Smt.Eager -> Prover.assume_node
-    | Smt.Lazy -> Prover.assume_node_no_check
+    | Smt.Lazy  -> Prover.assume_node_no_check
     
   let last_action =
     match Prover.SMT.check_strategy with
@@ -415,14 +406,13 @@ end = struct
 end
 
 
-
 module FixpointTrieNaive : sig
 
   val check : Node.t -> Node.t Cubetrie.t -> int list option
 
 end = struct
 
-  let check_and_add n nodes vis_n=
+  let check_and_add n nodes vis_n =
     let vis_cube = vis_n.cube in
     let vis_array = vis_cube.Cube.array in
     let d = Instantiation.exhaustive ~of_cube:vis_cube ~to_cube:n.cube in
