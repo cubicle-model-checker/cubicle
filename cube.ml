@@ -483,7 +483,6 @@ let elim_ite_atoms np =
 	[base]
   with Exit -> []
 
-
 let simplify { litterals = sa; } =
   create_normal (simplification_atoms SAtom.empty sa)
 
