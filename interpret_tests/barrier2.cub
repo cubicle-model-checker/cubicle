@@ -4,14 +4,20 @@ var Sense : bool
 array LocalSense[proc] : bool
 var Count : int 
 array PC[proc] : t
+array Cnt[proc] : int
 
 var C : condition 
 
-init(i) { Sense = False && LocalSense[i] = False  && Count = SYS_PROCS && PC[i] = None}
+init(i) {
+ Cnt[i] = 0 &&
+ Sense = False && LocalSense[i] = False  && Count = SYS_PROCS && PC[i] = None}
+
+unsafe(i j) { Cnt[i] <> Cnt[j] &&  PC[i] = None &&  PC[j] = None }
 
 transition wait(i)
 requires { PC[i] = None }
 { PC[i] := WaitEnter;
+  Cnt[i] := Cnt[i] + 1;
   acquire(C,i);
 }
 
