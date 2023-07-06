@@ -18,7 +18,6 @@ open Options
 open Util
 open Types
 
-
 module H = Hstring
 module S = H.HSet
 let hempty = H.empty
@@ -242,12 +241,12 @@ let rec simplification np a =
       else if SAtom.mem Atom.False sa then a2
       else Atom.Ite(sa,a1,a2)
     | Atom.Comp (t1, op, t2) ->
-        let t1' = 
-          match term_add t1 (term_neg t2) with 
+        let t2' = 
+          match term_add t2 (term_neg t1) with 
           | Poly (cs,ts) -> simplify_poly cs ts 
           | t            -> t
         in
-        Atom.Comp (t1', op, Poly(Const.int_zero, VMap.empty))
+        Atom.Comp (Poly(Const.int_zero, VMap.empty), op, t2')
 
 (***********************************)
 (* Cheap check of inconsitent cube *)
@@ -284,15 +283,15 @@ let inconsistent_list l =
       then raise Exit
       else check values ((t1, t2)::eqs) neqs les lts ges gts l
     | Atom.Comp (t1, Neq, t2) :: l ->
-      if assoc_eq t1 values t2 || assoc_eq t2 values t1
-      || assoc_eq t1 eqs t2 || assoc_eq t2 eqs t1
+      if assoc_eq t1 values t2  || assoc_eq t2 values t1
+      || assoc_eq t1 eqs t2     || assoc_eq t2 eqs t1
       then raise Exit
       else check values eqs ((t1, t2)::(t2, t1)::neqs) les lts ges gts l
     | Atom.Comp (t1, Lt, t2) :: l ->
-      if assoc_eq t1 values t2 || assoc_eq t2 values t1
-      || assoc_eq t1 eqs t2 || assoc_eq t2 eqs t1
-      || assoc_eq t1 ges t2 || assoc_eq t2 les t1
-      || assoc_eq t1 gts t2 || assoc_eq t2 lts t1
+      if assoc_eq t1 values t2  || assoc_eq t2 values t1
+      || assoc_eq t1 eqs t2     || assoc_eq t2 eqs t1
+      || assoc_eq t1 ges t2     || assoc_eq t2 les t1
+      || assoc_eq t1 gts t2     || assoc_eq t2 lts t1
       then raise Exit
       else check values eqs neqs les ((t1, t2)::lts) ges ((t2, t1)::gts) l
     | Atom.Comp (t1, Le, t2) :: l ->
@@ -328,10 +327,10 @@ let inconsistent_aux ((values, eqs, neqs, les, lts, ges, gts) as acc) = function
       then raise Exit
       else values, eqs, ((t1, t2)::(t2, t1)::neqs), les, lts, ges, gts
     | Atom.Comp (t1, Lt, t2) ->
-      if assoc_eq t1 values t2 || assoc_eq t2 values t1
-	|| assoc_eq t1 eqs t2 || assoc_eq t2 eqs t1
-	|| assoc_eq t1 ges t2 || assoc_eq t2 les t1
-	|| assoc_eq t1 gts t2 || assoc_eq t2 lts t1
+      if assoc_eq t1 values t2  || assoc_eq t2 values t1
+      || assoc_eq t1 eqs t2     || assoc_eq t2 eqs t1
+      || assoc_eq t1 ges t2     || assoc_eq t2 les t1
+      || assoc_eq t1 gts t2     || assoc_eq t2 lts t1
       then raise Exit
       else values, eqs, neqs, les, ((t1, t2)::lts), ges, ((t2, t1)::gts)
     | Atom.Comp (t1, Le, t2) ->
@@ -369,7 +368,6 @@ let inconsistent_array a =
   let l = Array.to_list a in
   inconsistent_list l
 
-
 let inconsistent_set sa =
   try
     let _ =
@@ -377,7 +375,6 @@ let inconsistent_set sa =
 	sa ([], [], [], [], [], [], []) in
     false
   with Exit -> true
-
 
 let inconsistent_array ar =
   try
@@ -394,7 +391,6 @@ let inconsistent_2arrays ar1 ar2 =
     let _ = Array.fold_left inconsistent_aux acc ar2 in
     false
   with Exit -> true
-
 
 let inconsistent_2sets sa1 sa2 =
   try

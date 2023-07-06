@@ -113,7 +113,9 @@ let obvious_impossible a1 a2 =
       Elem (x2, sx2), Eq, Elem (y2, sy2) ->
         begin match sx1, sy1, sx2, sy2 with
           | Glob, Constr, Glob, Constr when H.equal x1 x2 && not (H.equal y1 y2)
-            -> raise NoPermutations
+          -> raise NoPermutations
+          | Constr, Glob, Constr, Glob when H.equal y1 y2 && not (H.equal x1 x2)
+          -> raise NoPermutations
           | Glob, Var, Glob, Var when H.equal x1 x2 -> add_obv (y1,y2) obvs
           | Glob, Var, Var, Glob when H.equal x1 y2 -> add_obv (y1,x2) obvs
           | Var, Glob, Glob, Var when H.equal y1 x2 -> add_obv (x1,y2) obvs

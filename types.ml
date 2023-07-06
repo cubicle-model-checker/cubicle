@@ -132,20 +132,17 @@ module Vea = struct
 
     let compare x y =
       match x, y with
-      | Elem (a1,s1), Elem(a2, s2) ->
-         let c = Stdlib.compare s1 s2 in
-         if c <> 0 then c
-         else Hstring.compare a1 a2
-      | Access(t1,l1), Access(t2,l2) ->
-         let c = Hstring.compare t1 t2 in
-         if c <> 0 then c
-         else Variable.compare_list l1 l2
-      | Elem (_,_), Access(_,_) -> -1
-      | Access (_,_), Elem(_,_) -> 1
+      | Elem (_, (Constr | Var)), Elem (_, Glob) -> -1
+      | Elem (_, Glob), Elem (_, (Constr | Var)) -> 1
+      | Elem (s1, _), Elem (s2, _) -> Hstring.compare s1 s2
+      | Elem _, _ -> -1 | _, Elem _ -> 1
+      | Access (a1, l1), Access (a2, l2) ->
+         let c = Hstring.compare a1 a2 in
+         if c<>0 then c else Hstring.compare_list l1 l2
 
     let type_of = function 
-        | Elem (x, Var)               -> Smt.Type.type_proc
-        | Elem (x, _) | Access (x, _) -> snd (Smt.Symbol.type_of x)
+      | Elem (x, Var)               -> Smt.Type.type_proc
+      | Elem (x, _) | Access (x, _) -> snd (Smt.Symbol.type_of x)
 end
 
 module VMap = struct
@@ -283,15 +280,21 @@ module Term = struct
          let nx = Variable.subst sigma x in
          if x == nx then vea
          else Elem (nx, s)
-      | Access (a, lz) -> 
-         Access (a, List.map
-                      (fun z -> try Variable.subst sigma z with Not_found -> z) lz)
+      | Access (a, lz) ->
+          let lz = 
+            List.map (fun z ->  try Variable.subst sigma z 
+                                with Not_found -> z)
+            lz
+          in
+          Access (a, lz)
     in
     match t with
     | Vea  v        -> Vea(subst_vea v)
-    | Poly (cs, ts) -> 
-        Poly(cs, VMap.fold (fun v c acc -> VMap.add (subst_vea v) c acc) ts
-        VMap.empty)
+    | Poly (cs, ts) ->
+        let ts = 
+          VMap.fold (fun v c acc -> VMap.add (subst_vea v) c acc) ts VMap.empty 
+        in
+        Poly(cs, ts)
 
   let variables t = 
     let variables_vea = function 
