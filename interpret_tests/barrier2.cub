@@ -1,0 +1,41 @@
+type t = None | WaitEnter | WaitIf | WaitFor | WaitExit
+
+var Sense : bool 
+array LocalSense[proc] : bool
+var Count : int 
+array PC[proc] : t
+
+var C : condition 
+
+init(i) { Sense = False && LocalSense[i] = False  && Count = SYS_PROCS && PC[i] = None}
+
+transition wait(i)
+requires { PC[i] = None }
+{ PC[i] := WaitEnter;
+  acquire(C,i);
+}
+
+transition last(i)
+requires { PC[i] = WaitEnter && Count = 1 }
+{
+  let s = not LocalSense[i] in
+  Sense := s;
+  LocalSense[i] := s;
+  Count := SYS_PROCS;
+  notify_all(C,i);
+  PC[i] := None;
+}
+
+transition wait_not_last(i)
+requires { PC[i] = WaitEnter && Count > 1 && LocalSense[i] <> Sense}
+{
+  PC[i] := WaitFor;
+  wait(C,i);
+}
+
+transition wait_exit(i)
+requires { PC[i] = WaitFor && Count > 1 && LocalSense[i] = Sense }
+{
+  release(C, i);
+  PC[i] := None;
+} 
