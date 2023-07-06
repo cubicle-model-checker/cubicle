@@ -40,9 +40,9 @@ requires { Shr[n]=True  &&  Cmd = RE }
 transition t4 (n)
 requires { Shr[n]=True  && Cmd = RS && Exg=True }
 { 
-  Exg      := False;
+  Exg := False;
   Cache[n] := S;
-  Shr[n]   := True;
+  Shr[n] := True;
 }
     
 transition t5 (n)

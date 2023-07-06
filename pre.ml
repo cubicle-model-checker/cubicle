@@ -215,8 +215,8 @@ let add_list n l =
   if List.exists (fun n' -> Node.subset n' n) l then l
   else
     let l =
-      if true || delete then
-  	List.filter (fun n' -> not (Node.subset n n')) l
+      if true || delete 
+      then List.filter (fun n' -> not (Node.subset n n')) l
       else l
     in
       n :: l
@@ -227,8 +227,8 @@ let add_array_to_list n l =
   if List.exists (fun n' -> ArrayAtom.subset n' n) l then l
   else
     let l =
-      if true || delete then
-  	List.filter (fun n' -> not (ArrayAtom.subset n n')) l
+      if true || delete 
+      then List.filter (fun n' -> not (ArrayAtom.subset n n')) l
       else l
     in
       n :: l

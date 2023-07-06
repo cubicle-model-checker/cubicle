@@ -15,7 +15,6 @@ CUBICLE=cubicle
 TIMECSV="$BASEDIR/time.csv"
 NODECSV="$BASEDIR/node.csv"
 CALLCSV="$BASEDIR/call.csv"
-DUMP="$BASEDIR/benchmark_dump"
 
 # -----
 # Arguments:
@@ -71,12 +70,9 @@ tfunction ()
       echo -n ";$CNODE" >> $NODECSV
 			echo -n ";$CTIME" >> $TIMECSV
       echo -n ";$CCALL"  >> $CALLCSV
-      echo "$COUT" >> $DUMP
 		fi
 	fi
 }
-
-echo > $DUMP
 
 for csv in $NODECSV $TIMECSV $CALLCSV
 do

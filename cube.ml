@@ -26,11 +26,11 @@ let hempty = H.empty
 module SS = Set.Make
   (struct
      type t = H.t * H.t
-    let compare (s1, s2) (t1, t2) =
-      let c = H.compare s1 t1 in
-      if c <> 0 then c
-      else H.compare s2 t2
-   end)
+      let compare (s1, s2) (t1, t2) =
+        let c = H.compare s1 t1 in
+        if c <> 0 then c
+                  else H.compare s2 t2
+     end)
 
 type t =
  {
@@ -38,7 +38,6 @@ type t =
    litterals : SAtom.t;
    array : ArrayAtom.t;
  }
-
 
 let create vars sa =
   {
@@ -54,7 +53,6 @@ let create_array vars ar =
     litterals = ArrayAtom.to_satom ar;
     array = ar;
   }
-
 
 let cube_false =
 {
@@ -117,7 +115,7 @@ let size c = Array.length c.array
 
 
 (******************************************************************)
-(* Simplifcation of atoms in a cube based on the hypothesis that  *)
+(* Simplification of atoms in a cube based on the hypothesis that *)
 (* indices #i are distinct and the type of elements is an         *)
 (* enumeration                                                    *)
 (*                                                                *)
