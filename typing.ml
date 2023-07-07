@@ -339,10 +339,13 @@ let declare_type (loc, (x, y)) =
 let declare_symbol loc n args ret =
   try Smt.Symbol.declare n args ret
   with Smt.Error e -> error (Smt e) loc
+    
+let declare_t = function
+  | Constructors (loc, (x,y)) -> declare_type (loc,(x,y))
 
 
 let init_global_env s = 
-  List.iter declare_type s.type_defs;
+  List.iter declare_t s.type_defs;
   (* patch completeness on Boolean *)
   (*let mybool = Hstring.make "mbool" in
   let mytrue = Hstring.make "@MTrue" in

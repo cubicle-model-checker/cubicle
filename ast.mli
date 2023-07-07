@@ -26,12 +26,17 @@ open Util
 type dnf = SAtom.t list
 (** Disjunctive normal form: each element of the list is a disjunct *)
 
+
 type type_constructors = Hstring.t * (Hstring.t list)
 (** Type and constructors declaration: [("t", ["A";"B"])] represents the
     declaration of type [t] with two constructors [A] and [B]. If the
     list of constructors is empty, the type [t] is defined abstract. *)
 
     
+type type_defs =
+  | Constructors of (loc * type_constructors)
+
+      
 type swts = (SAtom.t * Term.t) list
 (** The type of case switches case | c1 : t1 | c2 : t2 | _ : tn *)
 
@@ -96,7 +101,7 @@ type system = {
   globals : (loc * Hstring.t * Smt.Type.t) list;
   consts : (loc * Hstring.t * Smt.Type.t) list;
   arrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
-  type_defs : (loc * type_constructors) list;
+  type_defs : type_defs list;
   init : loc * Variable.t list * dnf;
   invs : (loc * Variable.t list * SAtom.t) list;
   unsafe : (loc * Variable.t list * SAtom.t) list;

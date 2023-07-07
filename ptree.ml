@@ -176,7 +176,7 @@ type psystem = {
   pglobals : (loc * Hstring.t * Smt.Type.t) list;
   pconsts : (loc * Hstring.t * Smt.Type.t) list;
   parrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
-  ptype_defs : (loc * Ast.type_constructors) list;
+  ptype_defs : Ast.type_defs list;
   pinit : loc * Variable.t list * cformula;
   pinvs : (loc * Variable.t list * cformula) list;
   punsafe : (loc * Variable.t list * cformula) list;
@@ -833,6 +833,10 @@ let print_system fmt { type_defs;
                        invs;
                        unsafe;
                        trans } =
+  let type_defs =
+    List.fold_left (fun (constrs) -> function
+      | Constructors i -> i::constrs
+    ) ([]) type_defs in
   print_type_defs fmt type_defs;
   pp_print_newline fmt ();
   print_globals fmt globals;

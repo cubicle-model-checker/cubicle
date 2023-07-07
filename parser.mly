@@ -145,7 +145,7 @@ EOF
   Smt.set_sum true;
   let b = [Hstring.make "@MTrue"; Hstring.make "@MFalse"] in
   List.iter Constructors.add b;
-  let ptype_defs = (loc (), (Hstring.make "mbool", b)) :: ptype_defs in
+  let ptype_defs = Constructors ((loc (), (Hstring.make "mbool", b))) :: ptype_defs in
   let pconsts, pglobals, parrays = $3 in
   psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs $4 
     |> encode_psystem 
@@ -220,11 +220,12 @@ size_proc:
 ;
       
 type_def:
-  | TYPE lident { (loc (), ($2, [])) }
+  | TYPE lident { Constructors ((loc (), ($2, []))) }
   | TYPE lident EQ constructors 
-      { Smt.set_sum true; List.iter Constructors.add $4; (loc (), ($2, $4)) }
+      { Smt.set_sum true; List.iter Constructors.add $4; Constructors ((loc (), ($2, $4))) }
   | TYPE lident EQ BAR constructors 
-      { Smt.set_sum true; List.iter Constructors.add $5; (loc (), ($2, $5)) }
+      { Smt.set_sum true; List.iter Constructors.add $5; Constructors ((loc (), ($2, $5))) }  						       
+
 ;
 
 constructors:
