@@ -317,6 +317,7 @@ let transitions =
   let h = ref [] in
   List.iter 
     (fun ({tr_args = args; tr_loc = loc} as t) ->
+      let args = List.map fst args in (*MODIFIED subsorts*)
       if List.mem t.tr_name !h then 
 	error (DuplicateName t.tr_name) loc;
       h := t.tr_name::!h;
@@ -492,7 +493,8 @@ let create_init_instances (iargs, l_init) invs =
   (*   eprintf "@." *)
   (* ) init_instances; *)
   init_instances
-
+    
+    
 
 let debug_init_instances insts =
   Hashtbl.iter
@@ -520,9 +522,10 @@ let create_node_rename kind vars sa =
 let fresh_args ({ tr_args = args; tr_upds = upds} as tr) = 
   if args = [] then tr
   else
+    let args = List.map fst args in (*MODIFIED subsorts*)
     let sigma = Variable.build_subst args Variable.freshs in
     { tr with 
-	tr_args = List.map (Variable.subst sigma) tr.tr_args; 
+	tr_args = List.map (fun (x, y) -> Variable.subst sigma x, y) tr.tr_args; (*MODIFIED subsorts*)
 	tr_reqs = SAtom.subst sigma tr.tr_reqs;
 	tr_ureq = 
 	List.map 
@@ -557,9 +560,10 @@ let add_tau tr =
     tr_tau = pre;
     tr_reset = reset_memo;
   }
-    
+
+
 let system s = 
-  let l = init_global_env s in
+  let l = init_global_env s in  
   if not Options.notyping then init s.init;
   if Options.subtyping    then Smt.Variant.init l;
   if not Options.notyping then List.iter unsafe s.unsafe;

@@ -538,6 +538,8 @@ let rec print_ureqs args fmt = function
 
 
 let print_guard fmt { tr_args; tr_reqs; tr_ureq } =
+  let tr_args = List.map fst tr_args in (* MODIFIED subsorts*)
+
   (* fprintf fmt "  @[<v>"; *)
   print_satom fmt tr_reqs;
   if tr_ureq <> [] && not(SAtom.is_empty tr_reqs) then fprintf fmt " &@ ";
@@ -616,7 +618,8 @@ let print_actions fmt t =
 
 
 let print_transition fmt t =
-  let args = t.tr_args in
+  let args = List.map fst t.tr_args in (*MODIFIED subsorts*)
+  
   let close_ruleset =
     print_ruleset fmt args t.tr_nondets (Hstring.view t.tr_name) in
   print_guard fmt t;
@@ -984,6 +987,7 @@ let init sys =
 
   let mu_ch = open_out mu_tmp in
   let mu_fmt = formatter_of_out_channel mu_ch in
+
 
   (* print_system nbprocs abstr std_formatter sys; exit 1; *)
   

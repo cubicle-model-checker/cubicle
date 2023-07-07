@@ -44,9 +44,10 @@ module Debug = struct
   let pre = 
     if not debug then fun _ _ -> () else 
       fun tr p ->
+	let tr_args = List.map fst tr.tr_args in (*modified to remove subsort*)
 	eprintf "\nResult of the pre for transition %s (%a):@.%a@."
 	  (H.view tr.tr_name)
-	  Variable.print_vars tr.tr_args
+	  Variable.print_vars tr_args
 	  SAtom.print p
 
   let pre_cubes = 
@@ -142,6 +143,7 @@ let rec find_assign memo tr = function
 	  Branch (List.map (fun (sa, y) -> (sa, (Arith (y, cs1))))
 		           up_swts)
      end
+  | ProcManip _ -> assert false 
   | Access (a, li) -> 
      let nli = li in
      (* List.map (fun i -> *)
@@ -156,6 +158,7 @@ let rec find_assign memo tr = function
      (* ) li in *)
      try find_update a nli tr.tr_upds
      with Not_found -> Single (Access (a, nli))
+       
 			      (* let na =  *)
 			      (*   try (match H.list_assoc a tr.tr_assigns with *)
 			      (* 	 | Elem (na, _) -> na *)
@@ -163,7 +166,8 @@ let rec find_assign memo tr = function
 			      (*   with Not_found -> a *)
 			      (* in *)
 			      (* Single (Access (na, nli)) *)
-				
+
+       
 let make_tau tr =
   let memo = ref [] in
   (fun x op y ->
@@ -239,8 +243,10 @@ let make_cubes (ls, post) rargs s tr cnp =
   let { cube = { Cube.vars = uargs; litterals = p}; tag = nb } = s in
   let nb_uargs = List.length uargs in
   let args = cnp.Cube.vars in
+  let tr_args = List.map fst tr.tr_args in (*modified from tr.tr_args to remove subsort*)
+
   let cube acc sigma =
-    let tr_args = List.map (Variable.subst sigma) tr.tr_args in
+    let tr_args = List.map (Variable.subst sigma) tr_args in 
     let lnp = Cube.elim_ite_simplify (Cube.subst sigma cnp) in
     (* cubes are in normal form *)
     List.fold_left
@@ -283,7 +289,7 @@ let make_cubes (ls, post) rargs s tr cnp =
   else
     (* let d_old = Variable.all_permutations tr.tr_args rargs in *)
     (* TODO: Benchmark this *)
-    let d = Variable.permutations_missing tr.tr_args args in
+    let d = Variable.permutations_missing tr_args args in
     (* assert (List.length d_old >= List.length d); *)
     List.fold_left cube (ls, post) d
 
@@ -303,6 +309,7 @@ let make_cubes_new (ls, post) rargs s tr cnp =
 (*****************************************************)
 
 let pre { tr_info = tri; tr_tau = tau; tr_reset = reset } unsafe =
+  let tri_tr_args = List.map fst tri.tr_args in (*modified to remove subsort type*)
   (* let tau = tr.tr_tau in *)
   let pre_unsafe = 
     SAtom.union tri.tr_reqs 
@@ -314,7 +321,7 @@ let pre { tr_info = tri; tr_tau = tau; tr_reset = reset } unsafe =
   let args = pre_u.Cube.vars in
   if tri.tr_args = [] then tri, pre_u, args
   else
-    let nargs = Variable.append_extra_procs args tri.tr_args in
+    let nargs = Variable.append_extra_procs args tri_tr_args in
     if !size_proc <> 0 && List.length nargs > !size_proc then
       tri, pre_u, args
     else tri, pre_u, nargs

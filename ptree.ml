@@ -157,7 +157,7 @@ type pupdate = {
 type ptransition = {
   ptr_lets : (Hstring.t * term) list;
   ptr_name : Hstring.t;
-  ptr_args : Variable.t list;
+  ptr_args : (Variable.t * Hstring.t option) list;
   ptr_process : Variable.t option;
   ptr_reqs : cformula;
   ptr_assigns : (Hstring.t * pglob_update) list;
@@ -581,11 +581,17 @@ let encode_pupdate {pup_loc; pup_arr; pup_arg; pup_swts} =
      up_swts = encode_pswts pup_swts;
   }
 
-
+    
+(*ENCODE PTRANSITION : 
+code might need reviewing to take into consideration that procs can have subset types
+i.e. transition t1(i:type) for the requirements.
+*)
+    
 let encode_ptransition
     {ptr_lets; ptr_name; ptr_args; ptr_process; ptr_reqs; ptr_assigns;
      ptr_upds; ptr_nondets; ptr_locks;  ptr_loc;} =
-  let dguards = guard_of_formula ptr_args ptr_reqs in
+  let ptr_args_procs = List.map fst ptr_args in
+  let dguards = guard_of_formula ptr_args_procs ptr_reqs in
   let tr_assigns = List.map (fun (i, pgu) ->
       (i, encode_pglob_update pgu)) ptr_assigns in
   let tr_upds = List.map encode_pupdate ptr_upds in
@@ -798,6 +804,7 @@ let print_trans fmt =
   List.iter
     (fun { tr_name; tr_args; tr_reqs; tr_ureq; tr_lets;
            tr_assigns; tr_upds; tr_nondets } ->
+      let tr_args = List.map fst tr_args in (*modified to remove subsorts*)
       fprintf fmt
         "@[<v>@{<fg_magenta>transition@} @{<fg_cyan_b>%a@} (%a)@,\
          %a\
@@ -809,7 +816,7 @@ let print_trans fmt =
          @]}\
          @,@,@]"
         Hstring.print tr_name
-        Variable.print_vars tr_args
+        Variable.print_vars  tr_args
         print_reqs (tr_reqs, tr_ureq)
         print_lets tr_lets
         print_assigns tr_assigns

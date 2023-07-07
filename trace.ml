@@ -387,7 +387,7 @@ module AltErgo = struct
   let print_transtion s fmt {tr_info = t} =
     fprintf fmt "(* transition %a *)\n" Hstring.print t.tr_name;
     fprintf fmt "(";
-    let args =  t.tr_args in
+    let args =  List.map fst t.tr_args in (*MODIFIED subsorts*)
     begin match args with
 	  | [] -> ()
 	  | _  -> fprintf fmt "exists %a:int. %a\n" 
@@ -922,7 +922,7 @@ module Why3 = struct
   let print_transition s fmt {tr_info = t} =
     fprintf fmt "(* transition %a *)@\n" Hstring.print t.tr_name;
     fprintf fmt "(";
-    let args =  t.tr_args in
+    let args =  List.map fst t.tr_args in (*MODIFIED subsorts*)
     begin match args with
 	  | [] -> fprintf fmt "@,"
 	  | _  -> fprintf fmt "exists %a:int. %a@\n" 
@@ -1723,7 +1723,7 @@ module Why3_INST = struct
   let print_transition s fmt {tr_info = t} =
     fprintf fmt "(* transition %a *)\n" Hstring.print t.tr_name;
     fprintf fmt "(";
-    let args =  t.tr_args in
+    let args =  List.map fst t.tr_args in (*MODIFIED subsorts*)
     begin match args with
 	  | [] -> ()
 	  | _  -> fprintf fmt "exists %a:int. %a\n" 

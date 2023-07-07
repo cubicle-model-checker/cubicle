@@ -125,13 +125,16 @@ let markov glob tsys all_procs tr trans=
       let env, _,_,_ = !running_env in 
       let rand = Random.int els in
       let (proposal,prop_procs) = tr_array.(rand) in
- 
-      let sigma = Variable.build_subst proposal.tr_args prop_procs in
+
+      let proposal_tr_args = List.map fst proposal.tr_args in (* MODIFIED subsorts*)
+  
+      
+      let sigma = Variable.build_subst proposal_tr_args prop_procs in
       
       (*check_actor_suspension sigma !global_env proposal.tr_process;*)
       let curr_env = ref env in 
       curr_env := check_reqs proposal.tr_reqs env sigma proposal.tr_name;
-      let trargs = List.map (fun x -> Variable.subst sigma x) proposal.tr_args in
+      let trargs = List.map (fun x -> Variable.subst sigma x) proposal_tr_args in
       let ureqs = uguard  sigma all_procs trargs proposal.tr_ureq in
       List.iter (fun u -> curr_env := check_reqs u !curr_env sigma proposal.tr_name) ureqs;
       let _, l1, l2, l3 = !running_env in
@@ -276,13 +279,15 @@ let markov_entropy glob tsys all_procs trans steps=
       let rand = Random.int els in
       let (proposal,prop_procs) = tr_array.(rand) in
          
+      let proposal_tr_args = List.map fst proposal.tr_args in (* MODIFIED subsorts*)
+
       
-      let sigma = Variable.build_subst proposal.tr_args prop_procs in
+      let sigma = Variable.build_subst proposal_tr_args prop_procs in
       
       (*check_actor_suspension sigma !global_env proposal.tr_process;*)
       let curr_env = ref env in 
       curr_env := check_reqs proposal.tr_reqs env sigma proposal.tr_name;
-      let trargs = List.map (fun x -> Variable.subst sigma x) proposal.tr_args in
+      let trargs = List.map (fun x -> Variable.subst sigma x) proposal_tr_args in
       let ureqs = uguard  sigma all_procs trargs proposal.tr_ureq in
       List.iter (fun u -> curr_env := check_reqs u !curr_env sigma proposal.tr_name) ureqs;
 
@@ -440,15 +445,16 @@ let markov_entropy_detailed glob tsys all_procs trans steps det_flag=
       let rand = Random.int l in
       let (proposal,prop_procs) = !transitions.(rand) in
       
+      let proposal_tr_args = List.map fst proposal.tr_args in (* MODIFIED subsorts*)
 
       
-      let sigma = Variable.build_subst proposal.tr_args prop_procs in
+      let sigma = Variable.build_subst proposal_tr_args prop_procs in
       
       (*check_actor_suspension sigma !global_env proposal.tr_process;*)
       let curr_env = ref env in
 
       curr_env := check_reqs proposal.tr_reqs env sigma proposal.tr_name;
-      let trargs = List.map (fun x -> Variable.subst sigma x) proposal.tr_args in
+      let trargs = List.map (fun x -> Variable.subst sigma x) proposal_tr_args in
 
       let ureqs = uguard  sigma all_procs trargs proposal.tr_ureq in
 
@@ -645,15 +651,17 @@ let markov_biased_proposal glob tsys all_procs tr trans steps=
       let elts, potent_tr = Hashtbl.find propositions choice in
       let rand_el = Random.int elts in
       let proposal, prop_procs = Trans.find choice trans, potent_tr.(rand_el) in 
+
+      let proposal_tr_args = List.map fst proposal.tr_args in (* MODIFIED subsorts*)
+
       
-      
-      let sigma = Variable.build_subst proposal.tr_args prop_procs in
+      let sigma = Variable.build_subst proposal_tr_args prop_procs in
       
       (*check_actor_suspension sigma !global_env proposal.tr_process;*)
       let curr_env = ref env in
       
       curr_env := check_reqs proposal.tr_reqs env sigma proposal.tr_name;
-      let trargs = List.map (fun x -> Variable.subst sigma x) proposal.tr_args in
+      let trargs = List.map (fun x -> Variable.subst sigma x) proposal_tr_args in
       let ureqs = uguard  sigma all_procs trargs proposal.tr_ureq in
       List.iter (fun u -> curr_env := check_reqs u !curr_env sigma proposal.tr_name) ureqs;
 
@@ -812,15 +820,17 @@ in
       let env, _,_,_ = !running_env in 
       let rand = Random.int els in
       let (proposal,prop_procs) = tr_array.(rand) in
+
+      let proposal_tr_args = List.map fst proposal.tr_args in (* MODIFIED subsorts*)
+
       
       
-      
-      let sigma = Variable.build_subst proposal.tr_args prop_procs in
+      let sigma = Variable.build_subst proposal_tr_args prop_procs in
       
       (*check_actor_suspension sigma !global_env proposal.tr_process;*)
       let curr_env = ref env in 
       curr_env := check_reqs proposal.tr_reqs env sigma proposal.tr_name;
-      let trargs = List.map (fun x -> Variable.subst sigma x) proposal.tr_args in
+      let trargs = List.map (fun x -> Variable.subst sigma x) proposal_tr_args in
       let ureqs = uguard  sigma all_procs trargs proposal.tr_ureq in
       List.iter (fun u -> curr_env := check_reqs u !curr_env sigma proposal.tr_name) ureqs;
 
@@ -1013,13 +1023,15 @@ let markov_biased_entropy_biased_proposal glob tsys all_procs trans steps det_fl
       let rand_el = Random.int elts in
       let proposal, prop_procs = Trans.find choice trans, potent_tr.(rand_el) in 
       
+      let proposal_tr_args = List.map fst proposal.tr_args in (* MODIFIED subsorts*)
+  
       
-      let sigma = Variable.build_subst proposal.tr_args prop_procs in
+      let sigma = Variable.build_subst proposal_tr_args prop_procs in
       
       (*check_actor_suspension sigma !global_env proposal.tr_process;*)
       let curr_env = ref env in 
       curr_env := check_reqs proposal.tr_reqs env sigma proposal.tr_name;
-      let trargs = List.map (fun x -> Variable.subst sigma x) proposal.tr_args in
+      let trargs = List.map (fun x -> Variable.subst sigma x) proposal_tr_args in
       let ureqs = uguard  sigma all_procs trargs proposal.tr_ureq in
       List.iter (fun u -> curr_env := check_reqs u !curr_env sigma proposal.tr_name) ureqs;
       let _,l1,l2,l3 = !running_env in
@@ -1218,14 +1230,16 @@ let markov_hastings glob tsys all_procs trans steps det_flag=
       (*Format.eprintf "%d@." elts;*)
       let rand_el = Random.int elts in
       let proposal, prop_procs = Trans.find choice trans, potent_tr.(rand_el) in 
+
+      let proposal_tr_args = List.map fst proposal.tr_args in (* MODIFIED subsorts*)
+
       
-      
-      let sigma = Variable.build_subst proposal.tr_args prop_procs in
+      let sigma = Variable.build_subst proposal_tr_args prop_procs in
       
       (*check_actor_suspension sigma !global_env proposal.tr_process;*)
       let curr_env = ref env in 
       curr_env := check_reqs proposal.tr_reqs env sigma proposal.tr_name;
-      let trargs = List.map (fun x -> Variable.subst sigma x) proposal.tr_args in
+      let trargs = List.map (fun x -> Variable.subst sigma x) proposal_tr_args in
       let ureqs = uguard  sigma all_procs trargs proposal.tr_ureq in
       List.iter (fun u -> curr_env := check_reqs u !curr_env sigma proposal.tr_name) ureqs;
 

@@ -61,7 +61,7 @@ type lock_uses =
 
 type transition_info = {
   tr_name : Hstring.t; (** name of the transition *)
-  tr_args : Variable.t list;
+  tr_args : (Variable.t * Hstring.t option) list;
   tr_process : Variable.t option;
   (** existentially quantified parameters of the transision *)
   tr_reqs : SAtom.t; (** guard *)

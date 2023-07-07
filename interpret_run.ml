@@ -245,12 +245,14 @@ let wl glob_env trans all_procs tsys steps =
     let (proposal,prop_procs),index = tr_array.(rand) in
 
 
-    let sigma = Variable.build_subst proposal.tr_args prop_procs in
+    let proposal_tr_args = List.map fst proposal.tr_args in (* MODIFIED subsorts*)
+
+    let sigma = Variable.build_subst proposal_tr_args prop_procs in
       
       (*check_actor_suspension sigma !global_env proposal.tr_process;*)
     let curr_env = ref env in
     curr_env := check_reqs proposal.tr_reqs env sigma proposal.tr_name;
-    let trargs = List.map (fun x -> Variable.subst sigma x) proposal.tr_args in
+    let trargs = List.map (fun x -> Variable.subst sigma x) proposal_tr_args in
     let ureqs = uguard !running_env sigma all_procs trargs proposal.tr_ureq in
     List.iter (fun u -> curr_env := check_reqs u !curr_env sigma proposal.tr_name) ureqs;
     let _,l1,l2,l3 = !running_env in

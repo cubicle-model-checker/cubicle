@@ -524,13 +524,17 @@ let markov_entropy_detailed glob tsys all_procs trans steps matr =
       if l = 0 then raise (TopError Deadlock);
       let rand = Random.int l in
       let (proposal,prop_procs) = !transitions.(rand) in
-      let sigma = Variable.build_subst proposal.tr_args prop_procs in
+
+      let proposal_tr_args = List.map fst proposal.tr_args in (* MODIFIED subsorts*)
+
+      
+      let sigma = Variable.build_subst proposal_tr_args prop_procs in
       
       (*check_actor_suspension sigma !global_env proposal.tr_process;*)
       let curr_env = ref env in
 
       curr_env := check_reqs proposal.tr_reqs env sigma proposal.tr_name;
-      let trargs = List.map (fun x -> Variable.subst sigma x) proposal.tr_args in
+      let trargs = List.map (fun x -> Variable.subst sigma x) proposal_tr_args in
 
       let ureqs = uguard  sigma all_procs trargs proposal.tr_ureq in
 

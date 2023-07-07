@@ -2079,7 +2079,11 @@ let apply_transition_forward args trname trans (env,lock_queue,cond_sets, semaph
   let arg_length = List.length tr.tr_args in
   if List.length args <> arg_length then
     raise (TopError (WrongArgs (trname,arg_length)));
-  let sigma = Variable.build_subst tr.tr_args args in 
+
+  let tr_args = List.map fst tr.tr_args in (* MODIFIED subsorts*)
+
+  let sigma = Variable.build_subst tr_args args in 
+
   check_actor_suspension sigma env tr.tr_process;
   (*let new_env = check_reqs tr.tr_reqs env sigma trname in
   let procs = Variable.give_procs (Options.get_interpret_procs ()) in
@@ -2099,14 +2103,16 @@ let apply_transition_forward args trname trans (env,lock_queue,cond_sets, semaph
     
 let apply_transition args trname trans (env,lock_queue,cond_sets, semaphores) =
   let tr = Trans.find trname trans in
+  let tr_args = List.map fst tr.tr_args in (* MODIFIED subsorts*)
+
   let arg_length = List.length tr.tr_args in
   if List.length args <> arg_length then
     raise (TopError (WrongArgs (trname,arg_length)));
-  let sigma = Variable.build_subst tr.tr_args args in 
+  let sigma = Variable.build_subst tr_args args in 
   check_actor_suspension sigma env tr.tr_process;
   let new_env = check_reqs tr.tr_reqs env sigma trname in
   let procs = Variable.give_procs (Options.get_interpret_procs ()) in
-  let trargs = List.map (fun x -> Variable.subst sigma x) tr.tr_args in
+  let trargs = List.map (fun x -> Variable.subst sigma x) tr_args in
   let ureqs = uguard sigma procs trargs tr.tr_ureq in
   (*List.iter (fun u -> Format.eprintf "checkingg : %a@." SAtom.print u) ureqs;*)
   (*Ureqs that have ORs are lists with multiple elements : no or means 1 el in list
@@ -2141,12 +2147,14 @@ let explain args trname trans (env,lock_queue,cond_sets, semaphores) =
   let arg_length = List.length tr.tr_args in
   if List.length args <> arg_length then
     raise (TopError (WrongArgs (trname,arg_length)));
-  let sigma = Variable.build_subst tr.tr_args args in
+  let tr_args = List.map fst tr.tr_args in (* MODIFIED subsorts*)
+
+  let sigma = Variable.build_subst tr_args args in
   try
     check_actor_suspension sigma env tr.tr_process;
     let satom = explain_reqs tr.tr_reqs env sigma trname args in
     let procs = Variable.give_procs (Options.get_interpret_procs ()) in
-    let trargs = List.map (fun x -> Variable.subst sigma x) tr.tr_args in
+    let trargs = List.map (fun x -> Variable.subst sigma x) tr_args in
     let ureqs = uguard sigma procs trargs tr.tr_ureq in
     let final =
       List.fold_left (fun acc u ->
@@ -2179,7 +2187,7 @@ let possible_for_proc (env,_,_,_) trans all_procs aproc =
   let glob = ref env in 
   Trans.fold (fun x el (acc_np, acc_p) ->
     let name = el.tr_name in 
-    let args = el.tr_args in
+    let args = List.map fst el.tr_args in (*MODIFED subsorts*)
     let num_args = List.length args in
     let tr_procs = all_arrange num_args all_procs in
     if tr_procs = [] then
@@ -2252,7 +2260,7 @@ let all_possible_transitions (env,_,_,_) trans all_procs flag=
   let glob = ref env in 
   Trans.fold (fun x el acc ->
     let name = el.tr_name in 
-    let args = el.tr_args in
+    let args = List.map fst el.tr_args in (*MODIFIED subsorts*)
     let num_args = List.length args in
     let tr_procs = all_arrange num_args all_procs in
     if tr_procs = [] then
@@ -2363,7 +2371,7 @@ let all_possible_weighted_transitions global trans all_procs (env2,_,_,_) tr fla
   let glob = ref env in
   Trans.fold (fun x el acc ->
     let name = el.tr_name in 
-    let args = el.tr_args in
+    let args = List.map fst el.tr_args in (*MODIFIED subsorts*)
     let num_args = List.length args in
     let tr_procs = all_arrange num_args all_procs in
     if tr_procs = [] then

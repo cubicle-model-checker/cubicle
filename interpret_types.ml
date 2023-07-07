@@ -4,6 +4,20 @@ open Types
 let sys_procs = ref 0 
 
 
+
+type msg =
+    { sender: Hstring.t;
+      receiver: Hstring.t;
+      timestamp: int;
+      contents : Hstring.t }
+      
+type  buffer =
+    { id : int;
+      between: Hstring.t * Hstring.t;
+      msgs : msg list;
+    }
+  
+
 type conc_value =
   | VInt of int
   | VReal of float
@@ -18,7 +32,10 @@ type conc_value =
   | VArith of Term.t
   | VAbstract of Hstring.t	    
   | VAlive | VSuspended | VSleep of int
+  (*| VBuffer of buffer*) 
   | UNDEF
+
+      
 
 type interpret_value = { value: conc_value; typ: Hstring.t}
 
@@ -180,6 +197,7 @@ let print_val fmt v =
     | VAccess(l,t) -> Format.fprintf fmt "%a[%a]" Hstring.print l (Hstring.print_list ", ") t
     | VArith _ -> Format.fprintf fmt "FORMAT"
     | VAbstract _ -> ()
+    (*| VBuffer b -> assert false*)
 
 
 let print_interpret_val fmt {value=v; typ = t} =
@@ -206,6 +224,7 @@ rocess active"
     | UNDEF -> Format.printf "%s" "UNDEF"
     | VArith _ -> ()
     | VAbstract _ -> ()
+    (*| VBuffer  *)
 
 
 let print_poss_trans fmt l =

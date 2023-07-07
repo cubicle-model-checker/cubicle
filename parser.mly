@@ -256,7 +256,7 @@ transition_name:
   | mident {$1}
 
 transition:
-  | TRANSITION transition_name LEFTPAR lidents_proc RIGHTPAR 
+  | TRANSITION transition_name LEFTPAR lidents_proc_typed RIGHTPAR 
       require
       LEFTBR let_assigns_nondets_updates_locks RIGHTBR
       { let lets, (assigns, nondets, upds,locks) = $8 in
@@ -519,7 +519,7 @@ mident:
   | MIDENT { Hstring.make $1 }
 ;
  
-
+/*
 lidents_proc_plus:
   | lident { [$1], None }
   | lident lidents_proc_plus { $1::(fst $2), (snd $2) }
@@ -529,7 +529,39 @@ lidents_proc_plus:
 lidents_proc:
   | { [], None }
   | lidents_proc_plus {$1 }
+;*/
+
+
+lidents_proc_plus_typed:
+  | lident { [$1, None], None }
+  | lident lidents_proc_plus_typed { ($1, None)::(fst $2), (snd $2) }
+
+  | lident COLON lident { [$1, Some $3], None }
+  | lident COLON lident lidents_proc_plus_typed { ($1, Some $3) ::(fst $4), (snd $4) }
+
+
+  | LEFTSQ lident RIGHTSQ { [$2, None], Some $2 }
+  | LEFTSQ lident RIGHTSQ lidents_plus_typed { ($2, None)::$4, Some $2 }
+
+  | LEFTSQ lident COLON lident RIGHTSQ { [$2, Some $4], Some $2 }
+  | LEFTSQ lident COLON lident RIGHTSQ lidents_plus_typed { ($2, Some $4)::$6, Some $2 }
 ;
+
+lidents_proc_typed:
+  | { [], None }
+  | lidents_proc_plus_typed {$1 }
+;
+
+
+lidents_plus_typed:
+  | lident { [$1, None] }
+  | lident lidents_plus_typed { ($1,None)::$2 }
+
+  | lident COLON lident { [$1, Some $3] }
+  | lident COLON lident lidents_plus_typed { ($1, Some $3)::$4 }
+;
+
+
 
 lidents_plus:
   | lident { [$1] }
