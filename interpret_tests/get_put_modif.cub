@@ -1,3 +1,6 @@
+type get < proc
+type put < proc
+
 type t = None
        	| Put_Wait | Put_Enter | Put_Exit
 	| Get_Wait | Get_Enter | Get_Exit
@@ -12,11 +15,11 @@ init(i) { Empty = True && PC[i] = None }
 
 (*---- Run ----*)
 
-transition run_put(i)
+transition run_put(i:put)
 requires { PC[i] = None }
 { PC[i] := Put_Wait }
 
-transition run_get(i)
+transition run_get(i:get)
 requires { PC[i] = None }
 { PC[i] := Get_Wait }
 
