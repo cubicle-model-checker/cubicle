@@ -12,7 +12,7 @@ array Clock[proc] : real
 array Last[proc] : real
 array Is_proc[proc] : bool
 
-const Tick : real
+const Tick = 1.0
 (* axiom : 0  < tick  *)
 
 init (z) { State[z] = L1 && Clock[z] = 0.0 && Last[z] = 0.0 && Timer = 1.0 }
@@ -34,35 +34,34 @@ unsafe (z1 z2 z3 z4) {
 
 
 transition t1 (z)
-requires { State[z] = L1 && Sender[z] = Receiver[z] && 0.0 < Tick }
+requires { State[z] = L1 && Sender[z] = Receiver[z] }
 {
   Timer := Timer + Tick;
   State[j] := case
-                | j = z : L2
+    | j = z : L2
 		| Sender[j] <> z : State[j]
 		| State[j] = L1 : L2
 		| _ : State[j] ;
   Clock[j] := case
 		| j = z : Timer
 		| Sender[j] <> z : Clock[j]
-                | State[j] = L1 : Timer
+    | State[j] = L1 : Timer
 		| _ : Clock[j] ;
   Last[j]  := case
 		| j = z : Timer
 		| _ : Last[j] 
-
 }
 
 transition t2 (z other)
 requires { State[z] = L2 && 
            Sender[z] = Receiver[z] &&
            Sender[other] <> Receiver[other] &&
-	   State[other] = L3 && Sender[other] = z  && 0.0 < Tick}
+           State[other] = L3 && Sender[other] = z }
 {
   Timer := Timer + Tick;
   State[j] := case
-                | j = z : L2
-                | j = other : L4
+    | j = z : L2
+    | j = other : L4
 		| _ : State[j] ;
   Clock[j] := case
 		| j = z : Timer
@@ -79,7 +78,7 @@ requires { State[z] = L2 && Sender[z] = Receiver[z] &&
 	      Sender[j] <> Receiver[j] && Sender[j] = z && State[j] = L4) }
 {
   State[j] := case
-                | j = z : L3
+    | j = z : L3
 		| _ : State[j]
 }
 
@@ -88,16 +87,16 @@ transition t4 (z)
 requires { State[z] = L3 && Sender[z] = Receiver[z] }
 {
   State[j] := case
-                | j = z : L4
-                | Sender[j] = Receiver[j] : State[j]
-                | Sender[j] <> z : State[j]
-		| State[j] = L4 : L1
+    | j = z : L4
+    | Sender[j] = Receiver[j] : State[j]
+    | Sender[j] <> z : State[j]
+    | State[j] = L4 : L1
 		| _ : State[j] ;
 }
 
 
 transition t5 (z)
-requires { State[z] = L4 && Sender[z] = Receiver[z] && 0.0 < Tick &&
+requires { State[z] = L4 && Sender[z] = Receiver[z] &&
 	   forall_other j.
 	    (Sender[j] = Receiver[j] ||
 	     Sender[j] <> Receiver[j] && Receiver[j] <> z ||
@@ -105,7 +104,7 @@ requires { State[z] = L4 && Sender[z] = Receiver[z] && 0.0 < Tick &&
 {
   Timer := Timer + Tick;
   State[j] := case
-                | j = z : L1
+    | j = z : L1
 		| _ : State[j] ;
   Clock[j] := case
 		| _ : Timer ;
@@ -115,11 +114,11 @@ requires { State[z] = L4 && Sender[z] = Receiver[z] && 0.0 < Tick &&
 transition t6 (z other)
 requires { State[z] = L1 && Sender[z] = Receiver[z] &&
            State[other] = L2 && Sender[other] <> Receiver[other] &&
-	   Receiver[other] = z && Clock[other] <= Clock[z] && 0.0 < Tick }
+           Receiver[other] = z && Clock[other] <= Clock[z] }
 {
   Timer := Timer + Tick;
   State[j] := case
-                | j = z : L1
+    | j = z : L1
 		| j = other : L3
 		| _ : State[j] ;
   Clock[j] := case
@@ -131,11 +130,11 @@ requires { State[z] = L1 && Sender[z] = Receiver[z] &&
 transition t7 (z other)
 requires { State[z] = L2 && Sender[z] = Receiver[z] &&
            State[other] = L2 && Sender[other] <> Receiver[other] &&
-	   Receiver[other] = z && Clock[other] < Last[z] && 0.0 < Tick }
+           Receiver[other] = z && Clock[other] < Last[z] }
 {
   Timer := Timer + Tick;
   State[j] := case
-                | j = z : L2
+    | j = z : L2
 		| j = other : L3
 		| _ : State[j] ;
   Clock[j] := case
@@ -148,11 +147,11 @@ requires { State[z] = L2 && Sender[z] = Receiver[z] &&
 transition t8 (z other)
 requires { State[z] = L2 && Sender[z] = Receiver[z] &&
            State[other] = L2 && Sender[other] <> Receiver[other] &&
-	   Receiver[other] = z && Clock[other] = Last[z] && Sender[other] < z && 0.0 < Tick }
+           Receiver[other] = z && Clock[other] = Last[z] && Sender[other] < z }
 {
   Timer := Timer + Tick;
   State[j] := case
-                | j = z : L2
+    | j = z : L2
 		| j = other : L3
 		| _ : State[j] ;
   Clock[j] := case

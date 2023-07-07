@@ -1,4 +1,3 @@
-
 - Disjunctions of unsafe formulas
 
   Alain's idea: use a restricted form of disjunctions on terms
@@ -23,5 +22,3 @@
 - Taking advantage of the unsat cores returned by the SMT solver.
 
 - Improve the concurrent computation of invariants
-
-

@@ -198,11 +198,13 @@ let simplify_vea v1 op v2 =
   | Vea.Elem(i, si), Vea.Elem(j, sj) -> simplify_comp i si op j sj
   | _ -> Atom.Comp(Vea(v1), op, Vea(v2))
 
+exception Floating
+
 let simplify_poly cs ts =
 
   (* 1. Remove every null vea *)
   let ts = VMap.filter (fun _ c -> not (Const.is_zero c)) ts in 
- 
+
   (* 2. Check if poly contains only one Vea *)
   if Const.is_zero cs && VMap.cardinal ts = 1 then
     let vea, c = VMap.choose ts in 
@@ -246,7 +248,17 @@ let rec simplification np a =
           | Poly (cs,ts) -> simplify_poly cs ts 
           | t            -> t
         in
-        Atom.Comp (Poly(Const.int_zero, VMap.empty), op, t2')
+        begin match t2' with 
+        | Poly (cs, ts) when VMap.is_empty ts -> 
+            begin match op, Const.sign cs with 
+            | Eq, 0               -> Atom.True
+            | Lt, i when i < 0    -> Atom.True 
+            | Le, i when i <= 0   -> Atom.True 
+            | Neq, i when i <> 0  -> Atom.True
+            | _                   -> Atom.False
+            end
+        | _ -> Atom.Comp (Poly(Const.int_zero, VMap.empty), op, t2')
+        end
 
 (***********************************)
 (* Cheap check of inconsitent cube *)

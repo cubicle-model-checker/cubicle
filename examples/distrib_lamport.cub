@@ -13,8 +13,7 @@ array Receiver[proc] : proc
 array Aux[proc] : real
 array Num[proc] : real
 
-const Tick : real
-
+const Tick = 1.0
 
 init (z) { State[z] = EmptyIdle && Aux[z] = 0.0 && Num[z] = 0.0 && Timer = 1.0 }
 
@@ -33,18 +32,18 @@ requires { State[z] = EmptyIdle && Sender[z] = Receiver[z] && 0.0 < Tick }
 {
   Timer := Timer + Tick;
   State[j] := case
-                | j = z : Choose
-		| Sender[j] <> Receiver[j] && 
-		    State[j] = EmptyIdle && Sender[j] = z : Req1
-		| _ : State[j] ;
+            | j = z : Choose
+            | Sender[j] <> Receiver[j] && 
+              State[j] = EmptyIdle && Sender[j] = z : Req1
+            | _ : State[j] ;
   Aux[j] := case
-		| j = z : Timer
-		| Sender[j] <> Receiver[j] && 
-		    State[j] = EmptyIdle && Sender[j] = z : Timer
-		| _ : Aux[j] ;
+          | j = z : Timer
+          | Sender[j] <> Receiver[j] 
+          && State[j] = EmptyIdle && Sender[j] = z : Timer
+          | _ : Aux[j] ;
   Num[j]  := case
-		| j = z : Timer
-		| _ : Num[j]
+          | j = z : Timer
+          | _ : Num[j]
 
 }
 
@@ -52,13 +51,13 @@ transition t2 (z other)
 requires { State[z] = Choose && 
            Sender[z] = Receiver[z] &&
            Sender[other] <> Receiver[other] &&
-	   State[other] = Ack1 && Sender[other] = z &&
+           State[other] = Ack1 && Sender[other] = z &&
            Aux[z] < Aux[other] }
 {
   State[j] := case
-                | j = z : Choose
-                | j = other : Ok1
-		| _ : State[j] ;
+            | j = z : Choose
+            | j = other : Ok1
+            | _ : State[j] ;
 }
 
 transition t3 (z other)
@@ -69,9 +68,9 @@ requires { State[z] = Choose &&
            Aux[other] <= Aux[z] }
 {
   State[j] := case
-                | j = z : Choose
-                | j = other : Ok1
-		| _ : State[j] ;
+            | j = z : Choose
+            | j = other : Ok1
+            | _ : State[j] ;
 }
 
 

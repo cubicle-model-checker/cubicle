@@ -10,8 +10,7 @@ array Receiver[proc] : proc
 array Clock[proc] : real
 array Last[proc] : real
 
-const Tick : real
-(* axiom : 0  < tick  *)
+const Tick = 1.0
 
 init (z) { State[z] = Empty && Clock[z] = 0.0 && Last[z] = 0.0 && Timer = 1.0 }
 
@@ -19,36 +18,36 @@ unsafe (z1 z2) { State[z1] = Use && State[z2] = Use }
 
 
 transition t1 (z)
-requires { State[z] = Idle &&  0.0 < Tick }
+requires { State[z] = Idle }
 {
   Timer := Timer + Tick;
   State[j] := case
-                | j = z : Wait
-                | State[j] = Empty && Sender[j] = z : Req
-		| _ : State[j] ;
+            | j = z : Wait
+            | State[j] = Empty && Sender[j] = z : Req
+            | _ : State[j] ;
   Clock[j] := case
-		| j = z : Timer
-                | State[j] = Empty && Sender[j] = z : Timer
-		| _ : Clock[j] ;
+            | j = z : Timer
+            | State[j] = Empty && Sender[j] = z : Timer
+            | _ : Clock[j] ;
   Last[j]  := case
-		| j = z : Timer
-		| _ : Last[j] 
+            | j = z : Timer
+            | _ : Last[j] 
 
 }
 
 transition t2 (z other)
 requires { State[z] = Wait && 
-           State[other] = Ack && Sender[other] = z && 0.0 < Tick }
+           State[other] = Ack && Sender[other] = z }
 {
   Timer := Timer + Tick;
   State[j] := case
-                | j = z : Wait
-                | j = other : Ok
-		| _ : State[j] ;
+            | j = z : Wait
+            | j = other : Ok
+            | _ : State[j] ;
   Clock[j] := case
-		| j = z : Timer
-		| j = other : Timer
-		| _ : Clock[j] ;
+            | j = z : Timer
+            | j = other : Timer
+            | _ : Clock[j] ;
 }
 
 
@@ -73,7 +72,7 @@ requires { State[z] = Use }
 
 
 transition t4b (z)
-requires { State[z] = Exiting && 0.0 < Tick &&
+requires { State[z] = Exiting &&
 	   forall_other j. (Receiver[j] = z && State[j] = Req) }
 {
   Timer := Timer + Tick;
@@ -85,7 +84,7 @@ requires { State[z] = Exiting && 0.0 < Tick &&
 }
 
 transition t5 (z other)
-requires { State[z] = Idle &&  0.0 < Tick &&
+requires { State[z] = Idle &&
            State[other] = Req &&
 	   Receiver[other] = z && Clock[other] <= Clock[z] }
 {
@@ -101,7 +100,7 @@ requires { State[z] = Idle &&  0.0 < Tick &&
 }
 
 transition t6 (z other)
-requires { State[z] = Wait && 0.0 < Tick &&
+requires { State[z] = Wait &&
            State[other] = Req &&
 	   Receiver[other] = z && Clock[other] < Last[z] }
 {
@@ -118,7 +117,7 @@ requires { State[z] = Wait && 0.0 < Tick &&
 
 
 transition t7 (z other)
-requires { State[z] = Wait && 0.0 < Tick &&
+requires { State[z] = Wait &&
            State[other] = Req &&
 	   Receiver[other] = z && Clock[other] = Last[z] &&
            Sender[other] < z }

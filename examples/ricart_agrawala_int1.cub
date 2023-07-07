@@ -12,7 +12,7 @@ array Clock[proc] : int
 array Last[proc] : int
 array Is_proc[proc] : bool
 
-const Tick : int
+const Tick = 1
 
 init (z) { State[z] = L1 && Clock[z] = 0 && Last[z] = 0 && Timer = 1 }
 

@@ -12,7 +12,7 @@ array Last[proc] : int
 array Channel_msg[proc,proc] : msg
 array Channel_timestamp[proc,proc] : int
 
-const Tick : int
+const Tick = 1
 
 init (z z1) { State[z] = Idle &&
               Clock[z] = 0 &&
@@ -30,7 +30,7 @@ unsafe (z1 z2) {
 
 
 transition t1 (z)
-requires { State[z] = Idle && 0 < Tick }
+requires { State[z] = Idle }
 {
   Timer := Timer + Tick;
   State[z] := Wait;
@@ -67,7 +67,7 @@ requires { State[z] = Wait &&
 
 
 transition t4 (z)
-requires { State[z] = Use && 0 < Tick }
+requires { State[z] = Use }
 {
   Timer := Timer + Tick;
 
@@ -89,7 +89,7 @@ requires { State[z] = Use && 0 < Tick }
 transition t5 (z s)
 requires { State[z] = Idle &&
            Channel_msg[s,z] = Req &&
-           Channel_timestamp[s,z] < Clock[z] && 0 < Tick }
+           Channel_timestamp[s,z] < Clock[z] }
 {
   Timer := Timer + Tick;
   Clock[z] := Timer;
@@ -101,7 +101,7 @@ requires { State[z] = Idle &&
 transition t6 (z s)
 requires { State[z] = Wait &&
            Channel_msg[s,z] = Req &&
-           Channel_timestamp[s,z] < Last[z] && 0 < Tick }
+           Channel_timestamp[s,z] < Last[z] }
 {
   Timer := Timer + Tick;
   Clock[z] := Timer;
@@ -114,7 +114,7 @@ transition t7 (z s)
 requires { State[z] = Wait &&
            Channel_msg[s,z] = Req &&
            Channel_timestamp[s,z] = Last[z] &&
-           s < z && 0 < Tick }
+           s < z }
 {
   Timer := Timer + Tick;
   Clock[z] := Timer;

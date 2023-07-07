@@ -69,6 +69,10 @@ module Const = struct
     | ConstInt c -> ConstInt (Num.div_num c i)
     | ConstReal c -> ConstReal (Num.div_num c i)
 
+  let abs = function 
+    | ConstInt n  -> ConstInt (Num.abs_num n)
+    | ConstReal n -> ConstReal (Num.abs_num n)
+
   (* -- *)
 
   let const_int  n = ConstInt   (n)
@@ -313,7 +317,6 @@ module Term = struct
         Variable.Set.empty
 
   let variables_proc t = Variable.Set.filter Variable.is_proc (variables t)
-
 
   let type_of = function
     | Vea  (v)      -> Vea.type_of v

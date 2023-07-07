@@ -10,7 +10,7 @@ transition req (i)
 requires { PC[i] = L1 }
 { 
  PC[j] := case
-           | i=j : L2 
+     | i=j : L2 
 	   | _ : PC[j] 
 }
 
@@ -18,7 +18,7 @@ transition limbo (i)
 requires { PC[i]=L2 }
 { 
  PC[j] := case 
-       	   | i=j : Limbo 
+     | i=j : Limbo 
 	   | _ : PC[j]
 }
  
@@ -27,7 +27,7 @@ transition enter (i)
 requires { PC[i]=Limbo  && Turn = i}
 { 
  PC[j] := case
-       	   | i=j : L3 
+     | i=j : L3 
 	   | _ : PC[j]
 }
 
@@ -36,7 +36,7 @@ requires { PC[i] = L3}
 { 
   Turn := . ;
   PC[j] := case 
-  	    | i=j : L1 
+      | i=j : L1 
 	    | _ : PC[j] 
 }
 

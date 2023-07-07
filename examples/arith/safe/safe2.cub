@@ -1,13 +1,11 @@
 var A : int
 var B : int 
 
-init () 
-	{ A = 0 && B = 0}
+init () { A = 0 && B = 0}
 
-unsafe ()
-{ A < 0 || B < 0 }
+unsafe () { A < 0 || B < 0 }
 
-transition minB()
+transition minB ()
 requires {A < B}
 { B := B - 1 }
 

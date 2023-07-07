@@ -68,7 +68,7 @@ requires { Round = 1 && Done[x] = False && State[x] = False && Coord[y] = True }
 { 
   Request := True; 
   Done[j] := case 
-              | j = x : True 
+        | j = x : True 
 	      | _ : Done[j] 
 }
 
@@ -78,7 +78,7 @@ requires { Round = 1 && Coord[x] = True && Done[x] = False && State[x] = False }
 { 
   Request := True;
   Done[j] := case 
-  	      | j = x : True 
+        | j = x : True 
 	      | _ : Done[j] 
 }
 
@@ -100,10 +100,10 @@ requires { Round = 1 && Request = False && Coord[x] = True && Done[x] = True &&
 { 
   Coord[j] := case 
   	       | j = x : False 
-	       | _ : Coord[j] ;
+           | _ : Coord[j] ;
   ACoord[j] := case 
   	        | j = x : True 
-		| _ : ACoord[j] 
+            | _ : ACoord[j] 
 }
 
 (* 5) The coordinator sends his estimate to an undecided process *)
@@ -112,10 +112,10 @@ requires { Round = 2 && Done[x] = False && State[x] = False && Coord[y] = True }
 { 
   Estimate[j] := case 
   	      	  | j = x : Estimate[y] 
-		  | _ : Estimate[j] ;
+              | _ : Estimate[j] ;
   Done[j] := case 
   	      | j = x : True 
-	      | _ : Done[j] 
+          | _ : Done[j] 
 }
 
 (* 6) The undecided coordinator does nothing in this round *)
@@ -124,7 +124,7 @@ requires { Round = 2 && State[x] = False && Done[x] = False && Coord[x] = True }
 { 
   Done[j] := case 
   	      | j = x : True 
-	      | _ : Done[j] 
+          | _ : Done[j] 
 }
 
 (* 7) Round 2 completed. System goes to round 3 *)
@@ -143,13 +143,13 @@ requires { Round = 3 && Done[x] = False && State[x] = False && Coord[y] = True }
 { 
   State[j] := case 
   	       | j = x : True 
-	       | _ : State[j] ;
+           | _ : State[j] ;
   Done[j] := case 
   	       | j = x : True 
-	       | _ : Done[j] ;
+           | _ : Done[j] ;
   DecisionValue[j] := case 
   		       | j = x : Estimate[x] 
-		       | _ : DecisionValue[j] 
+             | _ : DecisionValue[j] 
 }
 
 (* 9) If the coordinator is undecided takes a decision. *)
@@ -158,13 +158,13 @@ requires { Round = 3 && Done[x] = False && State[x] = False && Coord[x] = True }
 { 
   State[j] := case 
   	       | j = x : True 
-	       | _ : State[j] ;
+           | _ : State[j] ;
   Done[j] := case 
   	       | j = x : True 
-	       | _ : Done[j] ;
+           | _ : Done[j] ;
   DecisionValue[j] := case 
   		       | j = x : Estimate[x] 
-		       | _ : DecisionValue[j] 
+             | _ : DecisionValue[j] 
 }
 
 
@@ -187,12 +187,12 @@ requires { Round = 4 && Coord[x] = True && Coord[y] = False &&
   Request := False ;
   ACoord[j] := case 
   	        | j = x : True 
-		| _ : ACoord[j] ;
+            | _ : ACoord[j] ;
   Done[j] := case | _ : False ;
   Coord[j] := case 
   	       | j = x : False 
-	       | j = y : True 
-	       | _ : Coord[j] 
+           | j = y : True 
+           | _ : Coord[j] 
 }
 
 (* 12) If there's no coordinator (maybe the coordinator in office crashed)
@@ -205,7 +205,7 @@ requires { Coord[x] = False && ACoord[x] = False &&
   Request := False ;
   Coord[j] := case 
   	       | j = x : True 
-	       | _ : Coord[j] ;
+           | _ : Coord[j] ;
   Done[j] := case | _ : False 
 }
 
@@ -216,5 +216,5 @@ requires { State[x] = True && Done[x] = False }
 { 
   Done[j] := case 
   	      | j = x : True 
-	      | _ : Done[j] 
+          | _ : Done[j] 
 }

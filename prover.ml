@@ -19,7 +19,6 @@ open Util
 open Ast
 open Types
 
-
 module T = Smt.Term
 module F = Smt.Formula
 
@@ -64,43 +63,57 @@ let make_op_comp = function
   | Le -> F.Le
   | Neq -> F.Neq
 
-let make_const = function
+let make_const c (tt : Smt.Type.t) = 
+  match c  with
+  | ConstInt  i when Hstring.equal Smt.Type.type_real tt -> T.make_real i
+  | ConstReal i -> T.make_real i 
   | ConstInt  i -> T.make_int  i
-  | ConstReal i -> T.make_real i
+
+let make_const_real = function
+  | ConstInt i | ConstReal i -> T.make_real i
 
 let make_vea = function 
   | Vea.Elem   (e, _)  -> T.make_app e []
   | Vea.Access (a, li) -> T.make_app a (List.map (fun i -> T.make_app i []) li)
 
-let make_ts ts = 
+let make_ts ts tt = 
   match VMap.choose_opt ts with 
   | Some (vea, cs) ->
-    let cs_t = make_const cs in 
-    let vea_t = make_vea vea in
-    let fst = T.make_arith T.Mult cs_t vea_t in 
+    
+    let fst = 
+      if Const.is_one cs then make_vea vea
+      else T.make_arith T.Mult (make_const cs tt) (make_vea vea)
+    in
 
     let ts_without_fst = VMap.remove vea ts in 
 
     let res = VMap.fold
-    (fun vea cs tres ->
-      let cs_t  = make_const cs in
+    (fun vea cs res_t ->
       let vea_t = make_vea vea  in
+      if Const.is_one cs then T.make_arith T.Plus res_t vea_t 
+      else if Const.is_one (Const.abs cs) then
+        T.make_arith T.Minus res_t vea_t 
+      else
+      let cs_t = if T.is_real vea_t then make_const_real cs 
+                                    else make_const cs tt in
       let csvea_t = T.make_arith T.Mult cs_t vea_t in 
-      T.make_arith T.Plus tres csvea_t 
+      T.make_arith T.Plus res_t csvea_t 
     )
     ts_without_fst
     fst
-    in Some(res)
+    in Some res
   | None -> None
 
-let make_term = function
+let make_term t =
+  match t with
   | Vea v        -> make_vea v
   | Poly(cs, ts) ->
-      match make_ts ts with 
+      let tt = Term.type_of t in
+      match make_ts ts tt  with 
       | Some (ts_t) -> 
           if Const.is_zero cs then ts_t else 
-          let cs_t = make_const cs in T.make_arith T.Plus cs_t ts_t
-      | None -> make_const cs
+          let cs_t = make_const cs tt in T.make_arith T.Plus cs_t ts_t
+      | None -> make_const cs tt
 
 let rec make_formula_set sa = 
   F.make F.And (SAtom.fold (fun a l -> make_literal a::l) sa [])

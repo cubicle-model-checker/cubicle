@@ -3,7 +3,8 @@ import os
 import re
 import shutil
 import signal
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
+from datetime import datetime
 from pathlib import Path
 from subprocess import PIPE, Popen, TimeoutExpired, run
 
@@ -18,14 +19,26 @@ time = shutil.which("time")
 if time is None:
     raise RuntimeError("Time not found !")
 
-cubicle_opt = cubicle_git_dir / "cubicle.opt"
-if not cubicle_opt.exists():
-    raise RuntimeError("Please Build Cubicle.")
+begin_t = datetime.now().replace(microsecond=0)
 
-cubicle = shutil.which("cubicle")
-if cubicle is None:
-    raise RuntimeError("Cubicle is not found.")
-cubicle = Path(cubicle)
+ARITH = "arith"
+BASE = "base"
+
+
+def find_cubicles() -> dict[str, Path]:
+    cubicle_opt = cubicle_git_dir / "cubicle.opt"
+    if not cubicle_opt.exists():
+        raise RuntimeError("Please Build Cubicle.")
+
+    cubicle = shutil.which("cubicle")
+    if cubicle is None:
+        raise RuntimeError("Cubicle is not found.")
+    cubicle = Path(cubicle)
+
+    return {ARITH: cubicle_opt, BASE: cubicle}
+
+
+cub_execs = find_cubicles()
 
 test_dir = cubicle_git_dir / "examples"
 if not test_dir.exists():
@@ -57,6 +70,8 @@ SPURIOUS_TRACE = "Spurious Trace"
 SAFE = "Safe"
 UNSAFE = "Unsafe"
 REACH_LIMITS = "Reach Limits"
+RUN_ERROR = "Parsing or Program Crashed"
+
 
 def run_with_timeout(args) -> None | tuple[float, str]:
     with Popen([time, "-f", "time:%e"] + args, stdout=PIPE, stderr=PIPE, text=True,
@@ -70,7 +85,7 @@ def run_with_timeout(args) -> None | tuple[float, str]:
             os.killpg(process.pid, signal.SIGINT)
             return None
         except IndexError:
-            raise RuntimeError(f"Error Parsing :\n{data_out}")
+            raise RuntimeError(f"Error Parsing: \n{data_out}")
     return t, data_out
 
 
@@ -79,12 +94,14 @@ def run_cubicle(cubicle_path: Path, test_file: Path) -> dict:
     if c.returncode != 0:
         return {STATUS: TYPE_ERROR, TIME_TAKEN: None, SOLVER_CALLED: None, NODES_VISITED: None}
     else:
-        out = run_with_timeout([cubicle_path, "-nocolor", str(test_file)])
-        if out is None:
-            return {STATUS: TIMEOUT, TIME_TAKEN: None, SOLVER_CALLED: None, NODES_VISITED: None}
-        else:
-            cubicle_time, cubicle_out = out
-            try:
+        out: None | tuple[float, str] = None
+        try:
+            out = run_with_timeout([cubicle_path, "-nocolor", str(test_file)])
+            if out is None:
+                return {STATUS: TIMEOUT, TIME_TAKEN: None, SOLVER_CALLED: None, NODES_VISITED: None}
+            else:
+                cubicle_time, cubicle_out = out
+
                 sol_c = int(solver_calls.findall(cubicle_out)[0])
                 vis_n = int(visited_nodes.findall(cubicle_out)[0])
 
@@ -101,48 +118,51 @@ def run_cubicle(cubicle_path: Path, test_file: Path) -> dict:
                     return {STATUS: REACH_LIMITS, TIME_TAKEN: cubicle_time, SOLVER_CALLED: sol_c,
                             NODES_VISITED: vis_n}
                 else:
-                    raise RuntimeError(f"Unable to parse output :\n{cubicle_out}")
-            except Exception as e:
-                print(f"Error parsing:\n{cubicle_out}")
-                raise e
+                    raise RuntimeError(f"Unable to parse output: \n{cubicle_out}")
+        except Exception as e:
+            print("Error in parsing:")
+            print(e)
 
+            if out is not None:
+                print("Cubicle output:")
+                print(out[1])
 
-def job(test_file: Path) -> tuple[dict, dict]:
-    arith_list, base_list = [], []
-
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        future_to_file = {executor.submit(run_cubicle, cubicle_opt, test_file): "Arith",
-                          executor.submit(run_cubicle, cubicle, test_file): "Base"}
-
-        for future in as_completed(future_to_file):
-            type_tested = future_to_file[future]
-            cub_result = future.result()
-            if type_tested == "Arith":
-                arith_list.append(cub_result)
-            elif type_tested == "Base":
-                base_list.append(cub_result)
+                return {STATUS: RUN_ERROR, TIME_TAKEN: out[0], SOLVER_CALLED: None,
+                        NODES_VISITED: None}
             else:
-                raise RuntimeError("Who the fuck are you ?")
-
-    assert (len(arith_list) == 1 == len(base_list))
-    return arith_list[0], base_list[0]
+                return {STATUS: REACH_LIMITS, TIME_TAKEN: None, SOLVER_CALLED: None,
+                        NODES_VISITED: None}
 
 
-def run_all(nb_workers: int) -> dict[str, tuple[dict, dict]]:
+def run_all(nb_workers: int) -> dict[str, dict[str, dict]]:
     testing_data = {}
     with ThreadPoolExecutor(max_workers=nb_workers) as executor:
-        future_to_file = {executor.submit(job, file): file for file in examples_list}
+        future_to_file: dict[Future[dict], tuple[Path, str]] = \
+            {executor.submit(run_cubicle, cub_execs[mode], file): (file, mode)
+             for file in examples_list
+             for mode in [ARITH, BASE]}
 
-        for future in as_completed(future_to_file):
-            tested_file = future_to_file[future]
+        test_number = len(future_to_file)
+
+        for nb, future in enumerate(as_completed(future_to_file)):
+            tested_file, mode = future_to_file[future]
             cub_result = future.result()
-            testing_data[tested_file.stem] = cub_result
+            key = tested_file.stem
+
+            print(
+                f"Remaining: {test_number - nb - 1:>3d}/{test_number}. "
+                f"Time elapsed: {datetime.now().replace(microsecond=0) - begin_t}. End of {'mode=' + mode + ',':<11} file={key}")
+
+            if key not in testing_data:
+                testing_data[key] = {}
+
+            testing_data[key][mode] = cub_result
 
     return testing_data
 
 
-def dict_to_list(file: str, run_data: tuple[dict, dict]) -> list[str]:
-    arith, base = run_data
+def dict_to_list(file: str, run_data: dict[str, dict]) -> list[str]:
+    arith, base = run_data[ARITH], run_data[BASE]
 
     def parse_none(elm: str | int | None) -> str:
         if elm is None:
@@ -156,7 +176,7 @@ def dict_to_list(file: str, run_data: tuple[dict, dict]) -> list[str]:
             parse_none(arith[SOLVER_CALLED]), parse_none(base[SOLVER_CALLED])]
 
 
-def save_to_csv(data_to_save: dict[str, tuple[dict, dict]]) -> None:
+def save_to_csv(data_to_save: dict[str, dict[str, dict]]) -> None:
     if OUT_FILE.exists():
         OUT_FILE.unlink()
 
@@ -165,10 +185,13 @@ def save_to_csv(data_to_save: dict[str, tuple[dict, dict]]) -> None:
 
     with open(OUT_FILE, "w") as f:
         f.write(";".join(legend) + "\n")
-        for file, d in data_to_save.items():
-            f.write(";".join(dict_to_list(file, d)) + "\n")
+        for file in sorted(data_to_save):
+            f.write(";".join(dict_to_list(file, data_to_save[file])) + "\n")
 
 
 if __name__ == '__main__':
-    data = run_all(NB_PROCESS // 2)
+    print("Let's Bench !")
+    data = run_all(NB_PROCESS)
+
+    print("Saving Data...")
     save_to_csv(data)

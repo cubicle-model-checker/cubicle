@@ -10,7 +10,7 @@ transition t1 (x)
 requires { A[x] = Invalid }
 { 
   A[j] := case 
-            | j = x : UnOwned 
+      | j = x : UnOwned 
 	    | A[j] = Exclusive : NonExclusive 
 	    | _ : A[j]; 
 }
@@ -19,7 +19,7 @@ transition t2 (x)
 requires { A[x] = UnOwned }
 { 
   A[j] := case	
-           | j = x : Exclusive 
+     | j = x : Exclusive 
 	   | A[j] = NonExclusive : Invalid 
 	   | A[j] = UnOwned : Invalid 
 	   | _ : A[j]; 
@@ -29,7 +29,7 @@ transition t3 (x)
 requires { A[x] = NonExclusive }
 { 
   A[j] := case 
-           | j = x : Exclusive 
+     | j = x : Exclusive 
 	   | A[j] = UnOwned : Invalid 
 	   | A[j] = NonExclusive : Invalid 
 	   | _ : A[j]; 
@@ -39,7 +39,7 @@ transition t4 (x)
 requires { A[x] = Invalid }
 { 
   A[j] := case 
-           | j = x : Exclusive 
+     | j = x : Exclusive 
 	   | A[j] = NonExclusive : Invalid 
 	   | A[j] = Exclusive : Invalid 
 	   | A[j] = UnOwned : Invalid 

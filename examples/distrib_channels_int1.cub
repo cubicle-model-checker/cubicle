@@ -14,8 +14,7 @@ array Aux[proc] : int
 array Channel_msg[proc,proc] : msg
 array Channel_v[proc,proc] : int
 
-const Tick : int
-
+const Tick = 1
 
 init (z z1) { State[z] = Idle &&
               Num[z] = 0 &&

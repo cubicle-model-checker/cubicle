@@ -36,8 +36,7 @@ var W : bool
 var H : proc
 var H_valid : bool
 
-const C : real
-
+const C : = 1.0
 
 init (x) { Clock[x] = 0.0 && W = False && PC[x]  = L1 && V_valid = False && H_valid = False && 1.0 <= E && 1.0 <= F }
 
@@ -174,7 +173,7 @@ requires { PC[x] = L8 && 1.0 <= Clock[x] }
 
 (* TODO: problem with simplifications of tick (F-M) with ites *)
 transition time_elapse ()
-requires { 0.0 < C &&
+requires { 
            forall_other j. ( PC[j] <> L1 && PC[j] <> L3 && Clock[j] + C <= E ||
                              PC[j] = L1 ||
                              PC[j] = L3 ) }

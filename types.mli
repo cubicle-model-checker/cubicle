@@ -50,6 +50,7 @@ module Const : sig
   val num_le      : t -> t -> bool
   val divided_by  : t -> int -> bool
   val div         : t -> Num.num-> t
+  val abs         : t -> t
 
   val add_const : t -> t -> t 
   val add_int   : t -> Num.num -> t

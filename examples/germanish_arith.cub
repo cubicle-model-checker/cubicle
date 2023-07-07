@@ -13,13 +13,11 @@ array Shrset[proc] : bool
 init (z) { Cache[z] = 1 && Shrset[z] = False &&
            Exgntd = False && Curcmd = 1 }
 
-
 (* encoding of subranges *)
 invariant (z) { Cache[z] < 1 }
 invariant (z) { 3 < Cache[z] }
 invariant (z) { Curcmd < 1 }
 invariant (z) { 3 < Curcmd }
-
 
 unsafe (z1 z2) { Cache[z1] = 3 && Cache[z2] = 2 }
 

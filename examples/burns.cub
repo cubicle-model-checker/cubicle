@@ -28,7 +28,7 @@ transition t2 (x y)
 requires { A[x] = Q2 && y < x && F[y] = True }
 { 
   A[j] := case 
-       	   | j = x : Q1 
+     | j = x : Q1 
 	   | _ : A[j]
 }
 
@@ -36,7 +36,7 @@ transition t3 (x)
 requires { A[x] = Q2 && forall_other j. (x<=j || F[j] = False ) }
 { 
   A[j] := case 
-       	   | j = x : Q3 
+     | j = x : Q3 
 	   | _ : A[j]
 }
 
@@ -44,10 +44,10 @@ transition t4 (x)
 requires { A[x] = Q3 }
 { 
   A[j] := case 
-       	   | j = x : Q5 
+     | j = x : Q5 
 	   | _ : A[j];
   F[j] := case 
-       	   | j = x : True
+     | j = x : True
 	   | _ : F[j]
 }
 
@@ -55,7 +55,7 @@ transition t5 (x y)
 requires { A[x] = Q4 && y<x && F[y] = True }
 { 
   A[j] := case 
-       	   | j = x : Q1 
+     | j = x : Q1 
 	   | _ : A[j]
 }
 
@@ -63,7 +63,7 @@ transition t6 (x)
 requires { A[x] = Q4 && forall_other j. (x<=j || F[j] = False) }
 { 
   A[j] := case 
-       	   | j = x : Q5
+     | j = x : Q5
 	   | _ : A[j]
 }
 
@@ -71,7 +71,7 @@ transition t7 (x)
 requires { A[x] = Q5 && forall_other j. (j <= x || F[j] = False) }
 { 
   A[j] := case 
-       	   | j = x : Q6
+     | j = x : Q6
 	   | _ : A[j]
 }
 
@@ -79,10 +79,10 @@ transition t8 (x)
 requires { A[x] = Q6 && F[x] = True }
 { 
   F[j] := case 
-       	   | j = x : False
+     | j = x : False
 	   | _ : F[j];
   A[j] := case 
-       	   | j = x : Q7 
+     | j = x : Q7 
 	   | _ : A[j]
 }
 
@@ -90,7 +90,7 @@ transition t9 (x)
 requires { A[x] = Q7 && F[x] = True }
 {
   A[j] := case 
-       	   | j = x : Q1
+     | j = x : Q1
 	   | _ : A[j]
 }
 
