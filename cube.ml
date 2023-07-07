@@ -193,11 +193,6 @@ let simplify_comp i si op j sj =
        else Atom.Comp (ti, op, tj)
     | _ -> Atom.Comp (Vea(Elem (i, si)), op, Vea(Elem (j, sj)))
 
-let simplify_vea v1 op v2 =
-  match v1, v2 with 
-  | Vea.Elem(i, si), Vea.Elem(j, sj) -> simplify_comp i si op j sj
-  | _ -> Atom.Comp(Vea(v1), op, Vea(v2))
-
 exception Floating
 
 let simplify_poly cs ts =
@@ -206,19 +201,19 @@ let simplify_poly cs ts =
   let ts = VMap.filter (fun _ c -> not (Const.is_zero c)) ts in 
 
   (* 2. Check if poly contains only one Vea *)
-  if Const.is_zero cs && VMap.cardinal ts = 1 then
-    let vea, c = VMap.choose ts in 
-    if Const.is_one c then Vea(vea)
-                      else Poly(cs, ts)
-  else Poly (cs, ts)
-
-let rec simplification np a =
+  match VMap.choose_opt ts with 
+  | Some (vea, c) when Const.is_one c && Const.is_zero cs && VMap.cardinal ts=1
+      -> Vea vea 
+  | _ -> Poly (cs, ts)
+ 
+ let rec simplification np a =
   let a = redondant_or_false (SAtom.remove a np) a in
   match a with
     | Atom.True | Atom.False -> a
     | Atom.Comp (t1, (Eq | Le), t2)  when Term.equal t1 t2 -> Atom.True
     | Atom.Comp (t1, (Neq | Lt), t2) when Term.equal t1 t2 -> Atom.False 
-    | Atom.Comp (Vea v1, op, Vea v2) -> simplify_vea v1 op v2 
+    | Atom.Comp (Vea (Elem (i, si)) , op, Vea (Elem (j, sj))) -> 
+        simplify_comp i si op j sj 
     | Atom.Comp (Poly (cs1, ts1), Le, Poly (cs2, ts2)) 
         when VMap.equal Const.equal ts1 ts2 && Const.num_le cs1 cs2 ->
           Atom.True
