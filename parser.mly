@@ -224,7 +224,10 @@ type_def:
   | TYPE lident EQ constructors 
       { Smt.set_sum true; List.iter Constructors.add $4; Constructors ((loc (), ($2, $4))) }
   | TYPE lident EQ BAR constructors 
-      { Smt.set_sum true; List.iter Constructors.add $5; Constructors ((loc (), ($2, $5))) }  						       
+      { Smt.set_sum true; List.iter Constructors.add $5; Constructors ((loc (), ($2, $5))) }
+
+  | TYPE lident LT lident
+      { if not (Hstring.equal $4 hproc) then raise Parsing.Parse_error; ProcSubsets ( loc (), $2) }
 
 ;
 

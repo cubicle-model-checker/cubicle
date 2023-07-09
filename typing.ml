@@ -42,6 +42,8 @@ type error =
   | Smt of Smt.error
   | SingleLockMechanism
   | LivelockTransition
+  | MustBeOfSubProc of Hstring.t 
+
 
 exception Error of error * loc
 
@@ -100,7 +102,10 @@ let report fmt = function
     fprintf fmt "only one lock-related (acquire, release, wait, notify, notify_all) allowed per transition"
   | LivelockTransition ->
     fprintf fmt "at least one transition needs to appear in livelock declaration"
-
+  | MustBeOfSubProc s ->
+    fprintf fmt "%a must be a subtype of proc" Hstring.print s
+  | Smt (Smt.NotProcSubType e) -> fprintf fmt "%a is not a proc subtype" Hstring.print e
+      
 let error e l = raise (Error (e,l))
 
 let rec unique error = function
@@ -317,7 +322,19 @@ let transitions =
   let h = ref [] in
   List.iter 
     (fun ({tr_args = args; tr_loc = loc} as t) ->
-      let args = List.map fst args in (*MODIFIED subsorts*)
+      let args = List.map (fun (v, st) ->
+	match st with
+	  | None -> v
+	  | Some ty ->
+	    begin
+	      try
+		let b = Smt.Type.is_proc_subtype ty in
+		if b then v
+		else error (MustBeOfSubProc ty) loc
+	      with Smt.Error e -> error (Smt e) loc
+	    end )
+		
+	args in (*MODIFIED subsorts*)
       if List.mem t.tr_name !h then 
 	error (DuplicateName t.tr_name) loc;
       h := t.tr_name::!h;
@@ -339,9 +356,14 @@ let declare_type (loc, (x, y)) =
 let declare_symbol loc n args ret =
   try Smt.Symbol.declare n args ret
   with Smt.Error e -> error (Smt e) loc
+
+let declare_sub_proc (loc,sub) =
+  try Smt.Type.declare_proc_subtype sub
+  with Smt.Error e -> error (Smt e) loc
     
 let declare_t = function
   | Constructors (loc, (x,y)) -> declare_type (loc,(x,y))
+  | ProcSubsets (loc, sub) -> declare_sub_proc (loc, sub)
 
 
 let init_global_env s = 

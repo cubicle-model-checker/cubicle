@@ -35,6 +35,7 @@ type type_constructors = Hstring.t * (Hstring.t list)
     
 type type_defs =
   | Constructors of (loc * type_constructors)
+  | ProcSubsets of (loc * Hstring.t)
 
       
 type swts = (SAtom.t * Term.t) list
