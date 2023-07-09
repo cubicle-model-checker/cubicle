@@ -1,0 +1,14 @@
+type sub1 < proc
+type sub2 < proc
+
+
+array X[proc] : bool
+
+init(i) { X[i] = True }
+
+unsafe(i j) { X[i] = True && X[j] = False }
+
+
+transition t1(i: sub1 j: sub2)
+requires { X[i] = True }
+{ X[i] := False }
