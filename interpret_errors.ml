@@ -30,6 +30,7 @@ type top_error =
   | StepTooBig of int * int
   | CannotBacktrack of int
   | ExplainReq of Hstring.t * Hstring.t list * Atom.t
+  | BadSubType of Term.t * Hstring.t
 
       
 type run_error =
@@ -83,5 +84,8 @@ let top_report fmt e =
 
     | ExplainReq(tn, args, atom) ->
       Format.fprintf fmt "Transition %a(%a) blocked due to %a" Hstring.print tn Variable.print_vars args Atom.print atom
+    | BadSubType (p,s) ->
+      Format.fprintf fmt "Process %a should be of %a subtype" Term.print p Hstring.print s
+
       
 let top_error e = raise (TopError e)

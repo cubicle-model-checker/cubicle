@@ -1669,9 +1669,10 @@ let wait_unlock lockq lock_elem env =
   else
     let new_proc, rem_queue = PersistentQueue.pop q in
     let nv =
-      Env.add lock_elem {value = VLock(true, Some new_proc); typ = ty_proc} env
+      Env.add lock_elem {value = VLock(true, Some new_proc); typ = ty_lock} env (*changed from ty_proc*)
     in
-    let nv = Env.add new_proc {value = VAlive; typ = ty_proc} nv in
+    let v = Env.find new_proc env in 
+    let nv = Env.add new_proc {value = VAlive; typ = v.typ} nv in
     let lq = LockQueues.add lock_elem rem_queue lockq in nv,lq   
     
 let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
@@ -1692,6 +1693,7 @@ let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
 	     match v.value  with
 	       | VLock(b, po) ->
 		 let term = Elem(Variable.subst sigma p, Var) in
+		 let term_type = (Env.find term env).typ in 
 		  if not b then
 		    begin
 		      (Env.add lock_elem
@@ -1707,7 +1709,7 @@ let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
 		      let q = LockQueues.find lock_elem lock_queue in
 		      let new_queue =  PersistentQueue.push term q in
 		      let lock_queue = LockQueues.add lock_elem new_queue lock_queue in
-		      (Env.add term {value = VSuspended; typ = ty_proc} new_env),
+		      (Env.add term {value = VSuspended; typ = term_type} new_env),
 		      lock_queue,
 		      cond_sets, semaphores
 		    end
@@ -1733,9 +1735,10 @@ let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
 
 			  else
 			    begin
+			      let term_type = (Env.find term env).typ in
 			      let new_queue = PersistentQueue.push term q in
 			      let lock_queue = LockQueues.add lock_elem new_queue lock_queue in
-			      (Env.add term {value = VSuspended; typ = ty_proc} new_env), lock_queue, cond_sets, semaphores
+			      (Env.add term {value = VSuspended; typ = term_type} new_env), lock_queue, cond_sets, semaphores
 			    end
 			    
 		    end
@@ -1747,7 +1750,8 @@ let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
 		  else
 		    let sl = Semaphores.find lock_elem semaphores in
 		    let sema = Semaphores.add lock_elem (term::sl) semaphores in
-		    (Env.add term {value = VSuspended; typ = ty_proc} new_env), lock_queue, cond_sets, sema
+		    let term_type = (Env.find term env).typ in
+		    (Env.add term {value = VSuspended; typ = term_type} new_env), lock_queue, cond_sets, sema
    		| VGlob _ -> assert false
 		| VProc _ -> assert false
 		| VInt _ -> assert false
@@ -1799,7 +1803,8 @@ let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
 				    lock_elem {value = VLock(true, Some new_proc); typ = v.typ}
 				    new_env
 				in
-				let nv = Env.add new_proc {value = VAlive; typ = ty_proc} nv in
+				let term_type = (Env.find new_proc env).typ in
+				let nv = Env.add new_proc {value = VAlive; typ = term_type} nv in
 				let lq = LockQueues.add lock_elem rem_procs lock_queue in
 				nv,lq, cond_sets, semaphores
 			    end 
@@ -1836,7 +1841,8 @@ let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
 				  lock_elem {value = VRLock(true, Some new_proc,1); typ = v.typ}
 				  new_env
 			      in
-			      let nv = Env.add new_proc {value = VAlive; typ = ty_proc} nv in
+			      let term_type = (Env.find new_proc env).typ in 
+			      let nv = Env.add new_proc {value = VAlive; typ = term_type} nv in
 			      let lq = LockQueues.add lock_elem rem_procs lock_queue in
 			      nv,lq, cond_sets, semaphores
 			  else
@@ -1853,7 +1859,8 @@ let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
 		  else
 		    let wakeup = List.hd sl in 
 		    let sema = Semaphores.add lock_elem (List.tl sl) semaphores in
-		    (Env.add wakeup {value = VAlive; typ = ty_proc} new_env), lock_queue, cond_sets, sema
+		    let term_type = (Env.find wakeup env).typ in
+		    (Env.add wakeup {value = VAlive; typ = term_type} new_env), lock_queue, cond_sets, sema
 		  
 		| _ -> assert false
 		  		
@@ -1879,7 +1886,7 @@ let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
 			  begin
 			    match term_value.value with
 			      | VSleep i -> if i > 0 then
-				  (Env.add term {value = VSleep(i+1); typ = ty_proc} new_env),
+				  (Env.add term {value = VSleep(i+1); typ = (Env.find term env).typ} new_env),
 				lock_queue,
 				cond_sets,
 				semaphores
@@ -1896,8 +1903,9 @@ let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
 			    if Term.compare pr term = 0 then
 			      let clist = Conditions.find lock_elem cond_sets in
 			      let clist = term::clist in
+			      let term_type = (Env.find term env).typ in
 			      let nv, lq = wait_unlock lock_queue lock_elem new_env in
-			      (Env.add term {value = VSleep 1; typ = ty_proc} nv),
+			      (Env.add term {value = VSleep 1; typ = term_type} nv),
 			      lq,
 			      Conditions.add lock_elem clist cond_sets,
 			      semaphores
@@ -1905,7 +1913,7 @@ let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
 			      begin
 				match term_value.value with
 				  | VSleep i -> if i > 0 then
-				      (Env.add term {value = VSleep(i+1); typ = ty_proc} new_env),
+				      (Env.add term {value = VSleep(i+1); typ = (Env.find term env).typ} new_env),
 				    lock_queue,
 				    cond_sets,
 				    semaphores
@@ -1957,7 +1965,9 @@ let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
 			      let q = LockQueues.find lock_elem lock_queue in
 			      
 			      let new_queue = PersistentQueue.push (List.hd waiting) q in
-			      let nv = Env.add (List.hd waiting) { value = VSuspended; typ = ty_proc} new_env in
+			      let t_term = List.hd waiting in
+			      let term_type = (Env.find t_term env).typ in
+			      let nv = Env.add t_term { value = VSuspended; typ = term_type} new_env in
 			      let lq = LockQueues.add lock_elem new_queue lock_queue
 			      in nv,lq,cond_sets, semaphores
 			  end 
@@ -2003,7 +2013,8 @@ let update_locks_unlocks sigma env new_env tr lock_queue cond_sets semaphores=
 			      let q = LockQueues.find lock_elem lock_queue in
 			      let nv =
 				List.fold_left (fun acc el ->
-				  Env.add el {value = VSuspended; typ = ty_proc } acc) new_env waiting
+				  let term_type = (Env.find el env).typ in
+				  Env.add el {value = VSuspended; typ = term_type } acc) new_env waiting
 			      in  
 			      let new_queue = List.fold_left (fun acc el -> PersistentQueue.push el acc) q waiting in
 			      let lq = LockQueues.add lock_elem new_queue lock_queue
@@ -2047,16 +2058,19 @@ let check_actor_suspension sigma env actor =
 		  | VSleep _ -> raise (TopError (SleepingProc elem))
 		  | _ -> assert false
 		end
+
+let check_subtype sigma env tr_args =
+  List.iter (fun (v, hopt) ->
+    match hopt with
+      | None -> ()
+      | Some subtype ->
+	let elem = Elem(v, Var) in 
+	let v = Term.subst sigma elem in
+	let { typ = ty } = Env.find v env in
+	if Hstring.equal subtype ty then ()
+	else raise (TopError (BadSubType (v,subtype)))
+  ) tr_args
       
-let check_suspension sigma env =
-  List.iter (fun (_, el) ->
-    let elem = Elem(el, Var) in
-    let v = Env.find elem env in
-    match v.value with
-      | VAlive -> ()
-      | VSuspended -> raise (TopError (SuspendedProc elem))
-      | VSleep _ -> raise (TopError (SleepingProc elem))
-      | _ -> assert false) sigma
 
 let check_ureqs ureqs env sigma trname =
   let glob = ref env in 
@@ -2085,6 +2099,8 @@ let apply_transition_forward args trname trans (env,lock_queue,cond_sets, semaph
   let sigma = Variable.build_subst tr_args args in 
 
   check_actor_suspension sigma env tr.tr_process;
+  check_subtype sigma env tr.tr_args;
+
   (*let new_env = check_reqs tr.tr_reqs env sigma trname in
   let procs = Variable.give_procs (Options.get_interpret_procs ()) in
   let trargs = List.map (fun x -> Variable.subst sigma x) tr.tr_args in
@@ -2110,6 +2126,7 @@ let apply_transition args trname trans (env,lock_queue,cond_sets, semaphores) =
     raise (TopError (WrongArgs (trname,arg_length)));
   let sigma = Variable.build_subst tr_args args in 
   check_actor_suspension sigma env tr.tr_process;
+  check_subtype sigma env tr.tr_args;
   let new_env = check_reqs tr.tr_reqs env sigma trname in
   let procs = Variable.give_procs (Options.get_interpret_procs ()) in
   let trargs = List.map (fun x -> Variable.subst sigma x) tr_args in
@@ -2152,6 +2169,8 @@ let explain args trname trans (env,lock_queue,cond_sets, semaphores) =
   let sigma = Variable.build_subst tr_args args in
   try
     check_actor_suspension sigma env tr.tr_process;
+    check_subtype sigma env tr.tr_args;
+
     let satom = explain_reqs tr.tr_reqs env sigma trname args in
     let procs = Variable.give_procs (Options.get_interpret_procs ()) in
     let trargs = List.map (fun x -> Variable.subst sigma x) tr_args in
@@ -2195,6 +2214,7 @@ let possible_for_proc (env,_,_,_) trans all_procs aproc =
 	try 
 	  let sigma = Variable.build_subst args [] in
 	  check_actor_suspension sigma env (Some aproc);
+	  check_subtype sigma env el.tr_args;
 	  let new_env = check_reqs el.tr_reqs env sigma name in 
 	  let trargs = List.map (fun x -> Variable.subst sigma x) args in
 	  let ureqs = uguard  sigma all_procs trargs el.tr_ureq in
@@ -2214,10 +2234,13 @@ let possible_for_proc (env,_,_,_) trans all_procs aproc =
 	  let sigma = Variable.build_subst args procs in
 	  try  
 	    let f =
-	      check_actor_suspension_sched sigma env el.tr_process (Elem(aproc,Var))
+	      check_actor_suspension_sched sigma env el.tr_process (Elem(aproc,Var)) 
+		(*TODO for SUBTYPE*)
 	    in
 	    if f then 
-	      begin		
+	      begin
+		check_subtype sigma env el.tr_args;
+
 		let new_env = check_reqs el.tr_reqs env sigma name in   
 	      let trargs = List.map (fun x -> Variable.subst sigma x) args in
 	      let ureqs = uguard  sigma all_procs trargs el.tr_ureq in
@@ -2268,6 +2291,7 @@ let all_possible_transitions (env,_,_,_) trans all_procs flag=
 	try
 	  let sigma = Variable.build_subst args [] in
 	  check_actor_suspension sigma env el.tr_process;
+	  check_subtype sigma env el.tr_args;
 	  let new_env = check_reqs el.tr_reqs env sigma name in
 	  let trargs = List.map (fun x -> Variable.subst sigma x) args in
 
@@ -2293,6 +2317,8 @@ let all_possible_transitions (env,_,_,_) trans all_procs flag=
 	  let sigma = Variable.build_subst args procs in
 	  try
 	    check_actor_suspension sigma env el.tr_process;
+	    check_subtype sigma env el.tr_args;
+
 	    let new_env = check_reqs el.tr_reqs env sigma name in
 
 	    let trargs = List.map (fun x -> Variable.subst sigma x) args in
@@ -2379,6 +2405,8 @@ let all_possible_weighted_transitions global trans all_procs (env2,_,_,_) tr fla
 	try
 	  let sigma = Variable.build_subst args [] in
 	  check_actor_suspension sigma env el.tr_process;
+	  check_subtype sigma env el.tr_args;
+
 	  let new_env = check_reqs el.tr_reqs env sigma name in 
 	  let trargs = List.map (fun x -> Variable.subst sigma x) args in
 	  let ureqs = uguard  sigma all_procs trargs el.tr_ureq in
@@ -2419,6 +2447,8 @@ let all_possible_weighted_transitions global trans all_procs (env2,_,_,_) tr fla
 	  let sigma = Variable.build_subst args procs in
 	  try
 	    check_actor_suspension sigma env el.tr_process;
+	    check_subtype sigma env el.tr_args;
+
 	    let new_env = check_reqs el.tr_reqs env sigma name in 
 	    let trargs = List.map (fun x -> Variable.subst sigma x) args in
 	    let ureqs = uguard  sigma all_procs trargs el.tr_ureq in

@@ -216,10 +216,9 @@ let print_interpret_val fmt {value=v; typ = t} =
       else
 	Format.printf "unlocked"
     | VRLock _ -> ()
-    | VAlive -> Format.printf "p
-rocess active"
-    | VSuspended -> Format.printf "process suspended"
-    | VSleep _ -> Format.printf "process asleep"
+    | VAlive -> Format.printf "type: %a; status: active" Hstring.print t
+    | VSuspended -> Format.printf "type: %a; status: suspended" Hstring.print t
+    | VSleep _ -> Format.printf "type: %a; status: asleep" Hstring.print t
     | VSemaphore i -> Format.printf "%d" i
     | UNDEF -> Format.printf "%s" "UNDEF"
     | VArith _ -> ()
@@ -305,8 +304,8 @@ let print_wait fmt el =
     
 let print_interpret_env fmt (env,locks, cond, sem)=
   print_title fmt "Final Environment";
-  Env.iter(fun k {value = v} ->
-    Format.fprintf fmt "%a : %a@." Term.print k print_val v
+  Env.iter(fun k v ->
+    Format.fprintf fmt "%a : %a@." Term.print k print_interpret_val v
   ) env;
   Format.printf  "%a" Pretty.print_line ();
   Format.printf "Lock Queues:@.";

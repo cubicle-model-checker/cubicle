@@ -747,7 +747,13 @@ let preprocess sys =
     List.fold_left (fun acc tr ->
       let c = List.length tr.tr_args in
       if c > acc then c else acc ) 0 sys.trans in
-  max temp temp2
+  let temp3 =
+    List.fold_left (fun acc ty ->
+      match ty with
+	| Constructors _ -> acc
+	| ProcSubsets _ -> acc + 1
+    ) 0 sys.type_defs in  
+  max temp (max temp2 temp3)
     
 
 
