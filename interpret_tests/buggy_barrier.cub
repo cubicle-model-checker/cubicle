@@ -1,0 +1,49 @@
+type t = None | WaitEnter | WaitIf | WaitFor | WaitExit
+
+var Count : int 
+array PC[proc] : t
+
+array Level[proc] : int
+
+var C : condition 
+
+init(i) {
+ Count = SYS_PROCS && PC[i] = None && Level[i] = 0
+}
+
+(*unsafe (i j) { Level[i] = Level[j] + 2 }*)
+
+transition wait_enter([i])
+requires { PC[i] = None }
+{ PC[i] := WaitEnter;
+  acquire(C,i);
+}
+
+transition wait_lock(i)
+requires { PC[i] = WaitEnter }
+{
+  Count := Count - 1;
+  PC[i] := WaitIf;
+}
+
+transition wait_and_exit([i])
+requires { PC[i] = WaitIf && Count = 0 }
+{ Count := SYS_PROCS;
+  notify_all(C,i);
+  PC[i] := WaitExit;
+}
+
+transition wait_since_not_last([i])
+requires { PC[i] = WaitIf && Count > 0}
+{
+  PC[i] := WaitExit;
+  wait(C,i);
+}
+
+transition wait_exit([i])
+requires { PC[i] = WaitExit }
+{
+  release(C, i);
+  PC[i] := None ;
+  Level[i] := Level[i] + 1;
+}
