@@ -425,6 +425,12 @@ let val_to_cub cv =
     | VProc el -> Elem(el, Var)
     | VConstr el -> Elem(el, Constr)
     | VAccess(el,vl) -> Access(el, vl)
+    | VInt i -> let i = ConstInt (Num.num_of_int i) in
+		let m = MConst.add i 1 MConst.empty in
+		Const(m)
+    | VReal r -> let r = ConstReal (Num.num_of_int (int_of_float r)) in
+		 let m = MConst.add r 1 MConst.empty in
+		  Const(m)
     | _ -> assert false
 
 

@@ -182,7 +182,7 @@ let check_unsafe1 glob unsafes =
   
 
     
-let check_unsafe glob unsafes =
+let check_unsafe_temp glob unsafes =
   let env, _,_,_ = glob in
   (*unsafe = (loc * variable * satom) list *)
   let v = Env.fold (fun key {value = el} acc ->
@@ -204,7 +204,57 @@ let check_unsafe glob unsafes =
   in
   List.iter (fun satom  ->
     if SAtom.subset satom v then raise (TopError Unsafe)
-  ) unsafes 
+  ) unsafes
+
+
+    
+
+
+let check_unsafe glob unsafes =
+  let env, _,_,_ = glob in
+  (*unsafe = (loc * variable * satom) list *)
+  (*let v = Env.fold (fun key {value = el} acc ->
+    match el with
+      | VGlob el -> SAtom.add (Comp(key, Eq, Elem(el, Glob))) acc 
+      | VProc el -> SAtom.add (Comp(key, Eq, Elem(el, Var))) acc
+      | VConstr el -> SAtom.add (Comp(key, Eq, Elem(el, Constr))) acc
+      | VAccess(el,vl) -> SAtom.add (Comp(key, Eq, Access(el, vl))) acc
+      | VInt i -> let i = ConstInt (Num.num_of_int i) in
+		  let m = MConst.add i 1 MConst.empty in
+		   SAtom.add (Comp(key, Eq, Const(m))) acc
+      | VReal r -> let r = ConstReal (Num.num_of_int (int_of_float r)) in
+		   let m = MConst.add r 1 MConst.empty in
+		   SAtom.add (Comp(key, Eq, Const(m))) acc
+      | VBool _ -> assert false
+      | VArith _ -> assert false
+      | _-> acc   
+  ) env SAtom.empty
+  in*)
+  List.iter (fun satom ->
+    let satom = SAtom.elements satom in
+    let flag = 
+    List.fold_left (fun acc atom ->
+      match atom with
+	| Atom.Comp (x, op, y ) ->
+	  begin
+	    try
+	      let el = Env.find x env in
+	      (interpret_comp (compare_interp_val el (to_interpret y )) op) && acc 
+	    with Not_found ->
+	      begin
+		try 
+		  let el = Env.find y env in
+		  (interpret_comp (compare_interp_val (to_interpret x ) el) op) && acc
+		with Not_found -> assert false
+	      end 
+	  end
+	| _ -> assert false
+    ) true satom
+    in 
+    if flag then raise (TopError Unsafe)
+  ) unsafes
+    
+    
 
 
 
