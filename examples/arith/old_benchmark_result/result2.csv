@@ -1,22 +1,22 @@
 File;Result (Arith);Result (Base);Time (Arith);Time (Base);Nodes (Arith);Nodes (Base);Solver Calls (Arith);Solver Calls (Base)
 bakery;Safe;Safe;0.01;0.01;2;2;2;2
-bakery_lamport;Safe;Safe;0.04;0.05;40;53;214;401
-bakery_lamport_bogus;Unsafe;Unsafe;0.11;0.12;69;74;743;819
+bakery_lamport;Safe;Safe;0.06;0.06;47;53;309;401
+bakery_lamport_bogus;Unsafe;Unsafe;0.16;0.14;73;74;803;819
 bakery_lamport_na;Timeout;Timeout;;;;;;
 bakery_lamport_na_wb;Timeout;Timeout;;;;;;
-bakery_na;Safe;Safe;0.05;0.04;30;30;51;51
+bakery_na;Safe;Safe;0.05;0.05;30;30;51;51
 bakery_uguard;Safe;Safe;0.01;0.01;2;2;2;2
 berkeley;Safe;Safe;0.01;0.01;3;3;3;3
-burns;Safe;Safe;0.07;0.08;45;45;159;159
+burns;Safe;Safe;0.07;0.07;45;45;159;159
 chandra_toueg;Timeout;Timeout;;;;;;
-crash;Safe;Safe;1.45;1.37;118;118;5748;5748
+crash;Safe;Safe;1.65;1.8;118;118;5748;5748
 dekker;Safe;Safe;0.01;0.01;3;3;3;3
 dekker_limbo;Safe;Safe;0.01;0.01;4;4;4;4
 dekker_loc;Safe;Safe;0.01;0.01;3;3;3;3
 dekker_n;Safe;Safe;0.02;0.02;17;17;24;24
-dijkstra;Safe;Safe;0.03;0.03;28;28;52;52
+dijkstra;Safe;Safe;0.03;0.03;33;28;50;52
 distrib_channels;Timeout;Type Error;;;;;;
-distrib_channels_int1;Unsafe;Type Error;13.33;;1542;;9236;
+distrib_channels_int1;Unsafe;Type Error;13.46;;1523;;10378;
 distrib_lamport;Timeout;Type Error;;;;;;
 flash;Timeout;Timeout;;;;;;
 flash_abstr;Timeout;Timeout;;;;;;
@@ -28,44 +28,44 @@ flash_enum;Timeout;Timeout;;;;;;
 flash_enum_simpl;Timeout;Timeout;;;;;;
 flash_home;Timeout;Timeout;;;;;;
 flash_nodata;Timeout;Timeout;;;;;;
-futurebus;Unsafe;Unsafe;0.03;0.03;40;40;41;41
-german;Safe;Safe;15.37;14.13;2384;2384;50631;50631
+futurebus;Unsafe;Unsafe;0.03;0.02;40;40;41;41
+german;Safe;Safe;16.43;16.42;2384;2384;50631;50631
 german.ctc;Timeout;Timeout;;;;;;
-german.ctc_finite;Safe;Safe;42.12;39.48;3289;3289;153789;153789
+german.ctc_finite;Safe;Safe;47.69;44.06;3289;3289;153789;153789
 german.ctc_function;Type Error;Timeout;;;;;;
-german.ctc_nodata;Safe;Safe;15.72;14.38;2345;2345;59438;59438
-german_baukus;Safe;Safe;16.93;16.51;2384;2384;50631;50631
+german.ctc_nodata;Safe;Safe;15.73;14.77;2345;2345;59438;59438
+german_baukus;Safe;Safe;18.51;17.03;2384;2384;50631;50631
 german_data;Timeout;Timeout;;;;;;
 german_pfs;Timeout;Timeout;;;;;;
 german_pfs2;Timeout;Timeout;;;;;;
 german_pfs_data;Timeout;Timeout;;;;;;
 german_pfs_data_enum;Timeout;Timeout;;;;;;
 german_subtype;Type Error;Type Error;;;;;;
-german_undip;Safe;Safe;0.16;0.15;73;73;751;751
-germanish;Safe;Safe;0.01;0.02;19;19;84;84
-germanish2;Safe;Safe;0.06;0.06;50;50;359;359
-germanish3;Safe;Safe;0.58;0.52;314;314;5223;5223
-germanish4;Safe;Safe;1.63;1.54;677;677;16425;16425
-germanish5;Safe;Safe;1.2;1.12;503;503;6594;6594
-germanish6;Unsafe;Unsafe;1.83;1.56;522;522;14294;14294
-germanish_arith;Safe;Safe;0.16;0.17;19;19;631;631
-germanish_data;Safe;Safe;0.06;0.06;36;36;433;405
-illinois;Safe;Safe;0.02;0.02;9;9;9;9
+german_undip;Safe;Safe;0.16;0.14;73;73;751;751
+germanish;Safe;Safe;0.02;0.02;19;19;84;84
+germanish2;Safe;Safe;0.08;0.09;50;50;359;359
+germanish3;Safe;Safe;0.61;0.55;314;314;5223;5223
+germanish4;Safe;Safe;1.62;1.51;677;677;16425;16425
+germanish5;Safe;Safe;1.26;1.53;503;503;6594;6594
+germanish6;Unsafe;Unsafe;2.29;1.65;522;522;14294;14294
+germanish_arith;Safe;Safe;0.2;0.17;19;19;833;631
+germanish_data;Safe;Safe;0.06;0.05;36;36;433;405
+illinois;Safe;Safe;0.02;0.01;9;9;9;9
 jml;Safe;Safe;0.02;0.02;22;22;33;42
 mesi;Safe;Safe;0.01;0.01;3;3;3;3
 moesi;Safe;Safe;0.01;0.01;3;3;3;3
 motivating;Safe;Safe;0.02;0.02;15;15;82;82
 motivating2;Safe;Safe;0.01;0.01;3;3;7;7
-mutex;Safe;Safe;0.01;0.01;3;3;3;3
-mux_sem;Safe;Safe;0.01;0.01;7;7;7;7
+mutex;Safe;Safe;0.01;0.02;3;3;3;3
+mux_sem;Safe;Safe;0.01;0.02;7;7;7;7
 peterson_two_proc;Safe;Safe;0.01;0.01;18;18;29;29
-ricart_abdulla;Unsafe;Type Error;0.3;;200;;601;
-ricart_abdulla_int;Unsafe;Type Error;0.39;;200;;601;
-ricart_abdulla_int1;Unsafe;Timeout;0.4;;200;;601;
+ricart_abdulla;Unsafe;Type Error;0.3;;195;;577;
+ricart_abdulla_int;Unsafe;Type Error;0.36;;195;;577;
+ricart_abdulla_int1;Unsafe;Timeout;0.45;;195;;577;
 ricart_agrawala;Timeout;Type Error;;;;;;
 ricart_agrawala_int1;Timeout;Type Error;;;;;;
-sense_barrier;Safe;Safe;1.6;1.01;194;203;4760;4493
-swimming_pool;Unsafe;Unsafe;0.41;0.26;79;79;3176;3155
+sense_barrier;Safe;Safe;1.38;1.25;185;203;4581;4493
+swimming_pool;Unsafe;Unsafe;0.66;0.27;77;79;3000;3155
 synapse;Safe;Safe;0.01;0.01;2;2;2;2
 szymanski_at;Timeout;Timeout;;;;;;
 szymanski_boleslaw_bool_at;Timeout;Timeout;;;;;;

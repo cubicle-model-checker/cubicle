@@ -237,23 +237,18 @@ let simplify_poly cs ts =
       || SAtom.subset sa (SAtom.singleton Atom.True) then a1
       else if SAtom.mem Atom.False sa then a2
       else Atom.Ite(sa,a1,a2)
+    | Atom.Comp ((Vea _) as t1, op, Poly (cs, ts)) ->
+        Atom.Comp (t1, op, simplify_poly cs ts)
+    | Atom.Comp (Poly (cs, ts), op, (Vea _ as t1)) -> 
+        Atom.Comp (simplify_poly cs ts, op, t1)
+    | Atom.Comp ((Vea _ as t1), op, (Vea _ as t2)) -> Atom.Comp (t1, op, t2)
     | Atom.Comp (t1, op, t2) ->
         let t2' = 
           match term_add t2 (term_neg t1) with 
           | Poly (cs,ts) -> simplify_poly cs ts 
           | t            -> t
         in
-        begin match t2' with 
-        | Poly (cs, ts) when VMap.is_empty ts -> 
-            begin match op, Const.sign cs with 
-            | Eq, 0               -> Atom.True
-            | Lt, i when i < 0    -> Atom.True 
-            | Le, i when i <= 0   -> Atom.True 
-            | Neq, i when i <> 0  -> Atom.True
-            | _                   -> Atom.False
-            end
-        | _ -> Atom.Comp (Poly(Const.int_zero, VMap.empty), op, t2')
-        end
+        Atom.Comp (Poly(Const.int_zero, VMap.empty), op, t2')
 
 (***********************************)
 (* Cheap check of inconsitent cube *)

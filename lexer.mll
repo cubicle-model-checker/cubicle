@@ -22,18 +22,18 @@
     List.iter 
       (fun (x,y) -> Hashtbl.add keywords x y)
       [ "type", TYPE;
-	"init", INIT;
-	"transition", TRANSITION;
-	"invariant", INVARIANT;
-	"requires", REQUIRE;
+        "init", INIT;
+        "transition", TRANSITION;
+        "invariant", INVARIANT;
+        "requires", REQUIRE;
         "array", ARRAY;
         "var", VAR;
         "const", CONST;
         "unsafe", UNSAFE;
-	"case", CASE;
-	"forall_other", FORALL_OTHER;
-	"exists_other", EXISTS_OTHER;
-	"forall", FORALL;
+        "case", CASE;
+        "forall_other", FORALL_OTHER;
+        "exists_other", EXISTS_OTHER;
+        "forall", FORALL;
         "exists", EXISTS;
         "predicate", PREDICATE;
         "if", IF;
@@ -42,9 +42,9 @@
         "not", NOT;
         "true", TRUE;
         "false", FALSE;
-	"number_procs", SIZEPROC;
-	"let", LET;
-	"in", IN;
+        "number_procs", SIZEPROC;
+        "let", LET;
+        "in", IN;
       ]
 	       
   let newline lexbuf =
@@ -64,7 +64,7 @@
       let c = s.[i] in
       if c = '.' then pos_dot := i 
       else
-	r := Num.add_num (Num.mult_num num10 !r) 
+      r := Num.add_num (Num.mult_num num10 !r) 
 	  (Num.num_of_int (Char.code s.[i] - code_0))
     done;
     assert (!pos_dot <> -1);
@@ -80,7 +80,7 @@
 }
 
 let newline = '\n'
-let space = [' ' '\t' '\r']
+let space   = [' ' '\t' '\r']
 let integer = ('-')? ['0' - '9'] ['0' - '9']*
 let real = ('-')? ['0' - '9'] ['0' - '9']* '.' ['0' - '9']* 
 let mident = ['A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']*
