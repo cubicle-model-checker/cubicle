@@ -196,11 +196,8 @@ let simplify_comp i si op j sj =
 exception Floating
 
 let simplify_poly cs ts =
-
-  (* 1. Remove every null vea *)
   let ts = VMap.filter (fun _ c -> not (Const.is_zero c)) ts in 
 
-  (* 2. Check if poly contains only one Vea *)
   match VMap.choose_opt ts with 
   | Some (vea, c) when Const.is_one c && Const.is_zero cs && VMap.cardinal ts=1
       -> Vea vea 

@@ -49,7 +49,7 @@ init (z) {
 
 predicate inv1 (i, e) {
   forall x <> y.
-    CacheState[x] = e => CacheState[y] = i
+    CacheState[x] = e 
 }
 
 (* Control *)
@@ -68,8 +68,8 @@ requires { CacheState[n] = Exclusive }
 {
   AuxData := Store_data;
   CacheData[j] := case 
-    	       	  | j = n : Store_data
-	       	  | _  : CacheData[j];
+    | j = n : Store_data
+    | _  : CacheData[j];
   Store_data := .;
 }
 
