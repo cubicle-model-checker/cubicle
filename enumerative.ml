@@ -476,8 +476,6 @@ let partial_order ht var_terms nb_vars =
 
 
 let init_tables ?(alloc=true) procs s =
-  failwith "todo : init tables"
-  (*
   let var_terms = Forward.all_var_terms procs s in
   let proc_terms = terms_of_procs procs in (* constantes *)
   let constr_terms = all_constr_terms () in (* constantes *)
@@ -516,8 +514,8 @@ let init_tables ?(alloc=true) procs s =
    
   let a_low = !i in
   List.iter (fun c ->
-    HT.add ht (Const (MConst.add (ConstInt (Num.Int c)) 1 MConst.empty)) !i;
-    HT.add ht (Const (MConst.add (ConstReal (Num.Int c)) 1 MConst.empty)) !i;
+    HT.add ht (Poly (ConstInt  (Num.Int c), VMap.empty)) !i;
+    HT.add ht (Poly (ConstReal (Num.Int c), VMap.empty)) !i;
     incr i) abstr_range;
   let a_up = !i - 1 in
 
@@ -556,7 +554,6 @@ let init_tables ?(alloc=true) procs s =
     explicit_states = HST.create (if alloc then tsize else 0);
     states = [];
   }
-  *)
 
 let abs_inf = 
   SAtom.filter (function
@@ -617,27 +614,9 @@ let cdnf_to_dnf = function
 let mkinits procs ({t_init = ia, l_init}) =
   let lsa = cdnf_to_dnf (make_init_cdnf ia l_init procs) in
   (* add_sorts procs *) lsa
-
-
-let int_of_const t = (* t added to avoid failure *) 
-failwith "todo : int_of_ocnst"
-(*
-  function
-  | ConstInt n -> Num.int_of_num n
-  | ConstReal n -> Num.int_of_num (Num.integer_num n)
-  | ConstName _ -> 1
-*)
-let int_of_consts cs =
-  failwith "todo : int_of_consts"
-  (* TODO
-  MConst.fold (fun c i acc -> i * (int_of_const c) + acc) cs 0
-  *)
-
 let write_atom_to_states env sts =
-  failwith "todo write atom to state"
-  (*
   function
-  | Atom.Comp (t1, (Le | Lt as op), (Const _ as t2)) when abstr_num ->
+  | Atom.Comp (t1, (Le | Lt as op), (Poly (c, ts) as t2)) when abstr_num ->
       let v2 = HT.find env.id_terms t2 in
       let i1 = HT.find env.id_terms t1 in
       let l = ref [] in
@@ -649,7 +628,7 @@ let write_atom_to_states env sts =
         ) sts
       done;
       !l
-  | Atom.Comp ((Const _ as t1), (Le | Lt as op), t2) when abstr_num  ->
+  | Atom.Comp ((Poly (c, ts) as t1), (Le | Lt as op), t2) when abstr_num  ->
       let v1 = HT.find env.id_terms t1 in
       let i2 = HT.find env.id_terms t2 in
       let l = ref [] in
@@ -665,13 +644,12 @@ let write_atom_to_states env sts =
       List.iter (fun st -> 
         st.(HT.find env.id_terms t1) <- HT.find env.id_terms t2) sts;
       sts
-  | Atom.Comp (t1, Neq, Elem(_, Var)) ->
+  | Atom.Comp (t1, Neq, Vea(Elem(_, Var))) ->
       (* Assume an extra process if a disequality is mentioned on
          type proc in init formula : change this to something more robust *)
       List.iter (fun st -> st.(HT.find env.id_terms t1) <- env.extra_proc) sts;
       sts
   | _ -> sts
-  *)
 
 let write_cube_to_states env st sa =
   SAtom.fold (fun a sts -> write_atom_to_states env sts a) sa [st]

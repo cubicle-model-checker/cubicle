@@ -13,7 +13,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-
 (** Terms, atoms and conjunctions *)
 
 
@@ -32,18 +31,18 @@ type const =
 module Const : sig 
   type t = const
 
-  val is_int  : t -> bool 
-  val sign    : t -> int 
-  val to_num  : t -> Num.num 
-  val type_of : t -> Smt.Type.t 
-  val compare : t -> t -> int
-  val equal   : t -> t -> bool
+  val is_int    : t -> bool 
+  val sign      : t -> int 
+  val to_num    : t -> Num.num 
+  val to_string : t -> string
+  val type_of   : t -> Smt.Type.t 
+  val compare   : t -> t -> int
+  val equal     : t -> t -> bool
 
-  val is_zero : t -> bool
-  val is_one  : t -> bool
+  val is_zero   : t -> bool
+  val is_one    : t -> bool
   val int_zero  : t
   val real_zero : t
-
 
   val num_equal   : t -> t -> bool
   val num_lt      : t -> t -> bool 

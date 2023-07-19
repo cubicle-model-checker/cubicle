@@ -89,15 +89,19 @@ let mk_shorter_names sys =
 let mk_short_names =
   if use_even_shorter_names then mk_shorter_names else mk_short_names
 
+let get_short_term_vea vea = 
+  try match vea with
+    | Vea.Elem(c, ((Constr | Glob) as t)) -> Vea.Elem(H.find short_names c, t)
+    | Vea.Access(x, xs) -> Vea.Access(H.find short_names x, xs)
+    | _                 -> vea 
+  with Not_found -> vea
 
 let rec get_short_term t =
-  try match t with
-    | Vea(Elem(c, Constr)) -> Vea(Elem(H.find short_names c, Constr))
-    | Vea(Elem(v, Glob)) -> Vea(Elem(H.find short_names v, Glob))
-    | Vea(Access(x, xs)) -> Vea(Access(H.find short_names x, xs))
-    (* TODO G | Arith (t', cs) -> Arith (get_short_term t', cs) *)
-    | _ -> t
-  with Not_found -> t
+  match t with
+    | Vea vea -> Vea (get_short_term_vea vea)
+    | Poly (cs, ts) -> 
+      let ts = VMap.fold (fun k v -> VMap.add (get_short_term_vea k) v) ts VMap.empty in
+        Poly (cs,ts)
 
 let print_list = Pretty.print_list
 

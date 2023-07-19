@@ -105,10 +105,6 @@ module AltErgo = struct
   
   let op_comp = function Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"
 
-  let print_const fmt c = assert false
-
-  let print_cs fmt cs = assert false
-
   let print_proc fmt s = 
     try Scanf.sscanf (Hstring.view s) "#%d" (fun id -> fprintf fmt "z%d" id)
     with Scanf.Scan_failure _ -> Hstring.print fmt s
@@ -118,24 +114,22 @@ module AltErgo = struct
     | [p] -> print_proc fmt p
     | p :: r -> fprintf fmt "%a,%a" print_proc p print_args r
 
-  let rec print_term ~prime fmt = function
-    (* TODO LG | Const cs -> print_cs fmt cs *)
-    | Vea(Elem (s, Var)) -> print_proc fmt s
-    | Vea(Elem (s, Constr)) when Hstring.equal s Term.hfalse -> fprintf fmt "false"
-    | Vea(Elem (s, Constr)) when Hstring.equal s Term.htrue -> fprintf fmt "true"
-    | Vea(Elem (s, Constr)) -> fprintf fmt "%a" Hstring.print s
-    | Vea(Elem (s, Glob)) -> fprintf fmt "%a%s" Hstring.print s (spr prime) 
-    | Vea(Access (a, li)) ->
+  let print_vea ~prime fmt = function 
+    | Vea.Elem (s, Var) -> print_proc fmt s
+    | Vea.Elem (s, Constr) when Hstring.equal s Term.hfalse -> fprintf fmt "false"
+    | Vea.Elem (s, Constr) when Hstring.equal s Term.htrue -> fprintf fmt "true"
+    | Vea.Elem (s, Constr) -> fprintf fmt "%a" Hstring.print s
+    | Vea.Elem (s, Glob) -> fprintf fmt "%a%s" Hstring.print s (spr prime) 
+    | Vea.Access (a, li) ->
        fprintf fmt "%a%s(%a)" Hstring.print a (spr prime) print_args li
-    (* TODO LG 
-    | Arith (x, cs) -> 
-       fprintf fmt "@[%a%a@]" (print_term ~prime) x print_cs cs
-    *)
-    | _ -> failwith "todo print_term"
+
+  let print_term ~prime fmt = function
+    | Vea  v  -> print_vea ~prime fmt v
+    | Poly (cs, ts) -> failwith "todo : print_term poly"
 
   let rec print_atom ~prime fmt = function
-    | Atom.True -> fprintf fmt "true"
-    | Atom.False -> fprintf fmt "false"
+    | Atom.True   -> fprintf fmt "true"
+    | Atom.False  -> fprintf fmt "false"
     | Atom.Comp (x, op, y) -> 
        fprintf fmt "%a %s %a" 
 	       (print_term ~prime) x (op_comp op) (print_term ~prime) y
@@ -637,18 +631,16 @@ module Why3 = struct
     | [p] -> print_proc fmt p
     | p :: r -> fprintf fmt "%a %a" print_proc p print_args r
 
-  let rec print_term ~prime fmt = function
-    | Vea(Elem (s, Var)) -> print_proc fmt s
-    | Vea(Elem (s, Constr)) -> fprintf fmt "%a" Hstring.print s
-    | Vea(Elem (s, Glob)) -> fprintf fmt "%a%s" print_name s (spr prime) 
-    | Vea(Access (a, li)) ->
+  let print_vea ~prime fmt = function 
+    | Vea.Elem (s, Var) -> print_proc fmt s
+    | Vea.Elem (s, Constr) -> fprintf fmt "%a" Hstring.print s
+    | Vea.Elem (s, Glob) -> fprintf fmt "%a%s" print_name s (spr prime) 
+    | Vea.Access (a, li) ->
        fprintf fmt "(%a%s %a)" print_name a (spr prime) print_args li
-    | _ -> failwith "todo print_term"
-    (* TODO G 
-    | Const cs -> print_cs fmt cs 
-    | Arith (x, cs) -> 
-       fprintf fmt "%a%a" (print_term ~prime) x (print_cs ~arith:true) cs
-    *)
+
+  let print_term ~prime fmt = function
+    | Vea v -> print_vea ~prime fmt v 
+    | Poly (cs, ts) -> assert false
 
   let rec print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"
@@ -1416,15 +1408,9 @@ module Why3_INST = struct
   
   let op_comp = function Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"
 
-  let print_const fmt =
-    failwith "todo print_const"
-    (* TODO  G
-    function
+  let print_const fmt = function 
     | ConstInt n -> fprintf fmt "%s" (Num.string_of_num n)
-    | ConstReal n -> fprintf fmt "%F" (Num.float_of_num n)
-    | ConstName n -> fprintf fmt "%a" print_name n
-  *)
-
+    | ConstReal n -> fprintf fmt "%F" (Num.float_of_num n) 
 
   let print_cs fmt cs =
     failwith "todo print_cs"
@@ -1447,18 +1433,16 @@ module Why3_INST = struct
     | [p] -> print_proc fmt p
     | p :: r -> fprintf fmt "%a %a" print_proc p print_args r
 
-  let rec print_term ~prime fmt = function
-    | Vea(Elem (s, Var)) -> print_proc fmt s
-    | Vea(Elem (s, Constr)) -> fprintf fmt "%a" Hstring.print s
-    | Vea(Elem (s, Glob)) -> fprintf fmt "%a%s" print_name s (spr prime) 
-    | Vea(Access (a, li)) ->
+  let print_vea ~prime fmt = function 
+    | Vea.Elem (s, Var) -> print_proc fmt s
+    | Vea.Elem (s, Constr) -> fprintf fmt "%a" Hstring.print s
+    | Vea.Elem (s, Glob) -> fprintf fmt "%a%s" print_name s (spr prime) 
+    | Vea.Access (a, li) ->
        fprintf fmt "(%a%s %a)" print_name a (spr prime) print_args li
-    | _ -> failwith "todo print_term"
-    (* TODO G 
-    | Const cs -> print_cs fmt cs 
-    | Arith (x, cs) -> 
-       fprintf fmt "@[(%a%a)@]" (print_term ~prime) x print_cs cs
-    *)
+
+  let print_term ~prime fmt = function
+    | Vea v -> print_vea ~prime fmt v
+    | _ -> assert false 
 
   let rec print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"

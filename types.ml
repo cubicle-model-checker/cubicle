@@ -53,6 +53,9 @@ module Const = struct
 
   let to_num = function
     | ConstInt n | ConstReal n -> n
+  
+  let to_string = function
+    | ConstInt n | ConstReal n -> Num.string_of_num n
 
   let is_one  n = Num.compare_num (to_num n) (Num.num_of_int 1) = 0
   let is_zero n = Num.compare_num (to_num n) (Num.num_of_int 0) = 0
@@ -331,23 +334,18 @@ module Term = struct
     in
     match t with
     | Vea v         -> fprintf fmt "%s" (vea_to_string v) 
+    | Poly (cs, ts) when VMap.is_empty ts ->
+        fprintf fmt "%s" (Const.to_string cs)
     | Poly (cs, ts) ->
-        let const_to_string c = Const.to_num c |> Num.string_of_num in
-        let bind = VMap.bindings ts in 
-
-        let bind_str = 
+        let ts_string_list = 
           List.map 
-          (fun (k,c) -> sprintf "%s*%s" (vea_to_string k) (const_to_string c))
-          bind
+          (fun (k,c) -> sprintf "%s*%s" (vea_to_string k) (Const.to_string c))
+          (VMap.bindings ts)
         in
-        let sum_str = String.concat " + " bind_str in
-        
-        if List.length bind_str > 0 then 
-          if not (Const.is_zero cs) then fprintf fmt "%s + %s" (const_to_string cs) sum_str 
-                                    else fprintf fmt "%s" sum_str 
-        else 
-          fprintf fmt "%s" (const_to_string cs)
-
+        let ts_string = String.concat " + " ts_string_list in
+        let cs_string = Const.to_string cs in
+        if (Const.is_zero cs) then fprintf fmt "%s" ts_string 
+                              else fprintf fmt "%s + %s" cs_string ts_string 
 end
 
 module rec Atom : sig
