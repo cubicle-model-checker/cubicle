@@ -212,30 +212,30 @@ let check_unsafe_temp glob unsafes =
 
 let check_unsafe glob unsafes =
   let env, _,_,_ = glob in
-  (*unsafe = (loc * variable * satom) list *)
-  (*let v = Env.fold (fun key {value = el} acc ->
-    match el with
-      | VGlob el -> SAtom.add (Comp(key, Eq, Elem(el, Glob))) acc 
-      | VProc el -> SAtom.add (Comp(key, Eq, Elem(el, Var))) acc
-      | VConstr el -> SAtom.add (Comp(key, Eq, Elem(el, Constr))) acc
-      | VAccess(el,vl) -> SAtom.add (Comp(key, Eq, Access(el, vl))) acc
-      | VInt i -> let i = ConstInt (Num.num_of_int i) in
-		  let m = MConst.add i 1 MConst.empty in
-		   SAtom.add (Comp(key, Eq, Const(m))) acc
-      | VReal r -> let r = ConstReal (Num.num_of_int (int_of_float r)) in
-		   let m = MConst.add r 1 MConst.empty in
-		   SAtom.add (Comp(key, Eq, Const(m))) acc
-      | VBool _ -> assert false
-      | VArith _ -> assert false
-      | _-> acc   
-  ) env SAtom.empty
-  in*)
   List.iter (fun satom ->
     let satom = SAtom.elements satom in
     let flag = 
     List.fold_left (fun acc atom ->
       match atom with
-	| Atom.Comp (x, op, y ) ->
+	| Atom.Comp (x, op, ((Arith _) as y) ) ->
+	  begin
+	    try
+	      let el = Env.find x env in
+	      let t2 = {value = eval_arith y env el.typ; typ = el.typ} in
+	      (interpret_comp (compare_interp_val el t2) op) && acc
+	    with Not_found -> assert false
+	  end
+	| Atom.Comp (((Arith _) as x), op, y ) ->
+	  begin
+	    try
+	      let el = Env.find y env in
+	      let t2 = {value = eval_arith x env el.typ; typ = el.typ} in
+	      (interpret_comp (compare_interp_val t2 el) op) && acc
+	    with Not_found -> assert false
+	  end   
+	    
+	  
+	| Atom.Comp (x, op, y) ->
 	  begin
 	    try
 	      let el = Env.find x env in
@@ -963,6 +963,7 @@ let update_vals env assigns sigma =
 	  match t with
 	    | Elem (n, Glob) | Access (n,_) ->
 	      begin
+		let t_s = Term.subst sigma t in
 		let v =
 		  try Env.find (Term.subst sigma t) !env
 		  with Not_found ->
@@ -972,8 +973,11 @@ let update_vals env assigns sigma =
  		      new_el
 		    end
 		in
-		env := Env.add t v !env;
-		let acc = Env.add t v acc in
+		(* The next two lines are only needed if something wasn't declared in init and is used, since you assign a random value
+		   the value needs to follow the whole environment -- this shouldn't apply to the interpreter because it initializes everything
+		*)
+		env := Env.add t_s v !env;
+		let acc = Env.add t_s v acc in (**)
 		Env.add elem v acc
 	      end 
 	    | Arith(t', cs) ->

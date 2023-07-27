@@ -1929,6 +1929,40 @@ let fuzz original_env transitions procs all_unsafes t_transitions =
 
 let throwaway = Elem(Hstring.make "UNDEF", Glob)
 
+
+let proc_as_subtype subtypes procs env_final =
+  let len = List.length subtypes in
+  let rec aux stypes procs env_final =
+    match stypes, procs with
+      | [], [] -> env_final 
+      | hd::tl, hd1::tl1 ->
+	let e = Env.add (Elem(hd1, Var)) {value = VAlive; typ = hd } env_final
+	in
+	aux tl tl1 e
+      | hd::tl, [] -> assert false
+      | [], hd::tl ->
+	let rand = Random.int len in
+	let t = List.nth subtypes rand in
+	let e = Env.add (Elem(hd, Var)) {value = VAlive; typ = t} env_final
+	in
+	aux [] tl e
+  in aux subtypes procs env_final
+      
+
+    
+let finalize_procs env_final procs sys =
+  Random.self_init ();
+  let subtypes = List.fold_left (fun acc x ->
+    match x with
+      | Constructors _ -> acc
+      | ProcSubsets (_, h) -> h::acc) [] sys.type_defs in
+  if subtypes = [] then
+    List.fold_left (fun acc x ->
+      Env.add (Elem(x, Var)) {value = VAlive; typ = ty_proc} acc
+    ) env_final procs
+  else
+   proc_as_subtype subtypes procs env_final  
+
 let init_aux tsys sys num_procs = 
   let procs = Variable.give_procs num_procs in
   let var_terms = Forward.all_var_terms procs tsys in
@@ -2063,11 +2097,16 @@ let init_aux tsys sys num_procs =
 		       {value =  v; typ = x.typ}
 	| _ ->
 	  x
-    ) original_init in 
-  let env_final =
+    ) original_init in
+
+  let env_final = finalize_procs env_final procs sys
+
+
+  
+  (*let env_final =
     List.fold_left (fun acc x ->
       Env.add (Elem(x, Var)) {value = VAlive; typ = ty_proc} acc
-  ) env_final procs
+    ) env_final procs*)
   in
   let original_env = env_final, lock_queue, cond_sets, semaphores in 
   let unsafe = List.map (fun x -> 0,x.cube.vars ,x.cube.litterals) tsys.t_unsafe in
