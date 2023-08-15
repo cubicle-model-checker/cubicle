@@ -1,0 +1,79 @@
+type barber < proc 
+type customer < proc 
+
+type s = L0 | L1 | L2 | L3 
+type c = C0 | C1 | C2 | C3 | C4
+
+
+var Customers: semaphore 
+var Barber: semaphore 
+var Seats: semaphore 
+
+var FreeSeats: int 
+
+array BarberPC[proc] : s
+array CustPC[proc] : c
+
+
+init(i) { Customers = 0 && Barber = 0 && Seats = 1 && FreeSeats = SYS_PROCS && BarberPC[i] = L0 && CustPC[i] = C0}
+
+(*the barber waits for a customer to appear*)
+transition barber_wait([i: barber]) 
+requires { BarberPC[i] = L0 }
+{ acquire(Customers,i); BarberPC[i] := L1 }
+
+(*the barber puts the customer in a chair, block people from entering*)
+transition barber_chair([i: barber])
+requires { BarberPC[i] = L1 }
+{ acquire(Seats, i); FreeSeats := FreeSeats + 1; BarberPC[i] := L2 } 
+
+(*the barber is done cutting hair*)
+transition barber_done([i: barber])
+requires { BarberPC[i] = L2 }
+{ (*release(Barber, i);*) BarberPC[i] := L3 } 
+
+(*let people enter the waiting room?*)
+transition free_chair([i: barber])
+requires { BarberPC[i] = L3 }
+{ release(Seats, i); BarberPC[i] := L0 }
+
+
+
+
+(*try to join barber waiting room*)
+transition try_room([i: customer])
+requires { CustPC[i] = C0 } 
+{ acquire(Seats, i); 
+  CustPC[i] := C1 }
+
+
+(*join barber waiting room*)
+transition wait_for_barber([i: customer])
+requires { FreeSeats > 0 && CustPC[i] = C1 } 
+{ FreeSeats := FreeSeats - 1; 
+  release(Customers, i); 
+  CustPC[i] := C2 }
+
+(*no room, leave*)
+transition leave([i: customer])
+requires { FreeSeats = 0 && CustPC[i] = C1 } 
+{  
+  release(Seats, i); 
+  CustPC[i] := C0 }
+
+(*let people modify the waiting room*)
+transition settle_in_room([i: customer])
+requires { CustPC[i] = C2 }
+{ release(Seats,i); CustPC[i] := C3 }
+
+transition try_for_barber([i: customer])
+requires { CustPC[i] = C3 }
+{ acquire(Barber, i); CustPC[i] := C4 }
+
+transition got_haircut([i: customer])
+requires { CustPC[i] = C4 }
+{ CustPC[i] := C0 }
+
+
+
+

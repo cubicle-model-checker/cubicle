@@ -1,0 +1,72 @@
+type get < proc
+type put < proc
+
+type t = None
+       	| Produce_Wait | Append_1 | Append_2
+	| Consume_Wait | Consume_Wait_S | Take | Consume	
+
+
+var S : semaphore (*binary semaphore*)
+var N : semaphore 
+
+
+array PC[proc] : t
+
+init(i) {PC[i] = None && S = 1 && N = 0}
+
+
+
+(*---- Run ----*)
+
+transition run_produce(i:put)
+requires { PC[i] = None }
+{ PC[i] := Produce_Wait }
+
+transition run_consume(i:get)
+requires { PC[i] = None }
+{ PC[i] := Consume_Wait }
+
+
+(*---- Put ----*)
+
+
+transition wait_produce([i])
+requires { PC[i] = Produce_Wait }
+{ acquire(S,i);
+  PC[i] := Append_1 }
+
+transition wait_put_loop([i])
+requires { PC[i] = Append_1}
+{ 
+  PC[i] := Append_2;
+  release(S,i);  
+} 
+
+transition enter_put([i])
+requires { PC[i] = Append_2 }
+{ PC[i] := None;
+  release(N,i); }
+
+
+(*---- Get ----*)
+
+
+transition wait_consume([i])
+requires { PC[i] = Consume_Wait }
+{ PC[i] := Consume_Wait_S ;
+  acquire(S,i);
+  }
+
+transition wait_get_loop([i])
+requires { PC[i] = Consume_Wait_S }
+{ PC[i] := Take;
+  acquire(N,i);} 
+
+transition enter_get([i])
+requires { PC[i] = Take }
+{ PC[i] := Consume;
+  release(S,i) }
+
+transition consume(i)
+requires { PC[i] = Consume }
+{ PC[i] := None }

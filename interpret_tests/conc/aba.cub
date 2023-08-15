@@ -1,0 +1,21 @@
+var T1 : lock 
+var T2 : lock 
+
+var X : bool
+
+init() { X = True}
+
+transition t1([i])
+{ acquire(T1, i) }
+
+
+transition t2([i])
+{ acquire(T2, i) } 
+
+
+transition t3([i])
+{ release(T1, i) }
+
+
+transition t4([i])
+{ release(T2, i)}

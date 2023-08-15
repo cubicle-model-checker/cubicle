@@ -1,0 +1,120 @@
+(*https://www.cs.umd.edu/~hollings/cs412/s96/synch/smokers.html*)
+type agent < proc 
+type matches < proc
+type paper < proc
+type tobacco < proc
+
+type a = A0 | A1 | A2 | A3
+type s = L0 | L1 | L2 | L3
+
+var STobacco: semaphore
+var SPaper: semaphore
+var SMatch: semaphore 
+
+var Agent: semaphore
+
+var Lock: semaphore 
+
+array AgentPC[proc] : a
+array PC[proc] : s
+
+init(i) { Agent = 0 && STobacco = 0 && SPaper = 0 && SMatch = 0 && Lock = 1
+       	 && AgentPC[i] = A0 && PC[i] = L0  }
+
+unsafe(i j) { PC[i] =  
+
+
+transition agent([i : agent])
+requires{ AgentPC[i] = A0 }
+{ acquire(Lock,i);
+  AgentPC[i] := A1 }
+
+transition agent_wake_match([i: agent])
+requires { AgentPC[i] = A1 }
+{ release(SMatch,i);
+  AgentPC[i] := A2 }
+
+transition agent_wake_paper([i: agent])
+requires { AgentPC[i] = A1 }
+{ release(SPaper,i);
+  AgentPC[i] := A2  }
+
+transition agent_wake_tobacco([i: agent])
+requires {AgentPC[i] = A1 }
+{ release(STobacco,i);
+  AgentPC[i] := A2  }
+
+transition agent_release([i: agent])
+requires { AgentPC[i] = A2 }
+{ release(Lock, i); AgentPC[i] := A3 } 
+
+transition agent_sleep([i: agent])
+requires { AgentPC[i] = A3 }
+{ acquire(Agent, i); 
+  AgentPC[i] := A0 } 
+
+
+(*Smoker w/ Tobacco*)
+transition tobacco_sleep([i : tobacco])
+requires { PC[i] = L0 }
+{ PC[i] := L1; 
+  acquire(STobacco, i) } 
+
+transition tobacco_get_other([i: tobacco])
+requires { PC[i] = L1 }
+{ PC[i] := L2; 
+  acquire(Lock,i) }
+
+transition tobacco_wake_agent([i: tobacco])
+requires { PC[i] = L2 }
+{ release(Agent,i); 
+  PC[i] := L3 }
+
+transition tobacco_smoke([i: tobacco])
+requires { PC[i] = L3 }
+{ PC[i] := L0; 
+  release(Lock,i) } 
+
+
+(*Smoker w/ Match*)
+transition match_sleep([i : matches])
+requires { PC[i] = L0 }
+{ PC[i] := L1; 
+  acquire(SMatch, i) } 
+
+transition match_get_other([i: matches])
+requires { PC[i] = L1 }
+{ PC[i] := L2; 
+  acquire(Lock,i) }
+
+transition match_wake_agent([i: matches])
+requires { PC[i] = L2 }
+{ release(Agent,i); 
+  PC[i] := L3 }
+
+transition match_smoke([i: matches])
+requires { PC[i] = L3 }
+{ PC[i] := L0; 
+  release(Lock,i) } 
+
+(*Smoker w/ Paper*)
+transition paper_sleep([i : paper])
+requires { PC[i] = L0 }
+{ PC[i] := L1; 
+  acquire(SPaper, i) } 
+
+transition paper_get_other([i: paper])
+requires { PC[i] = L1 }
+{ PC[i] := L2; 
+  acquire(Lock,i) }
+
+transition paper_wake_agent([i: paper])
+requires { PC[i] = L2 }
+{ release(Agent,i); 
+  PC[i] := L3 }
+
+transition paper_smoke([i: paper])
+requires { PC[i] = L3 }
+{ PC[i] := L0; 
+  release(Lock,i) } 
+
