@@ -28,7 +28,8 @@ let () =
     (Sys.Signal_handle 
        (fun _ ->
          eprintf "@{<n>@}@."; (* Remove colors *)
-	 if not Options.bench then
+	 if not Options.
+	   bench then
 	   begin
              Stats.print_report ~safe:false [] [];
     
@@ -68,6 +69,8 @@ let _ =
   let lb = from_channel cin in 
   try
     let s = Parser.system Lexer.token lb in
+    if parse_only then exit 0;
+
     let system = Typing.system s in
     if type_only then exit 0;
     if interpreter then Interpret_top.setup_env system s;

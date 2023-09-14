@@ -1759,15 +1759,15 @@ let init tsys =
   let env_final, original_init =
       Env.fold (fun k x (env_acc,v_acc) ->
 	if Term.compare x throwaway = 0 then
-	  (*begin
+	  begin
 	    match k with 
 	      | Elem(n,_) | Access(n,_) -> 
 		let _, ty = Smt.Symbol.type_of n in
 		(Env.add k {value = random_value ty; typ = ty } env_acc, v_acc)
 		(*(env_acc, v_acc)*)
 	  |  _ -> assert false	
-	    end*)
-	  env_acc, v_acc
+	    end (*removed this originally, put it back test hierarchical*)
+	  (*env_acc, v_acc*)
       else
 	begin
 	  match k with
@@ -1841,6 +1841,9 @@ let init tsys =
       Env.add (Elem(x, Var)) {value = VAlive; typ = ty_proc} acc
   ) env_final procs
   in
+
+  (*print_interpret_env fmt (env_final, LockQueues.empty, Conditions.empty, Semaphores.empty);*)
+
   
   let t_transitions = List.map (fun x -> x.tr_info) tsys.t_trans in 
   let transitions =

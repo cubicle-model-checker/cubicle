@@ -852,8 +852,7 @@ let run_from_list env trans all_procs follow unsafe=
 	Some(app,app_p)::acc, new_env 
   )  ([],env) follow
 
-
-let proc_as_subtype subtypes procs env_final =
+let proc_as_subtype1 subtypes procs env_final =
   let len = List.length subtypes in
   let rec aux stypes procs env_final =
     match stypes, procs with
@@ -870,6 +869,24 @@ let proc_as_subtype subtypes procs env_final =
 	in
 	aux [] tl e
   in aux subtypes procs env_final
+
+  
+let proc_as_subtype subtypes procs env_final =
+  let customer = List.hd subtypes in 
+  let barber = List.hd (List.tl subtypes) in 
+  let rec aux procs env_final flag = 
+    match procs with 
+      | [] -> env_final 
+      | hd::tl when flag ->  
+	let e = Env.add (Elem(hd, Var)) {value = VAlive; typ = barber } env_final
+	in
+	aux tl e false
+      | hd::tl -> 
+	let e = Env.add (Elem(hd, Var)) {value = VAlive; typ = customer } env_final
+	in
+	aux tl e false
+ 
+  in aux procs env_final true
       
 
     
@@ -958,6 +975,7 @@ let setup_env tsys sys =
 	    match k with 
 	      | Elem(n,_) | Access(n,_) -> 
 		let _, ty = Smt.Symbol.type_of n in
+		Format.eprintf "sup: k = %a, and val = %a@." Term.print k Hstring.print ty; 
 		(Env.add k {value = random_value ty; typ = ty } env_acc, v_acc)
 		(*(env_acc, v_acc)*)
 	  |  _ -> assert false	

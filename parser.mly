@@ -297,8 +297,7 @@ assigns_nondets_updates_locks:
 	  | PUnlock vp 
 	  | PWait vp 
 	  | PNotify vp 
-	  | PNotifyAll vp -> [], [], [], [vp]
-	    
+	  | PNotifyAll vp -> [], [], [], [vp]	    
       }
   | assign_nondet_update_lock PV assigns_nondets_updates_locks 
       { 
@@ -366,7 +365,10 @@ assignment:
       Assign ($1, PUTerm $3)
     }
   | mident AFFECT CASE switchs
-    { Assign ($1, PUCase $4) }
+      {
+	if Consts.mem $1 then raise Parsing.Parse_error;
+	Assign ($1, PUCase $4)
+      }
 ;
 
 nondet:

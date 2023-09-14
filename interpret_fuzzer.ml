@@ -120,7 +120,7 @@ let random_value h num_procs=
       else
 	begin
       let arr = Array.of_list constrs in
-      let r = Random.int (List.length constrs -1) in
+      let r = Random.int (List.length constrs) in
       let el = arr.(r) in
       VConstr(el)
 	end 
@@ -477,7 +477,7 @@ let force_procs_forward code glob_env trans all_procs p_proc all_unsafes =
 	TimerFuzz.pause ();
 	Format.printf "%a@." print_time (TimerFuzz.get ());
 	TimerFuzz.start ();
-	if Options.bench then raise Exit;
+	if Options.bench then begin Format.printf "States seen: %d@." !visit_count; raise Exit end;
 	steps := depth;
 	dead_states := h::!dead_states
       | Stdlib.Sys.Break | Exit ->  steps := depth; raise Exit
@@ -625,7 +625,7 @@ let markov_entropy_detailed glob tsys all_procs trans steps matr =
 	TimerFuzz.pause ();
 	Format.printf "%a@." print_time (TimerFuzz.get ());
 	TimerFuzz.start ();
-	if Options.bench then raise Exit;
+	if Options.bench then begin Format.printf "States seen: %d@." !visit_count; raise Exit end;
 	raise (TopError Deadlock)
       | TopError (FalseReq _) -> incr tried; incr taken; if !tried > 1000 then running := false 
   done;
@@ -923,7 +923,7 @@ let markov_entropy code glob all_procs trans all_unsafes=
 	TimerFuzz.pause ();
 	Format.printf "%a@." print_time (TimerFuzz.get ());
 	TimerFuzz.start ();
-	if Options.bench then raise Exit;
+	if Options.bench then begin Format.printf "States seen: %d@." !visit_count; raise Exit end;
 	taken := steps;
 	
       | Stdlib.Sys.Break | Stdlib.Exit ->
@@ -1147,7 +1147,7 @@ let run_smart code node all_procs trans all_unsafes =
 	TimerFuzz.pause ();
 	Format.printf "%a@." print_time (TimerFuzz.get ());
 	TimerFuzz.start ();
-	if Options.bench then raise Exit;
+	if Options.bench then begin Format.printf "States seen: %d@." !visit_count; raise Exit end;
 	steps := max_depth;
 	dead_states := h::!dead_states
       | TopError Deadlock -> Format.printf "Deadlock reached.";
@@ -1527,7 +1527,7 @@ let run_forward code node all_procs trans all_unsafes =
 	TimerFuzz.pause ();
 	Format.printf "%a@." print_time (TimerFuzz.get ());
 	TimerFuzz.start ();
-	if Options.bench then raise Exit;
+	if Options.bench then begin Format.printf "States seen: %d@." !visit_count; raise Exit end;
 	steps := max_depth;
 	dead_states := h::!dead_states
       | Stdlib.Sys.Break | Exit ->  steps := max_depth; raise Exit
@@ -1947,7 +1947,24 @@ let proc_as_subtype subtypes procs env_final =
 	in
 	aux [] tl e
   in aux subtypes procs env_final
-      
+
+let proc_as_subtype2 subtypes procs env_final =
+  let customer = List.hd subtypes in 
+  let barber = List.hd (List.tl subtypes) in 
+  let rec aux procs env_final flag = 
+    match procs with 
+      | [] -> env_final 
+      | hd::tl when flag ->  
+	let e = Env.add (Elem(hd, Var)) {value = VAlive; typ = barber } env_final
+	in
+	aux tl e false
+      | hd::tl -> 
+	let e = Env.add (Elem(hd, Var)) {value = VAlive; typ = customer } env_final
+	in
+	aux tl e false
+ 
+  in aux procs env_final true
+  
 
     
 let finalize_procs env_final procs sys =
@@ -2021,9 +2038,9 @@ let init_aux tsys sys num_procs =
 	    match k with 
 	      | Elem(n,_) | Access(n,_) -> 
 		let _, ty = Smt.Symbol.type_of n in
-		if is_lock ty || is_rlock ty || is_condition ty || is_semaphore ty then
+		(*if is_lock ty || is_rlock ty || is_condition ty || is_semaphore ty then*)
 		  (Env.add k {value = random_value ty num_procs; typ = ty } env_acc, v_acc)
-		else env_acc, v_acc 
+		(*else env_acc, v_acc *)
 	      |  _ -> assert false	
 	  end
 
@@ -2213,8 +2230,6 @@ let decide_how_many_procs tsys sys trans pick_min =
 let init tsys sys =
   try 
   Random.self_init ();
-
-  
   let s1 = String.make Pretty.vt_width '*' in
   let s2 = String.make ((Pretty.vt_width-14)/2) ' ' in
   if not Options.bench then
@@ -2271,10 +2286,10 @@ let init tsys sys =
   if dec <> 0 then
     begin
       let procs = Variable.give_procs dec in
+      sys_procs := dec;
       let original_env, all_unsafes = init_aux tsys sys dec in
       Options.set_interpret_procs dec;
       Options.set_int_brab dec;
-      sys_procs := dec;
       if not Options.bench then
       Format.printf "The fuzzer will run with %d procs @." dec; 
       fuzz original_env transitions procs all_unsafes t_transitions
@@ -2334,6 +2349,7 @@ let init tsys sys =
       Options.set_interpret_procs fp;
       Options.set_int_brab fp;
       sys_procs := fp;
+      Format.eprintf "Sys procs baby: %d@." !sys_procs; 
       fuzz original_env transitions procs all_unsafes t_transitions
     end 
 

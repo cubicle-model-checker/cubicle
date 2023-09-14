@@ -237,7 +237,17 @@ let check_unsafe glob unsafes =
 	  
 	| Atom.Comp (x, op, y) ->
 	  begin
-	    try
+	    let el =
+	      try
+		Env.find x env
+	      with Not_found -> to_interpret x in
+	    let el2 =
+	      try
+		Env.find y env
+	      with Not_found -> to_interpret y in
+
+	    (interpret_comp (compare_interp_val el el2) op) && acc 
+	    (*try
 	      let el = Env.find x env in
 	      (interpret_comp (compare_interp_val el (to_interpret y )) op) && acc 
 	    with Not_found ->
@@ -246,7 +256,7 @@ let check_unsafe glob unsafes =
 		  let el = Env.find y env in
 		  (interpret_comp (compare_interp_val (to_interpret x ) el) op) && acc
 		with Not_found -> assert false
-	      end 
+	      end *)
 	  end
 	| _ -> assert false
     ) true satom

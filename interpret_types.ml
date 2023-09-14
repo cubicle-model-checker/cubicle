@@ -463,7 +463,7 @@ let random_value h =
       else
 	begin
       (*let arr = Array.of_list constrs in*)
-      let r = Random.int (len -1) in
+      let r = Random.int (*(len -1)*) len in
       let el = List.nth constrs r in
       VConstr(el)
 	end 
@@ -514,8 +514,8 @@ let compare_conc v1 v2 =
     | UNDEF, _ -> assert false
     | VInt _, _ -> assert false
     | VReal _, _ -> assert false
-    | VConstr v1, _ -> assert false
-    | VProc p1, _ -> assert false
+    | VConstr v1, _ -> (*Format.eprintf "%a %a@." print_val (VConstr v1) print_val v2;*) assert false
+    | VProc p1, _ -> Format.eprintf "%a %a@." print_val (VProc p1) print_val v2;assert false
     | VGlob _ , _ -> assert false
     | _ -> assert false
 
