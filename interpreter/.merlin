@@ -1,0 +1,7 @@
+S ./..
+S ./../smt
+S ./../common
+
+B ./..
+B ./../smt
+B ./../common

@@ -346,21 +346,23 @@ module GrumpyApprox : S = struct
 
 end
 
-
 let select_oracle =
-  if do_brab then
-    if murphi then
-      (module Murphi : Oracle.S)
-    else (module Enumerative : Oracle.S)
+  if (get_int_brab ()) > -1 then
+    (module Interpret_forward : Oracle.S)
   else
+    if do_brab then
+      if murphi then
+	(module Murphi : Oracle.S)
+      else (module Enumerative : Oracle.S)
+    else
     (module GrumpyOracle : Oracle.S)
 
 module SelectedOracle : Oracle.S = (val select_oracle)
 
-
-
 let select_approx =
-  if do_brab then (module Make(SelectedOracle) : S)
+  if (get_int_brab ()) > -1 || do_brab then (module Make(SelectedOracle) : S)
+  (*if do_brab then (module Make(SelectedOracle) : S)*)
   else (module GrumpyApprox)
+
 
 module Selected : S = (val select_approx)

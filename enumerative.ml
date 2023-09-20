@@ -1235,7 +1235,10 @@ let search procs init =
   global_envs := env :: !global_envs;
   install_sigint ();
   begin try
-    forward_bfs init procs env st_inits;
+	  match Options.enum_mode with
+	    | "bfs" -> forward_bfs init procs env st_inits
+	    | "dfs" -> forward_dfs init procs env st_inits
+	    | _ -> failwith ("The forward strategy "^Options.enum_mode^" is not implemented.")
     with Exit -> ()
   end ;
   finalize_search env
@@ -1487,6 +1490,12 @@ let mk_env nbprocs sys =
   (* create mappings but don't allocate hashtable *)
   let procs = Variable.give_procs nbprocs in
   let env = init_tables ~alloc:false procs sys in
+  global_envs := env :: !global_envs;
+  env
+
+let mk_env_int nbprocs sys =
+  let procs = Variable.give_procs nbprocs in
+  let env = init_tables procs sys in
   global_envs := env :: !global_envs;
   env
 

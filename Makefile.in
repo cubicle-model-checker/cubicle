@@ -113,7 +113,7 @@ COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 
 INTERPRETCMO = interpreter/interpret_lexer.cmo interpreter/interpret.cmo interpreter/interpret_types.cmo \
                interpreter/interpret_errors.cmo interpreter/interpret_calc.cmo \
-               interpreter/interpret_heuristics.cmo interpreter/interpret_top.cmo
+               interpreter/interpret_heuristics.cmo interpreter/interpret_forward.cmo interpreter/interpret_top.cmo
 
 CMO = version.cmo options.cmo \
       $(COMMONCMO) $(SMTCMO) \

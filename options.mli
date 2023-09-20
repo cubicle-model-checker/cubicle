@@ -70,6 +70,7 @@ val refine_universal : bool
 val cores : int
 
 val mode : string
+val enum_mode : string
 
 val debug : bool
 val dot : bool
@@ -112,12 +113,10 @@ val fuzz_bench_time : bool
 val bench : bool
 val bench_rand : bool
 
-
 val js_mode : unit -> bool
 
 
 val set_js_mode : bool -> unit
-
 
 val set_interpret_procs : int -> unit
 val get_interpret_procs : unit -> int

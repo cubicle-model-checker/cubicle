@@ -24,10 +24,10 @@ let js_mode = ref false
 let usage = "usage: cubicle file.cub"
 let file = ref "_stdin"
 
-let max_proc = ref 10
-let type_only = ref false
 let parse_only = ref false
 
+let max_proc = ref 10
+let type_only = ref false
 let maxrounds = ref 100
 let maxnodes = ref 100_000
 let debug = ref false
@@ -39,7 +39,6 @@ let verbose = ref 0
 let quiet = ref false
 let bitsolver = ref false
 let enumsolver = ref false
-
 
 let fuzz_s = ref 100000
 let fuzz_d = ref 10
@@ -61,7 +60,6 @@ let int_brab_quiet = ref false
 let int_deadlock = ref false
 let fuzz = ref false
   
-
 let incr_verbose () = incr verbose
 
 let debug_smt = ref false
@@ -92,8 +90,6 @@ let candidate_heuristic = ref (-1)
 let forward_sym = ref true
 
 let abstr_num = ref false
-
-  
 let num_range_low = ref 0
 let num_range_up = ref 0
 
@@ -127,6 +123,14 @@ let set_mode m =
   match m with
   | "bfs" | "bfsh" | "bfsa" | "dfs" | "dfsh" | "dfsa" -> ()
   | _ -> raise (Arg.Bad ("search strategy "^m^" not supported"))
+
+let enum_mode = ref "bfs"
+let set_enum_mode m =
+  mode := m;
+  match m with
+  | "bfs" | "dfs"  -> ()
+  | _ -> raise (Arg.Bad ("forward search strategy "^m^" not supported"))
+  
 
 let smt_solver = ref AltErgo
 let set_smt_solver s =
@@ -178,6 +182,10 @@ let specs =
     "-brab", Arg.Set_int brab,
     "<nb> Backward reachability with approximations and backtrack helped \
      with a finite model of size <nb>";
+    "-enum",  Arg.Set_string enum_mode, " <bfs(defaul) | dfs> forward strategies";
+    "-int-brab", Arg.Set_int int_brab, " <nb> procs <nb> rounds <nb> depth <bool> smart";
+    "-int-brab-debug", Arg.Set int_brab_quiet, " Activate interpreter brab";
+    "-int-deadlock", Arg.Set int_deadlock, " Deadlock details for interpreter forward";
     "-upto", Arg.Set brab_up_to,
     " in combination with -brab <n>, finite models up to size <n>";
     "-murphi", Arg.Set murphi,
@@ -225,11 +233,12 @@ let specs =
     "-bitsolver", Arg.Set bitsolver, " use bitvector solver for finite types";
     "-enumsolver", Arg.Set enumsolver,
     " use Enumerated data types solver for finite types";
-    "-trace", Arg.String set_trace, "<alt-ergo | why> search strategies";
+    "-trace", Arg.String set_trace, " <alt-ergo | why> search strategies";
     "-out", Arg.String set_out,
     "<dir> set output directory for certificate traces to <dir>";
     (* Hidden options *)
-    "-notyping", Arg.Set notyping, ""; (* Disable typing *)
+    "-notyping", Arg.Set notyping, " disable typing"; (* Disable typing *)
+    "-undepth", Arg.Set_int unDepth, " depth of unsafe";
     "-interpret-proc", Arg.Set_int interpretProcs, " how many procs for interpreter";
     "-interpreter", Arg.Set interpreter, " start interpreter";
     "-fuzz", Arg.Set fuzz, " fuzz the model";
@@ -257,14 +266,16 @@ let cin =
   | Some f -> file := f ; open_in f 
   | None -> stdin
 
+
 let depth_ib = !depth_ib
 let rounds = !rounds
 let mrkv_brab = !mrkv_brab
 let int_brab_quiet = !int_brab_quiet
+
     
 
+let parse_only = !parse_only 
 let type_only = !type_only
-let parse_only = !parse_only
 let maxrounds = !maxrounds
 let maxnodes = !maxnodes
 let max_proc = !max_proc
@@ -282,7 +293,10 @@ let only_forward = !only_forward
 let gen_inv = !gen_inv
 let forward_inv = !forward_inv
 let brab = !brab
-let enumerative = if brab <> -1 then brab else !enumerative
+let enumerative =
+  if brab <> -1 then brab
+  else if !int_brab <> -1 then !int_brab
+  else !enumerative
 let do_brab = brab <> -1
 let brab_up_to =
   if !brab_up_to && not do_brab then
@@ -312,14 +326,19 @@ let noqe = !noqe
 let cores = !cores
 
 
+  
+
 let unDepth = !unDepth
 let interpreter = !interpreter
 let fuzz = !fuzz
 let debug_interpreter = !debug_interpreter
 let int_deadlock = !int_deadlock
-  
+
+
+
 
 let mode = !mode
+let enum_mode = !enum_mode 
 let smt_solver = !smt_solver
 
 let verbose = !verbose
@@ -333,8 +352,6 @@ let post_strategy =
     | _ -> 1
 
 let abstr_num = !abstr_num
-let num_range = (!num_range_low, !num_range_up)
-
 let set_num_range_low n = num_range_low := n
 let set_num_range_up n = num_range_up := n
 
@@ -345,7 +362,6 @@ let get_num_range () = (!num_range_low, !num_range_up)
   
 let num_range = (!num_range_low, !num_range_up)
 let num_range_up = !num_range_up
-
 let quiet = !quiet
 let bitsolver = !bitsolver
 let enumsolver = !enumsolver
@@ -385,7 +401,7 @@ let set_js_mode b = js_mode := b
 (* Getters *)
 let js_mode () = !js_mode
 
-  
+
 (* Interpreter *)
   
 let set_interpret_procs n = interpretProcs := n
@@ -393,5 +409,3 @@ let get_interpret_procs () = if !int_brab > -1 then !int_brab else !interpretPro
 
 let set_int_brab n = int_brab := n
 let get_int_brab () = !int_brab
-
-  
