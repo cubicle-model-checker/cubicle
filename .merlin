@@ -1,6 +1,8 @@
 # sources structures for Merlin mode
+S interpreter
 S smt
 S common
 
+B interpreter
 B smt
 B common

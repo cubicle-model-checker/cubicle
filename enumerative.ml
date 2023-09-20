@@ -942,7 +942,9 @@ let transitions_to_func_aux procs env reduce acc
 		                          tr_upds = upds; 
 		                          tr_nondets = nondets }} =
   if List.length tr_args > List.length procs then acc
-  else 
+  else
+    let tr_args = List.map fst tr_args in (* MODIFIED subsorts*)
+    
     let d = Variable.all_permutations tr_args procs in
     (* do it even if no arguments *)
     let d = if d = [] then [[]] else d in

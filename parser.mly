@@ -19,6 +19,8 @@
   open Types
   open Parsing
   open Ptree
+  open Interpret_ast
+
   
   let _ = Smt.set_cc false; Smt.set_arith false; Smt.set_sum false
 
@@ -34,6 +36,11 @@
     | Assign of Hstring.t * pglob_update
     | Nondet of Hstring.t
     | Upd of pupdate
+    | PLock of lock_uses
+    | PUnlock of lock_uses
+    | PWait of lock_uses
+    | PNotify of lock_uses
+    | PNotifyAll of lock_uses
 
   module S = Set.Make(Hstring)
 
@@ -83,24 +90,32 @@
 
 %}
 
+
 %token VAR ARRAY CONST TYPE INIT TRANSITION INVARIANT CASE
 %token FORALL EXISTS FORALL_OTHER EXISTS_OTHER
 %token SIZEPROC
-%token REQUIRE UNSAFE PREDICATE
+%token REQUIRE UNSAFE PREDICATE LIVELOCK
 %token OR AND COMMA PV DOT QMARK IMP EQUIV
-%token <string> CONSTPROC
+%token <string*string> CONSTPROC
 %token <string> LIDENT
 %token <string> MIDENT
+%token <string> SPROCS
+%token ADDPROC SUBPROC COMPPROC
 %token LEFTPAR RIGHTPAR COLON EQ NEQ LT LE GT GE
 %token LEFTSQ RIGHTSQ LEFTBR RIGHTBR BAR
 %token IN
 %token LET
+%token RELEASE RELEASELOCK RELEASERLOCK RELEASESEM RELEASECOND ACQUIRE ACQUIRELOCK ACQUIRERLOCK ACQUIRESEM ACQUIRECOND
+%token SHOWTRACE REPTRACE GOTOTR RERUNTR CURRTR WHYTR HELPTR FLAGTR OFFTR UNSAFEINTR INTSYS PREINT
+%token WAIT NOTIFY NOTIFYALL RANDOMT GENPROC EXEC FUZZ FREQ TOPTRY TOPMARKOV
+%token MARKOV HASTINGS ENTROPY HASTENT
 %token <Num.num> REAL
 %token <Num.num> INT
 %token PLUS MINUS TIMES
 %token IF THEN ELSE NOT
 %token TRUE FALSE
 %token UNDERSCORE AFFECT
+%token STATUS HELP CLEAR RESTART ALLT BACKTRACK DUMP
 %token EOF
 
 %nonassoc IN       
@@ -109,13 +124,14 @@
 %right OR
 %right AND
 %nonassoc prec_ite
-  /* %left prec_relation EQ NEQ LT LE GT GE */
-%left PLUS MINUS
-%left TIMES
+/* %left prec_relation EQ NEQ LT LE GT GE */
+/* %left PLUS MINUS */
 %nonassoc NOT
-  /* %left BAR */
-%left DOT
+/* %left BAR */
 
+%start toplevel     
+%type <Interpret_ast.toplevel> toplevel
+  
 %type <Ast.system> system
 %start system
 %%
@@ -237,62 +253,116 @@ transition_name:
   | mident {$1}
 
 transition:
-  | TRANSITION transition_name LEFTPAR lidents RIGHTPAR 
+  | TRANSITION transition_name LEFTPAR lidents_proc_typed RIGHTPAR 
       require
-      LEFTBR let_assigns_nondets_updates RIGHTBR
-      { let lets, (assigns, nondets, upds) = $8 in
+      LEFTBR let_assigns_nondets_updates_locks RIGHTBR
+      { let lets, (assigns, nondets, upds, locks) = $8 in
 	{   ptr_lets = lets;
 	    ptr_name = $2;
-            ptr_args = $4; 
+            ptr_args = fst $4;
+	    ptr_process = snd $4;
 	    ptr_reqs = $6;
 	    ptr_assigns = assigns; 
 	    ptr_nondets = nondets; 
 	    ptr_upds = upds;
+	    ptr_locks = locks, loc ();
             ptr_loc = loc ();
           }
       }
 ;
 
-let_assigns_nondets_updates:
-  | assigns_nondets_updates { [], $1 }
-  | LET lident EQ term IN let_assigns_nondets_updates {
+let_assigns_nondets_updates_locks:
+  | assigns_nondets_updates_locks { [], $1 }
+  | LET lident EQ term IN let_assigns_nondets_updates_locks {
 	  let lets, l = $6 in
 	  ($2, TTerm $4) :: lets, l}
 ;
   
-assigns_nondets_updates:
-  |  { [], [], [] }
-  | assign_nondet_update 
+assigns_nondets_updates_locks:
+  |  { [], [], [], [] }
+  | assign_nondet_update_lock
       {  
 	match $1 with
-	  | Assign (x, y) -> [x, y,loc()], [], []
-	  | Nondet x -> [], [x], []
-	  | Upd x -> [], [], [x]
+	  | Assign (x, y) -> [x, y,loc()], [], [], []
+	  | Nondet x -> [], [x], [], []
+	  | Upd x -> [], [], [x], []
+	  | PLock vp 
+	  | PUnlock vp 
+	  | PWait vp 
+	  | PNotify vp 
+	  | PNotifyAll vp -> [], [], [], [vp]	    
       }
-  | assign_nondet_update PV assigns_nondets_updates 
+  | assign_nondet_update_lock PV assigns_nondets_updates_locks 
       { 
-	let assigns, nondets, upds = $3 in
+	let assigns, nondets, upds, locks = $3 in
 	match $1 with
-	  | Assign (x, y) -> (x, y, loc()) :: assigns, nondets, upds
-	  | Nondet x -> assigns, x :: nondets, upds
-	  | Upd x -> assigns, nondets, x :: upds
+	  | Assign (x, y) -> (x, y, loc()) :: assigns, nondets, upds, locks
+	  | Nondet x -> assigns, x :: nondets, upds, locks
+	  | Upd x -> assigns, nondets, x :: upds, locks
+	  | PLock vp 
+	  | PUnlock vp 
+	  | PWait vp 
+	  | PNotify vp 
+	  | PNotifyAll vp -> assigns, nondets, upds, vp::locks
       }
 ;
 
-assign_nondet_update:
+assign_nondet_update_lock:
   | assignment { $1 }
   | nondet { $1 }
   | update { $1 }
+  | lock_types { $1 }
+
+;
+
+lock_types:
+  | lock { $1 }
+  | unlock { $1 }
+  | wait { $1 }
+  | notify { $1 }
+  | notifall { $1}
+;
+
+wait:
+  | WAIT LEFTPAR term COMMA lident RIGHTPAR { PWait(Wait(VarLock($3,$5)))}
+;
+
+notify:
+  | NOTIFY LEFTPAR term COMMA lident RIGHTPAR { PNotify(Notify(VarLock($3,$5)))}
+;
+notifall:
+  | NOTIFYALL LEFTPAR term COMMA lident RIGHTPAR { PNotifyAll(NotifyAll(VarLock($3,$5)))}
+;
+
+lock:
+  | ACQUIRE LEFTPAR term COMMA lident RIGHTPAR { PLock(Lock(VarLock($3,$5))) }
+  | ACQUIRELOCK LEFTPAR term COMMA lident RIGHTPAR { PLock(Lock(VarLock($3,$5))) }
+  | ACQUIRERLOCK LEFTPAR term COMMA lident RIGHTPAR { PLock(Lock(VarLock($3,$5))) }
+  | ACQUIRESEM LEFTPAR term COMMA lident RIGHTPAR { PLock(Lock(VarLock($3,$5))) }
+  | ACQUIRECOND LEFTPAR term COMMA lident RIGHTPAR { PLock(Lock(VarLock($3,$5))) }
+;
+
+unlock:
+  | RELEASE LEFTPAR term COMMA lident RIGHTPAR { PUnlock(Unlock(VarLock($3,$5))) }
+  | RELEASELOCK LEFTPAR term COMMA lident RIGHTPAR { PUnlock(Unlock(VarLock($3,$5))) }
+  | RELEASERLOCK LEFTPAR term COMMA lident RIGHTPAR { PUnlock(Unlock(VarLock($3,$5))) }
+  | RELEASESEM LEFTPAR term COMMA lident RIGHTPAR { PUnlock(Unlock(VarLock($3,$5))) }
+  | RELEASECOND LEFTPAR term COMMA lident RIGHTPAR { PUnlock(Unlock(VarLock($3,$5))) }
 ;
 
 assignment:
-  | mident AFFECT term { Assign ($1, PUTerm (TTerm $3)) }
+  | mident AFFECT term { if Consts.mem $1 then raise Parsing.Parse_error;
+      Assign ($1, PUTerm (TTerm $3)) }
   | mident AFFECT CASE switchs { Assign ($1, PUCase $4) }
 ;
 
 nondet:
-  | mident AFFECT DOT { Nondet $1 }
-  | mident AFFECT QMARK { Nondet $1 }
+  | mident AFFECT DOT {
+    if Consts.mem $1 then raise Parsing.Parse_error;
+    Nondet $1 }
+  | mident AFFECT QMARK {
+    if Consts.mem $1 then raise Parsing.Parse_error;
+    Nondet $1 }
 ;
 
 require:
@@ -333,8 +403,8 @@ switch:
   
 
 term:
-  | REAL { Const (MConst.add (ConstReal $1) 1 MConst.empty) }
-  | INT { Const (MConst.add (ConstInt $1) 1 MConst.empty) }
+  | REAL { Smt.set_arith true; Const (MConst.add (ConstReal $1) 1 MConst.empty) }
+  | INT { Smt.set_arith true; Const (MConst.add (ConstInt $1) 1 MConst.empty) }
   | proc_name { Elem ($1, Var) }
   | mident {
     let t = if Consts.mem $1 then Const (MConst.add (ConstName $1) 1 MConst.empty)
@@ -347,10 +417,23 @@ term:
   | term MINUS term { BinOp($1, Subtraction, $3) }
   | term TIMES term {  BinOp($1, Multiplication, $3) }*/
       
-  | term PLUS INT { Arith($1, MConst.add (ConstInt $3) 1 MConst.empty) }
-  | term PLUS mident { Arith($1, MConst.add (ConstName $3) 1 MConst.empty) }
-  | term MINUS INT { Arith($1, MConst.add (ConstInt $3) (-1) MConst.empty) }
-  | term MINUS mident { Arith($1, MConst.add (ConstName $3) (-1) MConst.empty) }
+  | term PLUS INT { Smt.set_arith true; Arith($1, MConst.add (ConstInt $3) 1 MConst.empty) }
+  | term PLUS mident { Smt.set_arith true; Arith($1, MConst.add (ConstName $3) 1 MConst.empty) }
+  | term MINUS INT { Smt.set_arith true; Arith($1, MConst.add (ConstInt $3) (-1) MConst.empty) }
+  | term MINUS mident { Smt.set_arith true; Arith($1, MConst.add (ConstName $3) (-1) MConst.empty) }
+  | SPROCS { let s = Hstring.make $1 in Elem(s,SystemProcs)}
+  | proc_manip { $1 }
+;
+
+proc_manip:
+  | ADDPROC LEFTPAR term RIGHTPAR
+      { (*let pr = Elem($3, Var) in*) ProcManip([$3], PlusOne) }
+  | SUBPROC LEFTPAR term RIGHTPAR
+      { (*let pr = Elem($3, Var) in*)ProcManip([$3], MinusOne) }
+  | COMPPROC LEFTPAR term COMMA term RIGHTPAR
+      { (*let pr = Elem($3, Var) in
+	let pr2 = Elem($5, Var) in*)
+	 ProcManip([$3;$5], CompProcs) }
 ;
 
 lident:
@@ -358,7 +441,10 @@ lident:
 ;
 
 const_proc:
-  | CONSTPROC { Hstring.make $1 }
+  | CONSTPROC { let h,s = $1 in
+	       if (not Options.interpreter) && (int_of_string s > !Options.size_proc)
+	       then raise Parsing.Parse_error;
+	       Hstring.make (h^s)  }
 ;
 
 proc_name:
@@ -384,6 +470,36 @@ lidents:
   | { [] }
   | lidents_plus { $1 }
 ;
+
+lidents_proc_plus_typed:
+  | lident { [$1, None], None }
+  | lident lidents_proc_plus_typed { ($1, None)::(fst $2), (snd $2) }
+
+  | lident COLON lident { [$1, Some $3], None }
+  | lident COLON lident lidents_proc_plus_typed { ($1, Some $3) ::(fst $4), (snd $4) }
+
+
+  | LEFTSQ lident RIGHTSQ { [$2, None], Some $2 }
+  | LEFTSQ lident RIGHTSQ lidents_plus_typed { ($2, None)::$4, Some $2 }
+
+  | LEFTSQ lident COLON lident RIGHTSQ { [$2, Some $4], Some $2 }
+  | LEFTSQ lident COLON lident RIGHTSQ lidents_plus_typed { ($2, Some $4)::$6, Some $2 }
+;
+
+lidents_proc_typed:
+  | { [], None }
+  | lidents_proc_plus_typed {$1 }
+;
+
+
+lidents_plus_typed:
+  | lident { [$1, None] }
+  | lident lidents_plus_typed { ($1,None)::$2 }
+
+  | lident COLON lident { [$1, Some $3] }
+  | lident COLON lident lidents_plus_typed { ($1, Some $3)::$4 }
+;
+
 
 lident_list_plus:
   | lident { [$1] }
@@ -452,4 +568,118 @@ expr_or_term_comma_list:
   | expr COMMA expr_or_term_comma_list { PF $1 :: $3 }
 ;
 
+
+top_proc_name:
+  | CONSTPROC { let h,s = $1 in
+		 Hstring.make (h^s)
+	        }
+  
+;
+
+top_proc_name_list_plus:
+  | top_proc_name { [$1] }
+  | top_proc_name COMMA top_proc_name_list_plus { $1::$3 }
+;
+
+top_level_trans:
+  | lident LEFTPAR RIGHTPAR { ($1, [])}
+  | lident LEFTPAR top_proc_name_list_plus RIGHTPAR { ($1, $3)}    
+;
+
+toplevel_trans_list:
+  | top_level_trans { [$1] }
+  | top_level_trans PV toplevel_trans_list { $1::$3 }
+;
+
+
+toplevel_assign:
+  | mident AFFECT term  {
+    TopAssign($1,Elem($1,Glob), $3)
+
+      (*
+	match $3 with
+	| Elem (_, Var) -> 
+      | TTerm t -> TopAssign($1,Elem($1,Glob), t)
+      | TVar v -> TopAssign($1, Elem($1,Glob), Elem(v, Var))*)}
+      
+  | mident LEFTSQ proc_name_list_plus RIGHTSQ AFFECT term
+      {TopAssign($1,Elem($1,Glob), $6)
+	(*match $6 with
+	  | TTerm t -> TopAssign($1, Access($1,$3), t)
+	  | TVar v ->  TopAssign($1, Access($1,$3), Elem(v, Var))*)
+      }
+
+;
+
+
+      
+toplevel:
+  | TRANSITION toplevel_trans_list { TopTransition $2}
+  | UNSAFEINTR { TopUnsafe }
+  | FUZZ INT {let i  = Num.int_of_num $2 in TopFuzz i} 
+  | STATUS { TopShowEnv }
+  | INTSYS { TopPrintSys }
+  | PREINT top_level_trans { let tn, ta = $2 in TopPre(tn,ta) }
+  | CONSTPROC {TopShowEnv}
+  | ALLT { TopAll }
+  | FREQ INT INT {let i  = Num.int_of_num $2 in
+		  let i2  = Num.int_of_num $3 in TopCount(i,i2)}
+  | HELP { TopHelp }
+  | CLEAR { TopClear }
+  | RESTART {TopRestart}
+  | toplevel_assign { $1 }
+  | DUMP { TopDump } 
+  | GENPROC { TopGenProc }
+  | RANDOMT { TopRandom}
+  | EXEC { TopExec }
+  | EXEC INT INT {let i  = Num.int_of_num $2 in
+		  let i2  = Num.int_of_num $3 in TopExecRetry(i,i2)}
+      
+  | BACKTRACK INT { let i  = Num.int_of_num $2 in TopBacktrack i}
+  | FLAGTR INT { let i  = Num.int_of_num $2 in TopFlag i }
+  | OFFTR { TopDebugOff }
+  | HELPTR { TopDebugHelp }
+  | WHYTR top_level_trans { let tn, ta = $2 in TopWhy(tn,ta) }
+  | CURRTR { TopCurrentTrace }
+  | RERUNTR INT INT { let i  = Num.int_of_num $2 in
+		      let i2  = Num.int_of_num $3 in
+		      TopRerun(i,i2) }
+  | GOTOTR INT { let i  = Num.int_of_num $2 in TopGoto i }
+  | REPTRACE { TopReplayTrace }
+  | SHOWTRACE { TopShowTrace }
+  | TOPTRY lident INT REAL { let i  = Num.int_of_num $3 in
+			    let f  = Num.float_of_num $4 in
+			    TopExperiment ($2,i, f)}
+  | TOPMARKOV lident { TopMarkov $2 }
+
+  | MARKOV INT INT
+      {(*mc_run*)
+	let flag = Num.int_of_num $2 in
+	let flag = if flag = 0 then false else true in	
+	let steps = Num.int_of_num $3 in
+	TopMCMC (1,flag,steps)
+      }
+  | HASTINGS INT INT
+      {(*mc_hastings*)
+	let flag = Num.int_of_num $2 in
+	let flag = if flag = 0 then false else true in	
+	let steps = Num.int_of_num $3 in
+	TopMCMC (2,flag,steps)
+      }
+      
+  | ENTROPY INT INT
+      { (*mc_entropy*)
+	let flag = Num.int_of_num $2 in
+	let flag = if flag = 0 then false else true in
+	let steps = Num.int_of_num $3 in
+	TopMCMC (3,flag,steps)
+      }
+  | HASTENT INT INT
+      { (*mc_he*)
+	let flag = Num.int_of_num $2 in
+	let flag = if flag = 0 then false else true in
+	let steps = Num.int_of_num $3 in
+	TopMCMC (4,flag,steps)
+      }
+;
 

@@ -40,6 +40,10 @@ type error =
   | NotATerm of Hstring.t
   | WrongNbArgs of Hstring.t * int
   | Smt of Smt.error
+
+  | SingleLockMechanism
+  | LivelockTransition
+  | MustBeOfSubProc of Hstring.t 
       
 
 exception Error of error * loc
@@ -101,6 +105,15 @@ let report fmt = function
   
   | Smt (Smt.UnknownSymb s) ->
     fprintf fmt "unknown symbol %a" Hstring.print s
+
+  |  SingleLockMechanism ->
+    fprintf fmt "only one lock-related (acquire, release, wait, notify, notify_all) allowed per transition"
+  | LivelockTransition ->
+    fprintf fmt "at least one transition needs to appear in livelock declaration"
+  | MustBeOfSubProc s ->
+    fprintf fmt "%a must be a subtype of proc" Hstring.print s
+  | Smt (Smt.NotProcSubType e) -> fprintf fmt "%a is not a proc subtype" Hstring.print e
+
   
 
 
@@ -182,7 +195,9 @@ let rec term loc args t =
           if not (Hstring.equal ty_i Smt.Type.type_proc) then
 	    error (MustBeOfTypeProc i) loc;
 	) li;
-      t,([], ty_a)
+    t,([], ty_a)
+  | ProcManip(_,_) -> assert false
+
 
 
 
@@ -305,7 +320,7 @@ let check_lets loc args l =
   List.map 
     (fun (x, t) ->  let tt,_ = term loc args t in x, tt) l
 	       
-let transitions tl = 
+(*let transitions tl = 
   List.map 
     (fun tr -> 
       unique (fun x -> error (DuplicateName x) tr.tr_loc) tr.tr_args;
@@ -323,7 +338,53 @@ let transitions tl =
       nondets tr.tr_loc tr.tr_nondets;
       { tr with tr_reqs; tr_ureq; tr_lets; tr_upds; tr_assigns }
 
-    ) tl
+  ) tl*)
+
+
+let transitions tl =
+  let h = ref [] in
+  List.map (fun tr ->
+    let trloc = tr.tr_loc in
+    let trargs = List.map (fun (p,_) -> p) tr.tr_args in
+    let args = List.map (fun (v, st) ->
+	match st with
+	  | None -> v
+	  | Some ty ->
+	    begin
+	      try
+		let b = Smt.Type.is_proc_subtype ty in
+		if b then v
+		else error (MustBeOfSubProc ty) trloc
+	      with Smt.Error e -> error (Smt e) trloc
+	    end )
+		
+	tr.tr_args in (*MODIFIED subsorts*)
+      if List.mem tr.tr_name !h then 
+	error (DuplicateName tr.tr_name) trloc;
+      h := tr.tr_name::!h;
+      
+      unique (fun x-> error (DuplicateName x) trloc) args;
+      let reqs, loc_reqs = tr.tr_reqs in
+      let tr_reqs = atoms loc_reqs args reqs,loc_reqs in
+      let tr_ureq =
+	List.map 
+	  (fun (ur, dnf, loc_req) -> 
+	    let dnf =
+	      List.map (atoms tr.tr_loc (ur::trargs)) dnf in
+	    ur, dnf, loc_req) tr.tr_ureq in
+      let tr_lets = check_lets tr.tr_loc trargs tr.tr_lets in
+      let tr_upds = updates trargs tr.tr_upds in
+      let tr_assigns = assigns trargs tr.tr_assigns in
+      nondets tr.tr_loc tr.tr_nondets;
+      { tr with tr_reqs; tr_ureq; tr_lets; tr_upds; tr_assigns }
+     (* List.iter 
+	(fun (x, cnf) -> 
+	  List.iter (atoms loc (x::args)) cnf)  t.tr_ureq;
+	    check_lets loc args t.tr_lets;
+	    updates args t.tr_upds;
+	    assigns loc args t.tr_assigns;
+	    nondets loc t.tr_nondets*)
+       (*locks loc t.tr_locks*))tl 
     
 
 let declare_type (loc, (x, y)) =
@@ -523,9 +584,10 @@ let create_node_rename kind vars sa =
 let fresh_args ({ tr_args = args; tr_upds = upds} as tr) = 
   if args = [] then tr
   else
+    let args = List.map (fun (p,_) -> p) args in
     let sigma = Variable.build_subst args Variable.freshs in
     { tr with 
-	tr_args = List.map (Variable.subst sigma) tr.tr_args; 
+	tr_args = List.map (fun (p,opt) -> Variable.subst sigma p, opt) tr.tr_args; 
 	tr_reqs = (SAtom.subst sigma (fst tr.tr_reqs), snd tr.tr_reqs) ;
 	tr_ureq = 
 	List.map 

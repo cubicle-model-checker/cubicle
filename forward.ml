@@ -77,6 +77,7 @@ let rec is_prime_term = function
   | Elem (s, _) | Access (s, _) ->
       is_prime (Hstring.view s)
   | Arith (x, _) -> is_prime_term x
+  | _ -> assert false
 
 let rec is_prime_atom = function
   | True | False -> false
@@ -383,6 +384,7 @@ let rec type_of_term = function
       let x = if is_prime (Hstring.view x) then unprime_h x else x in
       snd (Smt.Symbol.type_of x)
   | Arith (t, _) -> type_of_term t
+  | _ -> assert false
 
 let rec type_of_atom = function
   | True | False -> None
@@ -583,6 +585,8 @@ let post init all_procs procs { tr_args = tr_args;
 				tr_assigns = assigns; 
 				tr_upds = upds; 
 				tr_nondets = nondets } =
+  let tr_args = List.map fst tr_args in (*MODIFIED subsorts*)
+
   let tr_others, others = missing_args procs tr_args in
   let d = Variable.all_permutations tr_args procs in
   (* do it even if no arguments *)
@@ -800,6 +804,8 @@ let instance_of_transition { tr_args = tr_args;
 		             tr_upds = upds; 
 		             tr_nondets = nondets } all_procs tr_others sigma =
   let reqs = SAtom.subst sigma reqs in
+  let tr_args = List.map fst tr_args in (* MODIFIED subsorts*)
+
   let t_args_ef = 
     List.fold_left (fun acc p -> 
       try (Variable.subst sigma p) :: acc
@@ -823,8 +829,9 @@ let instance_of_transition { tr_args = tr_args;
 
 let instantiate_transitions all_procs procs trans = 
   let aux acc {tr_info = tr} =
-    let tr_others,others = missing_args procs tr.tr_args in
-    let d = Variable.all_permutations tr.tr_args procs in
+    let tr_args = List.map fst tr.tr_args in (* MODIFIED subsorts*)
+    let tr_others,others = missing_args procs tr_args in
+    let d = Variable.all_permutations tr_args procs in
     (* do it even if no arguments *)
     let d = if d = [] then [[]] else d in
     List.fold_left (fun acc sigma ->
@@ -913,6 +920,7 @@ let possible_trace ~starts ~finish ~procs ~trace =
     | [], (_, _, s) ::_ ->
       Spurious (above s trace)
     | _, (tr, _, _) :: rest_trace ->
+      let tr_args = List.map fst tr.tr_args in (* MODIFIED subsorts*)
         let nls =
 	  if List.length tr.tr_args > List.length procs then []
 	  else
@@ -926,7 +934,7 @@ let possible_trace ~starts ~finish ~procs ~trace =
                 with Smt.Unsat _ -> (nsa, nargs, new_hist) :: acc
               ) acc (post_inst sa args procs itr)
             ) acc ls
-           ) [] (Variable.all_permutations tr.tr_args procs)
+           ) [] (Variable.all_permutations tr_args procs)
         in
         forward_rec nls rest_trace
   in
@@ -1022,7 +1030,8 @@ let conflicting_from_trace s trace =
   let rec forward_rec acc ls trace = match trace with
     | [] -> acc
     | (tr, procs, _) :: rest_trace ->
-        let sigma = List.combine tr.tr_args procs in
+      let tr_args = List.map fst tr.tr_args in (* MODIFIED subsorts*)	      
+        let sigma = List.combine tr_args procs in
         let itr = instance_of_transition tr all_procs [] sigma in
         let nls, acc = 
           List.fold_left (fun (nls, acc) (sa, args) ->

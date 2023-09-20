@@ -18,6 +18,8 @@ type error =
   | DuplicateSymb of Hstring.t
   | UnknownType of Hstring.t
   | UnknownSymb of Hstring.t
+  | NotProcSubType of Hstring.t
+
 
 exception Error of error
 
@@ -38,11 +40,17 @@ module Type = struct
   let type_real = hfake
   let type_bool = hfake
   let type_proc = hfake
+  let type_lock = hfake
+  let type_rlock = hfake
+  let type_condition = hfake
+  let type_semaphore = hfake
+  let declare_proc_subtype _ = unsupported ()
   let declare _ _ = unsupported ()
   let declare_enum _ _ = unsupported ()
   let all_constructors _ = unsupported ()
   let constructors _ = unsupported ()
   let declared_types _ = unsupported ()
+  let is_proc_subtype _ = unsupported ()
 end
 
 module Symbol = struct
@@ -53,6 +61,7 @@ module Symbol = struct
   let has_abstract_type s = unsupported ()
   let has_infinite_type s = unsupported ()
   let has_type_proc s = unsupported ()
+
 end
 
 

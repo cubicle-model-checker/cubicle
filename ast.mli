@@ -46,15 +46,30 @@ type update = {
 }
 (** conditionnal updates with cases, ex. [A[j] := case | C : t | _ ...] *)
 
+
+type lock =
+  | VarLock of Term.t * Hstring.t
+
+type lock_uses =
+  | Condition of lock
+  | Lock of lock 
+  | Unlock of lock 
+  | Wait of lock 
+  | Notify of lock 
+  | NotifyAll of lock 
+
+
 type transition_info = {
   tr_name : Hstring.t; (** name of the transition *)
-  tr_args : Variable.t list;
+  tr_args : (Variable.t * Hstring.t option) list;
+  tr_process : Variable.t option;
   (** existentially quantified parameters of the transision *)
   tr_reqs : SAtom.t * loc; (** guard *)
   tr_ureq : (Variable.t * dnf * loc) list;
   (** global condition of the guard, i.e. universally quantified DNF *)
   tr_lets : (Hstring.t * Term.t) list;
   tr_assigns : (Hstring.t * glob_update * loc) list; (** updates of global variables *)
+  tr_locks : lock_uses list * loc; 
   tr_upds : update list; (** updates of arrays *)
   tr_nondets : Hstring.t list;
   (** non deterministic updates (only for global variables) *)
@@ -74,6 +89,8 @@ type transition = {
 
 type type_defs =
   | Constructors of (loc * type_constructors)
+  | ProcSubsets of (loc * Hstring.t)
+
 
 type system = {
   globals : (loc * Hstring.t * Smt.Type.t) list;

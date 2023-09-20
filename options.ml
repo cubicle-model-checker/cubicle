@@ -26,6 +26,8 @@ let file = ref "_stdin"
 
 let max_proc = ref 10
 let type_only = ref false
+let parse_only = ref false
+
 let maxrounds = ref 100
 let maxnodes = ref 100_000
 let debug = ref false
@@ -37,6 +39,28 @@ let verbose = ref 0
 let quiet = ref false
 let bitsolver = ref false
 let enumsolver = ref false
+
+
+let fuzz_s = ref 100000
+let fuzz_d = ref 10
+let fuzz_t = ref 10
+let fuzz_bench = ref 10
+let fuzz_bench_time = ref false
+let bench = ref false
+let bench_rand = ref false 
+
+let unDepth = ref 1
+let interpretProcs = ref 3
+let debug_interpreter = ref false
+let interpreter = ref false 
+let int_brab = ref (-1)
+let depth_ib = ref (-1)
+let rounds = ref (-1)
+let mrkv_brab = ref 0
+let int_brab_quiet = ref false
+let int_deadlock = ref false
+let fuzz = ref false
+  
 
 let incr_verbose () = incr verbose
 
@@ -68,6 +92,8 @@ let candidate_heuristic = ref (-1)
 let forward_sym = ref true
 
 let abstr_num = ref false
+
+  
 let num_range_low = ref 0
 let num_range_up = ref 0
 
@@ -123,6 +149,7 @@ let specs =
     "-quiet", Arg.Set quiet, " do not output search trace";
     "-nocolor", Arg.Set nocolor, " disable colors in ouptut";
     "-type-only", Arg.Set type_only, " stop after typing";
+    "-parse-only", Arg.Set parse_only, " stop after parsing";
     "-max-procs", Arg.Set_int max_proc, 
     "<nb> max number of processes to introduce (default 10)";
     "-depth", Arg.Set_int maxrounds, 
@@ -203,6 +230,18 @@ let specs =
     "<dir> set output directory for certificate traces to <dir>";
     (* Hidden options *)
     "-notyping", Arg.Set notyping, ""; (* Disable typing *)
+    "-interpret-proc", Arg.Set_int interpretProcs, " how many procs for interpreter";
+    "-interpreter", Arg.Set interpreter, " start interpreter";
+    "-fuzz", Arg.Set fuzz, " fuzz the model";
+    "-debug-interpret", Arg.Set debug_interpreter, " debug interpreter";
+    "-fuzz-states", Arg.Set_int fuzz_s, " set stopping limit";
+    "-fuzz-limit", Arg.Tuple [Arg.Set_int fuzz_s;
+			      Arg.Set_int fuzz_d;
+			      Arg.Set_int fuzz_t;], "<states> <depth> <time in s>";
+    "-fuzz-bench", Arg.Tuple [Arg.Set_int fuzz_bench;
+			      Arg.Set fuzz_bench_time], " time for fuzzer benches";
+    "-bench", Arg.Set bench, " benching version";
+    "-bench-random", Arg.Set bench_rand, " random forward exploration";
   ]
 
 let alspecs = Arg.align specs
@@ -218,7 +257,14 @@ let cin =
   | Some f -> file := f ; open_in f 
   | None -> stdin
 
+let depth_ib = !depth_ib
+let rounds = !rounds
+let mrkv_brab = !mrkv_brab
+let int_brab_quiet = !int_brab_quiet
+    
+
 let type_only = !type_only
+let parse_only = !parse_only
 let maxrounds = !maxrounds
 let maxnodes = !maxnodes
 let max_proc = !max_proc
@@ -265,6 +311,14 @@ let noqe = !noqe
 
 let cores = !cores
 
+
+let unDepth = !unDepth
+let interpreter = !interpreter
+let fuzz = !fuzz
+let debug_interpreter = !debug_interpreter
+let int_deadlock = !int_deadlock
+  
+
 let mode = !mode
 let smt_solver = !smt_solver
 
@@ -280,6 +334,17 @@ let post_strategy =
 
 let abstr_num = !abstr_num
 let num_range = (!num_range_low, !num_range_up)
+
+let set_num_range_low n = num_range_low := n
+let set_num_range_up n = num_range_up := n
+
+let get_num_range_up () = !num_range_up
+let get_num_range_low () = !num_range_low
+    
+let get_num_range () = (!num_range_low, !num_range_up)
+  
+let num_range = (!num_range_low, !num_range_up)
+let num_range_up = !num_range_up
 
 let quiet = !quiet
 let bitsolver = !bitsolver
@@ -303,6 +368,15 @@ let notyping = !notyping
 let trace = !trace
 let out_trace = !out
 
+let fuzz_s = !fuzz_s
+let fuzz_d = !fuzz_d
+let fuzz_t = !fuzz_t
+
+let fuzz_bench = float !fuzz_bench
+let fuzz_bench_time = !fuzz_bench_time
+let bench = !bench
+let bench_rand = !bench_rand
+
 
 (* Setters *)
 let set_js_mode b = js_mode := b
@@ -310,3 +384,14 @@ let set_js_mode b = js_mode := b
 
 (* Getters *)
 let js_mode () = !js_mode
+
+  
+(* Interpreter *)
+  
+let set_interpret_procs n = interpretProcs := n
+let get_interpret_procs () = if !int_brab > -1 then !int_brab else !interpretProcs
+
+let set_int_brab n = int_brab := n
+let get_int_brab () = !int_brab
+
+  

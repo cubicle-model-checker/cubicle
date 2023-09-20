@@ -25,6 +25,8 @@ module type S = sig
     | DuplicateSymb of Hstring.t (** raised when a symbol is already declared *)
     | UnknownType of Hstring.t (** raised when the given type is not declared *)
     | UnknownSymb of Hstring.t (** raised when the given symbol is not declared *)
+    | NotProcSubType of Hstring.t (** raised when the transition argument isn't a proc type*)
+
 
   exception Error of error
 
@@ -55,7 +57,16 @@ module type S = sig
     val type_proc : t
     (** The type processes (identifiers) *)
 
+      
+    val type_lock : t
+    val type_rlock : t
+    val type_condition : t
+    val type_semaphore : t
+
     (** {3 Declaring new types } *)
+
+    val declare_proc_subtype : Hstring.t -> unit
+    (** all subtypes are declared as Ty.Tint*)
 
     val declare : Hstring.t -> Hstring.t list -> unit
     (** {ul {- [declare n cstrs] declares a new enumerated data-type with
@@ -72,6 +83,9 @@ module type S = sig
         an enumerated data-type, otherwise returns [[]].*)
 
     val declared_types : unit -> t list
+
+    val is_proc_subtype : Hstring.t -> bool
+	    
 
   end
 

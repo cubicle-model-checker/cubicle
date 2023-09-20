@@ -22,9 +22,12 @@ module HSet = Hstring.HSet
 
 type op_comp = Eq | Lt | Le | Neq
 
-type sort = Glob | Constr | Var
+type sort = Glob | Constr | Var | SystemProcs
+
+type proc_act = PlusOne | MinusOne | CompProcs 
 
 
+    
 type const =
     ConstInt of Num.num | ConstReal of Num.num | ConstName of Hstring.t
 
@@ -87,6 +90,7 @@ type term =
   | Elem of Hstring.t * sort
   | Access of Hstring.t * Variable.t list
   | Arith of term * int MConst.t
+  | ProcManip of term list * proc_act
 (*  | NArith of cst VMap.t * cst*)
 
 

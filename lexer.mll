@@ -45,6 +45,19 @@
 	"number_procs", SIZEPROC;
 	"let", LET;
 	"in", IN;
+	"release", RELEASE;
+	"release_lock", RELEASELOCK;
+	"relase_rlock", RELEASERLOCK;
+	"release_semaphore", RELEASESEM;
+	"release_condition", RELEASECOND; 
+	"acquire_lock", ACQUIRELOCK;
+	"acquire_rlock", ACQUIRERLOCK;
+	"acquire_semaphore", ACQUIRESEM;
+	"acquire_condition", ACQUIRECOND;
+	"acquire", ACQUIRE; 
+	"wait", WAIT;
+	"notify", NOTIFY;
+        "notify_all", NOTIFYALL;
       ]
 	       
   let newline lexbuf =
@@ -96,8 +109,8 @@ rule token = parse
 	with Not_found ->
 	 if id = "bool" then LIDENT "mbool" else LIDENT id }
   | '#'(['1'-'9']['0'-'9']* as n) as id
-      { if int_of_string n > !Options.size_proc then raise Parsing.Parse_error;
-        CONSTPROC id }
+      { (*if int_of_string n > !Options.size_proc then raise Parsing.Parse_error;*)
+        CONSTPROC("#",n) }
   | mident as id {
 		  if id = "True" then MIDENT "@MTrue"
 		  else if id = "False" then MIDENT "@MFalse"

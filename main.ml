@@ -61,8 +61,12 @@ let _ =
   let lb = from_channel cin in 
   try
     let s = Parser.system Lexer.token lb in
+    if parse_only then exit 0;
+
     let system = Typing.system s in
     if type_only then exit 0;
+    if interpreter then Interpret_top.setup_env system s;
+    if fuzz then Interpret_heuristics.init system s;
     if refine_universal then
       printf "@{<b>@{<fg_yellow>Warning@} !@}\nUniversal guards refinement \
               is an experimental feature. Use at your own risks.\n@.";
@@ -119,6 +123,8 @@ let _ =
     if verbose > 0 then eprintf "Backtrace:@\n%s@." backtrace;
 
     exit 1
+
+  | Interpret_heuristics.Done -> exit 1
 
   | Smt.Error e ->
 

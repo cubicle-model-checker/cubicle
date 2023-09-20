@@ -164,11 +164,13 @@ type parraye_update = {
 type ptransition = {
   ptr_lets : (Hstring.t * term) list;
   ptr_name : Hstring.t;
-  ptr_args : Variable.t list;
+  ptr_args : (Variable.t * Hstring.t option) list;
+  ptr_process : Variable.t option;
   ptr_reqs : cformula * loc ;
   ptr_assigns : (Hstring.t * pglob_update * loc) list;
   ptr_upds : pupdate list;
   ptr_nondets : Hstring.t list;
+  ptr_locks : Ast.lock_uses list * loc; 
   ptr_loc : loc;
 }
 
@@ -595,7 +597,8 @@ let encode_array_update up =
   }*)
 
 let encode_ptransition tr =
-  let dguards = guard_of_formula tr.ptr_args tr.ptr_reqs in
+  let ptr_args_procs = List.map fst tr.ptr_args in
+  let dguards = guard_of_formula ptr_args_procs tr.ptr_reqs in
   let tr_assigns =
     List.map (fun (i, pgu,loc) -> (i, encode_pglob_update pgu,loc)) tr.ptr_assigns in 
   let tr_upds = List.map encode_pupdate tr.ptr_upds in
@@ -603,11 +606,13 @@ let encode_ptransition tr =
   List.rev_map (fun (req, ureq) ->
       {  tr_name = tr.ptr_name;
          tr_args = tr.ptr_args;
+	 tr_process = tr.ptr_process;
          tr_reqs = (req, snd tr.ptr_reqs);
          tr_ureq = ureq;
 	 tr_lets = tr_lets;
          tr_assigns;
          tr_upds;
+	 tr_locks = tr.ptr_locks;	 
          tr_nondets = tr.ptr_nondets;
          tr_loc = tr.ptr_loc }
     ) dguards
@@ -799,6 +804,7 @@ let print_trans fmt =
   List.iter
     (fun { tr_name; tr_args; tr_reqs; tr_ureq; tr_lets;
            tr_assigns; tr_upds; tr_nondets } ->
+      let tr_args = List.map fst tr_args in (*modified to remove subsorts*)
       fprintf fmt
         "@[<v>@{<fg_magenta>transition@} @{<fg_cyan_b>%a@} (%a)@,\
          %a\
@@ -830,6 +836,7 @@ let print_system fmt { type_defs;
   let type_defs =
     List.fold_left (fun (constrs) -> function
       | Constructors i -> i::constrs
+      | _ -> constrs (*TODO*)
     ) ([]) type_defs in
   print_type_defs fmt type_defs;
   pp_print_newline fmt ();

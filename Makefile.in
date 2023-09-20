@@ -42,7 +42,7 @@ OCAMLVERSION = @OCAMLVERSION@
 OCAMLWIN32 = @OCAMLWIN32@
 EXE = @EXE@
 
-INCLPATHS = $(FUNCTORYLIB) $(Z3LIB) -I common/ -I smt/
+INCLPATHS = $(FUNCTORYLIB) $(Z3LIB) -I common/ -I smt/ -I interpreter/
 INCLUDES = $(INCLPATHS) $(Z3CCFLAGS)
 
 BFLAGS = -dtypes -g $(INCLUDES) -annot
@@ -111,12 +111,17 @@ SMTCMO = smt/exception.cmo smt/symbols.cmo \
 COMMONCMO = common/timer.cmo common/hashcons.cmo common/hstring.cmo\
 	    common/vec.cmo common/heap.cmo common/iheap.cmo
 
+INTERPRETCMO = interpreter/interpret_lexer.cmo interpreter/interpret.cmo interpreter/interpret_types.cmo \
+               interpreter/interpret_errors.cmo interpreter/interpret_calc.cmo \
+               interpreter/interpret_heuristics.cmo interpreter/interpret_top.cmo
+
 CMO = version.cmo options.cmo \
       $(COMMONCMO) $(SMTCMO) \
       util.cmo variable.cmo types.cmo \
       cube.cmo node.cmo pretty.cmo ptree.cmo parser.cmo lexer.cmo \
       instantiation.cmo dot.cmo cubetrie.cmo prover.cmo safety.cmo fixpoint.cmo\
       pre.cmo forward.cmo enumerative.cmo \
+      $(INTERPRETCMO) \
       muparser_globals.cmo muparser.cmo mulexer.cmo murphi.cmo \
       approx.cmo \
       stats.cmo bwd.cmo brab.cmo typing.cmo trace.cmo main.cmo
@@ -126,7 +131,7 @@ CMX = $(CMO:.cmo=.cmx)
 MAINCMO = $(CMO) main.cmo
 MAINCMX = $(MAINCMO:.cmo=.cmx)
 
-GENERATED = version.ml parser.ml parser.mli lexer.ml muparser.mli muparser.ml mulexer.ml smt/z3wrapper.ml
+GENERATED = version.ml parser.ml parser.mli lexer.ml interpreter/interpret_lexer.ml muparser.mli muparser.ml mulexer.ml smt/z3wrapper.ml
 
 byte: $(NAME).byte
 opt: $(NAME).opt
@@ -183,7 +188,8 @@ version.ml: config.status
 headers:
 	headache -c doc/headache_config.txt -h doc/cubicle_header.txt \
 		Makefile.in configure.in *.ml *.ml[ily] \
-		common/*.ml common/*.mli smt/*.ml smt/*.mli
+		common/*.ml common/*.mli smt/*.ml smt/*.mli \
+                interpreter/*.ml interpreter/*.mli 
 
 # Emacs tags
 ############
@@ -237,8 +243,8 @@ clean::
 
 .depend depend:: $(GENERATED)
 	@rm -f .depend
-	@$(OCAMLDEP) -slash -I common/ -I smt/ \
-	common/*.ml common/*.mli smt/*.ml smt/*.mli \
+	@$(OCAMLDEP) -slash -I common/ -I smt/ -I interpreter/ \
+	common/*.ml common/*.mli smt/*.ml smt/*.mli interpreter/*.ml interpreter/*.mli \
 	*.ml *.mli > .depend
 
 
@@ -292,6 +298,8 @@ COMMONFILES = common/hashcons.ml common/hashcons.mli common/heap.ml\
 
 AELIGHTFILES = alt-ergo-light/Makefile.in alt-ergo-light/.depend\
 	       alt-ergo-light/configure.in alt-ergo-light/configure
+
+INTERPRETFILES = interpreter/interpret.ml interpreter/interpret.mli
 
 FILES = approx.ml approx.mli ast.mli ptree.mli ptree.ml\
         brab.ml brab.mli bwd.ml bwd.mli\

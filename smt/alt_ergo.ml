@@ -20,6 +20,8 @@ type error =
   | DuplicateSymb of Hstring.t
   | UnknownType of Hstring.t
   | UnknownSymb of Hstring.t
+  | NotProcSubType of Hstring.t
+
 
 exception Error of error
 
@@ -31,7 +33,9 @@ let report fmt = function
   | UnknownType s ->
       fprintf fmt "unknown type %a" Hstring.print s
   | UnknownSymb s ->
-      fprintf fmt "unknown symbol %a" Hstring.print s
+    fprintf fmt "unknown symbol %a" Hstring.print s
+  | NotProcSubType s ->
+    fprintf fmt "%a is not a proc subtype" Hstring.print s
 
 
 type check_strategy = Lazy | Eager
@@ -41,6 +45,8 @@ module HSet = Hstring.HSet
 
 let decl_types = H.create 17
 let decl_symbs = H.create 17
+let decl_sub_procs = H.create 17
+
 
 let htrue = Hstring.make "True"
 let hfalse = Hstring.make "False"
@@ -70,6 +76,32 @@ module Type = struct
     let tproc = Hstring.make "proc" in
     H.add decl_types tproc Ty.Tint;
     tproc
+
+      
+  let type_lock = 
+    let tlock = Hstring.make "lock" in
+    H.add decl_types tlock Ty.Tbool;
+    tlock
+
+  let type_rlock = 
+    let rlock = Hstring.make "rlock" in
+    H.add decl_types rlock Ty.Tbool;
+    rlock
+
+  let type_condition =
+    let tcond = Hstring.make "condition" in
+    H.add decl_types tcond Ty.Tbool;
+    tcond
+
+  let type_semaphore =
+    let tsem = Hstring.make "semaphore" in
+    H.add decl_types tsem Ty.Tint;
+    tsem
+
+  let declare_proc_subtype ty =
+    if H.mem decl_types ty then  raise (Error (DuplicateTypeName ty));
+    H.add decl_types ty Ty.Tint;
+    H.add decl_sub_procs ty Ty.Tint
 
   let declare_constructor ty c = 
     if H.mem decl_symbs c then raise (Error (DuplicateSymb c));
@@ -110,6 +142,21 @@ module Type = struct
 
   let declared_types () =
     H.fold (fun ty _ acc -> ty :: acc) decl_types []
+      
+  let is_proc_subtype st =
+    try
+      let ty = H.find decl_sub_procs st in
+      match ty with
+	| Ty.Tint -> true
+	| _ -> false
+    with Not_found ->
+      begin
+	if H.mem decl_types st then
+	  raise (Error (NotProcSubType st))
+	    
+	else raise (Error (UnknownType st))
+	  
+      end 
 
 end
 

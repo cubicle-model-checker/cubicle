@@ -88,11 +88,13 @@ type parraye_update = {
 type ptransition = {
   ptr_lets : (Hstring.t * term) list;
   ptr_name : Hstring.t;
-  ptr_args : Variable.t list;
+  ptr_args : (Variable.t * Hstring.t option) list;
+  ptr_process : Variable.t option;
   ptr_reqs : cformula * loc;
   ptr_assigns : (Hstring.t * pglob_update * loc) list;
   ptr_upds : pupdate list;
   ptr_nondets : Hstring.t list;
+  ptr_locks : Ast.lock_uses list * loc; 
   ptr_loc : loc;
 }
 

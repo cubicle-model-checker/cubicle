@@ -26,6 +26,8 @@ val cin : in_channel
 
 val max_proc : int
 val type_only : bool
+val parse_only: bool
+
 val maxrounds : int
 val maxnodes : int
 
@@ -54,6 +56,7 @@ val candidate_heuristic : int
 val forward_sym : bool
 
 val abstr_num : bool
+val num_range_up : int
 val num_range : int * int
 
 val post_strategy : int
@@ -90,8 +93,43 @@ val notyping : bool
 val trace : trace
 val out_trace : string
 
+val unDepth : int
+val interpreter : bool
+val fuzz : bool
+val debug_interpreter : bool
+val depth_ib : int
+val rounds : int
+val mrkv_brab : int
+val int_brab_quiet : bool
+val int_deadlock : bool 
+
+val fuzz_s : int
+val fuzz_d : int
+val fuzz_t : int
+
+val fuzz_bench : float
+val fuzz_bench_time : bool
+val bench : bool
+val bench_rand : bool
+
 
 val js_mode : unit -> bool
 
 
 val set_js_mode : bool -> unit
+
+
+val set_interpret_procs : int -> unit
+val get_interpret_procs : unit -> int
+
+  
+val set_int_brab : int -> unit
+val get_int_brab : unit -> int
+
+val set_num_range_low : int -> unit
+val set_num_range_up : int -> unit
+val get_num_range_up : unit -> int
+val get_num_range_low : unit -> int
+
+
+val get_num_range : unit -> int * int

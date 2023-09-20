@@ -128,7 +128,8 @@ module AltErgo = struct
     | Access (a, li) ->
        fprintf fmt "%a%s(%a)" Hstring.print a (spr prime) print_args li
     | Arith (x, cs) -> 
-       fprintf fmt "@[%a%a@]" (print_term ~prime) x print_cs cs
+      fprintf fmt "@[%a%a@]" (print_term ~prime) x print_cs cs
+    | _ -> () (*TODO*)
 
   let rec print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"
@@ -387,7 +388,7 @@ module AltErgo = struct
   let print_transtion s fmt {tr_info = t} =
     fprintf fmt "(* transition %a *)\n" Hstring.print t.tr_name;
     fprintf fmt "(";
-    let args =  t.tr_args in
+    let args =  List.map fst t.tr_args in (*MODIFIED subsorts*)
     begin match args with
 	  | [] -> ()
 	  | _  -> fprintf fmt "exists %a:int. %a\n" 
@@ -671,7 +672,8 @@ module Why3 = struct
     | Access (a, li) ->
        fprintf fmt "(%a%s %a)" print_name a (spr prime) print_args li
     | Arith (x, cs) -> 
-       fprintf fmt "%a%a" (print_term ~prime) x (print_cs ~arith:true) cs
+      fprintf fmt "%a%a" (print_term ~prime) x (print_cs ~arith:true) cs
+    | _ -> () (*TODO*)
 
   let rec print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"
@@ -922,7 +924,7 @@ module Why3 = struct
   let print_transition s fmt {tr_info = t} =
     fprintf fmt "(* transition %a *)@\n" Hstring.print t.tr_name;
     fprintf fmt "(";
-    let args =  t.tr_args in
+    let args =  List.map fst t.tr_args in (*MODIFIED subsorts*)
     begin match args with
 	  | [] -> fprintf fmt "@,"
 	  | _  -> fprintf fmt "exists %a:int. %a@\n" 
@@ -1470,7 +1472,8 @@ module Why3_INST = struct
     | Access (a, li) ->
        fprintf fmt "(%a%s %a)" print_name a (spr prime) print_args li
     | Arith (x, cs) -> 
-       fprintf fmt "@[(%a%a)@]" (print_term ~prime) x print_cs cs
+      fprintf fmt "@[(%a%a)@]" (print_term ~prime) x print_cs cs
+    | _ -> () (*TODO*)
 
   let rec print_atom ~prime fmt = function
     | Atom.True -> fprintf fmt "true"
@@ -1723,7 +1726,7 @@ module Why3_INST = struct
   let print_transition s fmt {tr_info = t} =
     fprintf fmt "(* transition %a *)\n" Hstring.print t.tr_name;
     fprintf fmt "(";
-    let args =  t.tr_args in
+    let args =  List.map fst t.tr_args in (*MODIFIED subsorts*)
     begin match args with
 	  | [] -> ()
 	  | _  -> fprintf fmt "exists %a:int. %a\n" 
