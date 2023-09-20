@@ -234,6 +234,7 @@ clean::
 	@rm -f *.cm[iox] *.o *~ *.annot
 	@rm -f common/*.cm[iox] common/*.o common/*~ common/*.annot
 	@rm -f smt/*.cm[iox] smt/*.o smt/*~ smt/*.annot
+	@rm -f interpreter/*.cm[iox] interpreter/*.o interpreter/*~ interpreter/*.annot
 	@rm -f $(GENERATED) *.output
 	@rm -f $(NAME).byte $(NAME).opt
 	@rm -f functory.*
