@@ -321,9 +321,9 @@ module Make
     let b = ((Int (-1)) */ v) // a in
     let u =
       if a >/ (Int 0) then
-	Intervals.new_borne_sup expl b is_le uints
+	Intervals.new_borne_sup expl b ~is_le uints
       else   
-	Intervals.new_borne_inf expl b is_le uints in
+	Intervals.new_borne_inf expl b ~is_le uints in
     let env = { env with monomes = MX.add x (u, use_x) env.monomes } in
     let env =  tighten_non_lin x use_x env expl in
     env, (find_eq eqs x u env)
@@ -341,9 +341,9 @@ module Make
       let c = minus_num c in
       let u =
 	if change then
-          Intervals.new_borne_inf expl c is_le (Intervals.undefined ty)
+          Intervals.new_borne_inf expl c ~is_le (Intervals.undefined ty)
 	else
-	  Intervals.new_borne_sup expl c is_le (Intervals.undefined ty) in
+	  Intervals.new_borne_sup expl c ~is_le (Intervals.undefined ty) in
       let u, pu =
 	try 
 	  let pu = MP.find p env.polynomes in

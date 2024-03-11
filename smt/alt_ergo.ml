@@ -500,7 +500,7 @@ module Make (Options : sig val profiling : bool end) = struct
     eprintf "@.";
     try 
       clear ();
-      CSolver.assume uc 0;
+      CSolver.assume uc ~cnumber:0;
       CSolver.solve ();
       eprintf "Not an unsat core !!!@.";
       assert false
@@ -535,7 +535,7 @@ module Make (Options : sig val profiling : bool end) = struct
     Time.start ();
     try
       let cnf = (Formula.make_cnf f) in
-      CSolver.assume cnf id;
+      CSolver.assume cnf ~cnumber:id;
       Time.pause ()
     with Solver.Unsat ex ->
       Time.pause ();
