@@ -1,0 +1,46 @@
+type t = Idle | Want_1 | Want_2 | Crit_1 | Crit_2
+
+var T1 : proc
+var T2 : proc
+array PC[proc] : t
+array R[proc] : proc
+
+init (i) { PC[i] = Idle }
+
+unsafe (i j) { PC[i] = Crit_1 && PC[j] = Crit_1 }
+unsafe (i j) { PC[i] = Crit_2 && PC[j] = Crit_2 }
+unsafe (i) { PC[i] = Crit_1 && PC[i] = Crit_2 }
+
+transition req_etage1 (i)
+requires { PC[i] = Idle }
+{ PC[i] := Want_1;
+}
+
+transition req_etage2(i)
+requires { PC[i] = Idle }
+{ PC[i] := Want_2; }
+
+
+transition enter_etage1 (i)
+requires { PC[i] = Want_1 && T1 = i}
+{ PC[i] := Crit_1; }
+
+transition enter_etage2 (i)
+requires { PC[i] = Want_2 && T2 = i}
+{ PC[i] := Crit_2; }
+
+transition exit_etage1 (i)
+requires { PC[i] = Crit_1 }
+{ 
+  T1 := ? ;
+  PC[i] := Idle; 
+}
+
+transition exit_etage2 (i)
+requires { PC[i] = Crit_2 }
+{ 
+  T2 := ? ;
+  PC[i] := Idle; 
+}
+
+

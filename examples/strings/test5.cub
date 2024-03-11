@@ -1,0 +1,8 @@
+var X : string
+
+init () { X = "bon" }
+
+transition t()
+requires { X = "bon"}
+{ X := "toto" }
+

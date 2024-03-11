@@ -1,0 +1,30 @@
+type t = Idle | Want | Crit
+
+array PC[proc] : t
+array Turn[proc] : bool
+
+init (i) { PC[i] = Idle && Turn[i] = False }
+
+unsafe (i j) {PC[i] = Crit && PC[j] = Crit }
+
+transition start(j)
+requires { forall i. Turn[i] = False }
+{ Turn[j] := True }
+
+transition req (i)
+requires { PC[i] = Idle }
+{ PC[i] := Want;
+}
+
+transition enter (i)
+requires { PC[i] = Want && Turn[i] = True}
+{ PC[i] := Crit; }
+
+transition exit (i j)
+requires { PC[i] = Crit }
+{ 
+  Turn[k] := case |k = j : True | _ : False;
+  PC[i] := Idle; 
+}
+
+

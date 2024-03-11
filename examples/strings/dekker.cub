@@ -1,0 +1,35 @@
+type role = Principal | Ressource
+type t = Idle | Want | Crit
+
+array Role[proc] : role
+array PC[proc] : t
+array R[proc] : proc
+array Turn[proc] : proc
+
+init (i) { PC[i] = Idle }
+
+unsafe (i j r) {
+       Role[r] = Ressource && Role[i] = Principal && Role[j] = Principal &&
+       R[i] = r && R[j] = r &&
+       PC[i] = Crit && PC[j] = Crit }
+
+transition req (i r)
+requires { Role[i] = Principal && PC[i] = Idle && Role[r] = Ressource}
+{ PC[i] := Want;
+  R[i] := r;
+}
+
+transition enter (i r)
+requires { Role[i] = Principal && PC[i] = Want && R[i] = r &&
+	   Role[r] = Ressource && Turn[r] = i}
+{ PC[i] := Crit; }
+
+transition exit (i r k)
+requires { Role[i] = Principal && PC[i] = Crit && R[i] = r && Role[r] = Ressource &&
+	   Role[k] = Principal  }
+{ 
+  Turn[r] := k ;
+  PC[i] := Idle; 
+}
+
+

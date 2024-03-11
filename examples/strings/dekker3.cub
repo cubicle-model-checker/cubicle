@@ -1,0 +1,28 @@
+type pc = Idle | Want | Crit
+
+array PC[proc] : pc
+array R[proc] : string
+
+array T[proc] : regexp
+
+init (i:proc) { PC[i] = Idle }
+
+unsafe (i j) { PC[i] = Crit && PC[j] = Crit && R[i] = R[j] }
+
+transition req_etage (i:proc, r:string)
+requires { PC[i] = Idle }
+{ PC[i] := Want;
+  R[i] :=: r;
+}
+
+transition enter (i)
+requires { PC[i] = Want && R[i] <: T[i] }
+{ PC[i] := Crit; }
+
+transition exit (i j)
+requires { PC[i] = Crit }
+{ 
+  PC[i] := Idle;
+}
+
+
