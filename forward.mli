@@ -78,4 +78,4 @@ val conflicting_from_trace : t_system -> trace -> SAtom.t list
 val uguard_dnf : 
   Variable.subst ->
   Variable.t list -> Variable.t list ->
-  (Variable.t * SAtom.t list) list -> SAtom.t list list
+  (Variable.t * SAtom.t list * 'a) list -> SAtom.t list list

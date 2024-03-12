@@ -103,7 +103,8 @@ let rec find_update a li = function
 
 exception Remove_lit_var of Hstring.t
 
-let rec find_assign memo tr = function
+let rec find_assign memo tr tt =
+  match tt with 
   | Elem (x, sx) -> 
      let gu =
        if H.list_mem x tr.tr_nondets then 
@@ -115,7 +116,7 @@ let rec find_assign memo tr = function
 	    memo := (Hstring.view x,nv) :: !memo;
 	    nv
        else 
-	 try H.list_assoc x tr.tr_assigns
+	 try fst (H.list_assoc_triplet x tr.tr_assigns)
          with Not_found -> UTerm (Elem (x, sx))
      in
      begin
@@ -197,21 +198,22 @@ let postpone args p np =
   let sa2 = SAtom.filter (Atom.has_vars args) np in
   SAtom.equal sa2 sa1
 
-let uguard sigma args tr_args = function
-  | [] -> [SAtom.empty]
-  | [j, dnf] ->
+let uguard sigma args tr_args tr_ureq =
+  match tr_ureq with
+    | [] -> [SAtom.empty]
+    | [j, dnf, _] ->
       let uargs = List.filter (fun a -> not (H.list_mem a tr_args)) args in
       List.fold_left 
 	(fun lureq z ->
 	   let m = List.map (SAtom.subst ((j, z)::sigma)) dnf in
 	   List.fold_left 
 	     (fun acc sa -> 
-		(List.map (fun zy-> SAtom.union zy sa) m) @ acc ) [] lureq
+	       (List.map (fun zy-> SAtom.union zy sa) m) @ acc ) [] lureq
 	)
 	[SAtom.empty]
 	uargs
-
-  | _ -> assert false
+	
+    | _ -> assert false
 
 let add_list n l =
   if List.exists (fun n' -> Node.subset n' n) l then l
@@ -305,7 +307,7 @@ let make_cubes_new (ls, post) rargs s tr cnp =
 let pre { tr_info = tri; tr_tau = tau; tr_reset = reset } unsafe =
   (* let tau = tr.tr_tau in *)
   let pre_unsafe = 
-    SAtom.union tri.tr_reqs 
+    SAtom.union (fst tri.tr_reqs) 
       (SAtom.fold (fun a -> SAtom.add (pre_atom tau a)) unsafe SAtom.empty)
   in
   let pre_u = Cube.create_normal pre_unsafe in

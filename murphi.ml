@@ -466,7 +466,7 @@ let print_swts ot fmt swts =
   end
 
 
-let print_assign fmt (v, up) =
+let print_assign fmt (v, up, _) =
   let tv = Elem (v, Glob) in
   match up with
   | UTerm t ->
@@ -523,7 +523,7 @@ let rec print_is_other fmt (v, args) = match args with
       print_is_other (v, ra)
   
 
-let print_forall_other args fmt (v, dnf) =
+let print_forall_other args fmt (v, dnf,_) =
   let close_forall = print_forall fmt v in
   print_is_other fmt (v, args);
   fprintf fmt "(%a)" print_dnf dnf;
@@ -537,10 +537,10 @@ let rec print_ureqs args fmt = function
     fprintf fmt "%a@ &@ %a" (print_forall_other args) u (print_ureqs args) ru
 
 
-let print_guard fmt { tr_args; tr_reqs; tr_ureq } =
+let print_guard fmt { tr_args; tr_reqs = (reqs,_); tr_ureq } =
   (* fprintf fmt "  @[<v>"; *)
-  print_satom fmt tr_reqs;
-  if tr_ureq <> [] && not(SAtom.is_empty tr_reqs) then fprintf fmt " &@ ";
+  print_satom fmt reqs;
+  if tr_ureq <> [] && not(SAtom.is_empty reqs) then fprintf fmt " &@ ";
   print_ureqs tr_args fmt tr_ureq
   (* fprintf fmt "@]\n" *)
 
@@ -765,9 +765,9 @@ let ordered_procs_globu = function
 let ordered_procs_up u = ordered_procs_swts u.up_swts
 
 let ordered_procs_trans { tr_info = t } =
-  ordered_procs_satom t.tr_reqs
-  || List.exists (fun (_, dnf) -> ordered_procs_dnf dnf) t.tr_ureq
-  || List.exists (fun (_, gu) -> ordered_procs_globu gu) t.tr_assigns
+  ordered_procs_satom (fst t.tr_reqs)
+  || List.exists (fun (_, dnf, _) -> ordered_procs_dnf dnf) t.tr_ureq
+  || List.exists (fun (_, gu, _) -> ordered_procs_globu gu) t.tr_assigns
   || List.exists ordered_procs_up t.tr_upds
 
 let ordered_procs_sys s =
