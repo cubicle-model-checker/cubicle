@@ -1289,7 +1289,11 @@ let further_bfs code node transitions all_procs all_unsafes =
 	  end
 	end 
 	) possible;
-      if env_d > !curr_depth then incr curr_depth    
+    
+	
+	
+	
+	if env_d > !curr_depth then incr curr_depth    
     done;
     (*Queue.iter (fun (_,x) -> incr pool_size; Hashtbl.add remaining_pool (fresh ()) x) to_do;*)
     finish_queue to_do transitions all_procs;
@@ -1874,6 +1878,21 @@ let print_deadlocks fmt () =
   List.iter (fun dead ->
     reconstruct_trace_file fmt parents dead ) !dead_states    
 
+let print_parents fmt () =
+	(* Format.fprintf fmt "\n==== PARENTS ====:\n"; *)
+	Hashtbl.iter (fun k el ->
+		let b, o, i = el in 
+		Format.fprintf fmt "\nParents\n";
+		Format.fprintf fmt "State Hash: %d\n" k;
+		Format.fprintf fmt "Init: %b\n" b;
+		let _ = 
+			match o with 
+			| None -> Format.fprintf fmt "Transition to get here: None\n"
+			| Some (s,_) -> Format.fprintf fmt "Transition to get here: %a\n" Hstring.print s.tr_name
+		in 
+		Format.fprintf fmt "Parent hash: %d@." i;
+		Format.fprintf fmt "%d\n" k) parents
+
     
 let write_file name fn = 
   let f = Format.formatter_of_out_channel fn in
@@ -1884,7 +1903,8 @@ let write_file name fn =
                   Remaining pool: %d\n\
                   %a\n\
                   %a\n\
-                  %a@."
+                 
+				  %a@."
     name
     print_time (TimerFuzz.get ())
     (Options.get_interpret_procs ())
@@ -1893,6 +1913,7 @@ let write_file name fn =
     print_transitions ()
     print_unsafes ()
     print_deadlocks ()
+	(* print_parents() *)
 
 let write_states_to_file name =
   let open_file = open_out (name^".states") in
@@ -1903,6 +1924,12 @@ let write_states_to_file name =
       key
       print_interpret_env el.state ) bfs_visited;
   close_out open_file 
+
+  let write_parents_to_file name = 
+	let open_file = open_out (name^".parents") in 
+	let f = Format.formatter_of_out_channel open_file in 
+	Format.fprintf f "%a@." print_parents ();
+	close_out open_file
 
         
 let fuzz original_env transitions procs all_unsafes t_transitions =
@@ -1919,10 +1946,11 @@ let fuzz original_env transitions procs all_unsafes t_transitions =
       Format.printf "├─States seen        : %d@." !visit_count;
       Hashtbl.iter (fun key el -> Format.eprintf "%a:--> %d@." Hstring.print key el) fuzz_tr_count;
       let j = Hashtbl.stats fuzz_tr_count in
-      Format.eprintf "--> %d@." j.num_bindings;
+      Format.eprintf "\n Total system transitions --> %d@." j.num_bindings;
       write_file dfile open_file;
       close_out open_file;
       write_states_to_file dfile;
+	  write_parents_to_file dfile;
     end ;
   raise Done
   
@@ -2349,7 +2377,7 @@ let init tsys sys =
       Options.set_interpret_procs fp;
       Options.set_int_brab fp;
       sys_procs := fp;
-      Format.eprintf "Sys procs baby: %d@." !sys_procs; 
+      (* Format.eprintf "Sys procs baby: %d@." !sys_procs;  *)
       fuzz original_env transitions procs all_unsafes t_transitions
     end 
 
