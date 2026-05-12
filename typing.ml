@@ -335,8 +335,12 @@ let transitions =
 	    end )
 		
 	args in (*MODIFIED subsorts*)
-      if List.mem t.tr_name !h then 
-	error (DuplicateName t.tr_name) loc;
+	if List.mem t.tr_name !h then
+	begin
+    let () = List.iter (fun lll -> eprintf "%a@." Hstring.print lll) !h in
+    let () = eprintf "%a@." Hstring.print t.tr_name in
+	error (DuplicateName t.tr_name) loc
+	end;
       h := t.tr_name::!h;
       unique (fun x-> error (DuplicateName x) loc) args; 
       atoms loc args t.tr_reqs;

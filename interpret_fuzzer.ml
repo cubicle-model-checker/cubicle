@@ -84,6 +84,12 @@ let print_time fmt sec =
   Format.fprintf fmt "%dm%2.3fs" (int_of_float minu) extrasec
 
 
+let print_interpret_env_ai fmt (env,locks, cond, sem)=
+  Env.iter(fun k {value = v} ->
+    Format.fprintf fmt "%a : %a\n" Term.print k print_val v
+  ) env
+
+
 let print_interpret_env fmt (env,locks, cond, sem)=
   Env.iter(fun k {value = v} ->
     Format.fprintf fmt "%a : %a\n" Term.print k print_val v
@@ -1890,8 +1896,7 @@ let print_parents fmt () =
 			| None -> Format.fprintf fmt "Transition to get here: None\n"
 			| Some (s,_) -> Format.fprintf fmt "Transition to get here: %a\n" Hstring.print s.tr_name
 		in 
-		Format.fprintf fmt "Parent hash: %d@." i;
-		Format.fprintf fmt "%d\n" k) parents
+		Format.fprintf fmt "Parent hash: %d@." i) parents
 
     
 let write_file name fn = 
@@ -1922,7 +1927,7 @@ let write_states_to_file name =
     Format.fprintf f "[%d]\n\
                       %a@."
       key
-      print_interpret_env el.state ) bfs_visited;
+      print_interpret_env_ai el.state ) bfs_visited;
   close_out open_file 
 
   let write_parents_to_file name = 
@@ -2293,7 +2298,7 @@ let init tsys sys =
     flush stdout; Format.printf "> %!";
     let inp = read_int_opt () in
     match inp with
-      | Some n -> if n <> 0 && n < pick_min then
+      | Some n -> if false (*n <> 0 && n < pick_min*) then
 	  begin
 	    Format.printf "Invalid input. Number must be greater than or equal to %d@." pick_min;
 	    decide ()

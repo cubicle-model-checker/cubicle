@@ -434,7 +434,8 @@ let force_procs_forward code glob_env trans all_procs p_proc all_unsafes =
       | Stdlib.Sys.Break | Exit ->  steps := depth; raise Exit
   done ;
   if not Options.bench then
-  Format.printf "Force proc: new states seen: %d. New added to pool: %d Removed from pool %d@." !new_seen !add_pool !rem_pool
+  Format.printf "Force proc: new states seen: %d. New added to pool: %d Removed from pool %d@." !new_seen !add_pool !rem_pool;
+	!new_seen, !steps
 
 
 let markov_entropy code glob all_procs trans =
@@ -591,7 +592,8 @@ let markov_entropy code glob all_procs trans =
 	raise Exit	
   done;
   if not Options.bench then
-  Format.printf "Markov: new seen states: %d, added to pool: %d, Removed from pool %d@." !new_seen !pool !rem_pool
+  Format.printf "Markov: new seen states: %d, added to pool: %d, Removed from pool %d@." !new_seen !pool !rem_pool;
+	!new_seen, !taken
   
 
 
@@ -872,7 +874,8 @@ let run_smart code node all_procs trans unsafes =
       | Stdlib.Sys.Break | Exit ->  steps := max_depth; raise Exit
   done ;
   if not Options.bench then
-  Format.printf "Smart states seen: %d. New added to pool: %d Removed from pool %d@." !new_seen !add_pool !rem_pool
+  Format.printf "Smart states seen: %d. New added to pool: %d Removed from pool %d@." !new_seen !add_pool !rem_pool;
+	!new_seen, !steps
 
 
   
@@ -889,6 +892,9 @@ let further_bfs code node transitions all_procs all_unsafes =
     let old_pool = ref !pool_size in
     let rem_pool = ref 0 in 
     let time_limit = 5.0 in
+
+	let total_steps = ref 0 in
+
     let to_do = Queue.create () in
     Queue.push ((hash_full_env node.state),0,node.state) to_do;
     let time = Unix.time () in
@@ -904,6 +910,7 @@ let further_bfs code node transitions all_procs all_unsafes =
       let possible = all_possible_transitions env transitions all_procs false in
       decr rem;
       List.iter (fun (at,at_p) ->
+	  incr total_steps;
 	let e = apply_transition at_p at.tr_name transitions env in
 	let he = hash_full_env e in
 
@@ -999,6 +1006,7 @@ let further_bfs code node transitions all_procs all_unsafes =
     finish_queue to_do transitions all_procs;
     if not Options.bench then
     Format.printf "Further BFS: %d new states added to visited, %d added to remaining pool@." !curr !rem;
+		!curr, (max !total_steps 1)
   with
     | Stdlib.Sys.Break | Exit -> raise Exit
     
@@ -1327,7 +1335,8 @@ let run_forward code node all_procs trans unsafes =
       | Stdlib.Sys.Break | Exit ->  steps := max_depth; raise Exit
   done;
   if not Options.bench then
-  Format.printf "New states seen: %d. New added to pool: %d Removed from pool %d@." !new_seen !add_pool !rem_pool
+  Format.printf "New states seen: %d. New added to pool: %d Removed from pool %d@." !new_seen !add_pool !rem_pool;
+	!new_seen, !steps
     
 
 let do_new_exit code node all_procs trans unsafes =
@@ -1340,7 +1349,7 @@ let do_new_exit code node all_procs trans unsafes =
     if (!visit_count) >= Options.fuzz_s then
       begin
 	if not Options.bench then 
-	Format.printf "\n\nSet limit reached@."; raise Exit
+	  Format.printf "\n\nSet limit reached@."; raise Exit
       end;
     TimerFuzz.pause () ;
     if Options.fuzz_bench_time && (TimerFuzz.get ()) >= Options.fuzz_bench then raise Exit
@@ -1355,7 +1364,7 @@ let do_new_exit code node all_procs trans unsafes =
 	  Hashtbl.remove remaining_pool code;
 	  decr pool_size;
 	  if not Options.bench then
-	  Format.printf "Removed state from pool.@.";
+	    Format.printf "Removed state from pool.@.";
 	  raise StopExit
 	end 
     in
@@ -1385,7 +1394,7 @@ let do_new_exit code node all_procs trans unsafes =
       end ;
     let new_env = apply_transition apply_procs apply trans env in
     let new_hash = hash_full_env new_env in 
-    try
+    begin try
       let s = Hashtbl.find bfs_visited new_hash in
       let sn = 
 	{ state = s.state;
@@ -1394,7 +1403,7 @@ let do_new_exit code node all_procs trans unsafes =
 	  exit_transitions = s.exit_transitions;
 	  exit_remaining = s.exit_remaining;
 	  taken_transitions = s.taken_transitions } 
-      in Hashtbl.replace bfs_visited new_hash sn;
+      in Hashtbl.replace bfs_visited new_hash sn
     with Not_found ->
       begin
 	added := 1;
@@ -1409,18 +1418,19 @@ let do_new_exit code node all_procs trans unsafes =
 	    taken_transitions = ExitMap.empty; }
 	in
 	Hashtbl.add bfs_visited new_hash nd;
-	(*let e_m = env_to_satom_map new_env in*)
 	visited_states := new_env::!visited_states;
 	incr visit_count;
 	let f = fresh () in
 	Hashtbl.add remaining_pool f nd;
 	incr pool_size
-      end;
-      if not Options.bench then
-      Format.printf "Unused Exit: Added %d state(s). Removed %d state(s) from pool@." !added !removed
+      end
+    end;
+    if not Options.bench then
+      Format.printf "Unused Exit: Added %d state(s). Removed %d state(s) from pool@." !added !removed;
+    !added, 1
   with
-    | StopExit -> () 
-    | Exit -> raise Exit 
+    | StopExit -> (0,1)
+    | Exit -> raise Exit
       
 
 let choose_random_proc arr n =
@@ -1444,7 +1454,125 @@ let choose_node rand =
       Hashtbl.find remaining_pool rand
     end 
 
+(* The new continue_from_bfs with bandit integration *)
 let continue_from_bfs all_procs transitions all_unsafes =
+  let num_procs = Options.get_int_brab () in
+  let procs = Variable.give_procs num_procs in
+  let arr_procs = Array.of_list procs in
+  if not Options.bench then 
+    Format.printf "Current number of states: %d@." !visit_count;
+ 
+  (* BANDIT: Try to connect to the Python server.
+     If it fails, bandit_conn = None and we fall back to random. *)
+  let bandit_conn =
+    try Some (Bandit_client.connect ())
+    with _ -> 
+      Format.eprintf "Bandit server not available, using random strategy selection.@.";
+      None
+  in
+ 
+  begin try 
+    let running = ref true in
+    while !running do
+      if !visit_count >= Options.fuzz_s then
+        begin
+          if not Options.bench then
+            Format.printf "\n\nSet limit reached@."; raise Exit
+        end;
+ 
+      if !pool_size = 0 then 
+        begin Format.printf "No more states to explore@."; raise Exit end;
+ 
+      let rand = Random.int !pool_size in
+      let node = choose_node rand in
+ 
+      (* BANDIT: Choose strategy via bandit (or random fallback) *)
+      let choice = 
+        match bandit_conn with
+        | Some conn ->
+					(**----new addition for new server*)
+					let total_tr = Hashtbl.length fuzz_tr_count in
+      		let covered_tr = Hashtbl.fold (fun _ v acc -> 
+          	if v > 0 then acc + 1 else acc) fuzz_tr_count 0 in
+						(*-----end new addition----*)
+          	let ctx = Bandit_client.build_context
+            ~node_seen:node.seen
+            ~exit_number:node.exit_number
+            ~exit_remaining:(List.length node.exit_remaining)
+            ~v_count:!visit_count
+            ~p_size:!pool_size
+            ~overall_s:!overall
+						(*new*)
+						~total_tr
+        		~covered_tr
+          in
+          let arm = Bandit_client.select conn ctx in
+          if arm >= 0 && arm < 6 then arm
+          else Random.int 6  (* fallback if server returned garbage *)
+        | None ->
+          (* Original random selection, same weights as before *)
+          let r = Random.int 7 in
+          begin match r with
+          | 0 | 5 -> 0
+          | 1 -> 1 | 6 -> 5 | 4 -> 4 | 3 -> 3 | 2 -> 2
+          | _ -> 0
+          end
+      in
+ 
+      TimerFuzz.pause () ;
+      if Options.fuzz_bench_time && (TimerFuzz.get ()) >= Options.fuzz_bench 
+      then raise Exit
+      else TimerFuzz.start ();
+ 
+			(* BANDIT: Capture reward normalized by time *)
+            let old_tr_cov = Hashtbl.fold (fun _ v acc -> 
+          if v > 0 then acc + 1 else acc) fuzz_tr_count 0 in
+      let t_before = Unix.gettimeofday () in
+
+      let (new_seen, steps_taken) = 
+        match choice with
+        | 0 -> run_forward rand node all_procs transitions all_unsafes
+        | 1 -> markov_entropy rand node all_procs transitions
+        | 2 -> force_procs_forward rand node transitions all_procs 
+                  (choose_random_proc arr_procs num_procs) all_unsafes
+        | 3 -> do_new_exit rand node all_procs transitions all_unsafes
+        | 4 -> run_smart rand node all_procs transitions all_unsafes
+        | 5 -> further_bfs rand node transitions all_procs all_unsafes
+        | _ -> assert false
+      in
+      let t_after = Unix.gettimeofday () in
+      let duration = max (t_after -. t_before) 0.001 in
+      let new_tr_cov = Hashtbl.fold (fun _ v acc -> 
+          if v > 0 then acc + 1 else acc) fuzz_tr_count 0 in
+      let new_transitions = new_tr_cov - old_tr_cov in
+
+      let rate = (float_of_int new_seen) /. duration in
+      let base = sqrt (rate +. 1.0) in
+      let multiplier = 1.0 +. (float_of_int new_transitions) *. 0.3 in
+      let reward = int_of_float (base *. multiplier *. 10.0) in
+
+      begin match bandit_conn with
+        | Some conn -> Bandit_client.update conn choice reward
+        | None -> ()
+      end
+ 
+    done
+  with
+    | Exit -> ()
+  end;
+ 
+  (* BANDIT: Print stats and disconnect *)
+  begin match bandit_conn with
+    | Some conn ->
+      Bandit_client.get_stats conn;
+      (* Optionally save the learned model for warm-starting *)
+      (* Bandit_client.save_model conn "bandit_learned.json"; *)
+      Bandit_client.disconnect conn
+    | None -> ()
+  end
+ 
+
+let continue_from_bfs_old all_procs transitions all_unsafes =
   let num_procs = Options.get_int_brab () in
   let procs = Variable.give_procs num_procs in
   let arr_procs = Array.of_list procs in
@@ -1476,7 +1604,7 @@ let continue_from_bfs all_procs transitions all_unsafes =
     if Options.fuzz_bench_time && (TimerFuzz.get ()) >= Options.fuzz_bench then raise Exit
     else 
     TimerFuzz.start ();
-    match choice with
+    let _ = match choice with
       | 0 -> run_forward rand node all_procs transitions all_unsafes
       | 5 -> run_forward rand node all_procs transitions all_unsafes 
       | 1 -> markov_entropy rand node all_procs transitions
@@ -1485,7 +1613,8 @@ let continue_from_bfs all_procs transitions all_unsafes =
       | 4 -> run_smart rand node all_procs transitions all_unsafes
       | 3 -> do_new_exit rand node all_procs transitions all_unsafes
       | 2 -> force_procs_forward rand node transitions all_procs (choose_random_proc arr_procs num_procs) all_unsafes 
-      | _ -> assert false   
+      | _ -> assert false 
+		in () 
   done
   with
     | Exit -> ()
@@ -1520,7 +1649,6 @@ let initial_seeds original_env transitions all_procs all_unsafes =
 
 let go_from_bfs original_env transitions all_procs all_unsafes tsys =
   List.iter (fun x -> Hashtbl.add initial_tr_count x.tr_name 0) tsys;
-  (*initial_seeds original_env transitions all_procs all_unsafes;*)
   if Options.bench_rand then
     begin
       try 
@@ -1538,18 +1666,21 @@ let go_from_bfs original_env transitions all_procs all_unsafes tsys =
       in
       Hashtbl.add bfs_visited he s;
       Hashtbl.add remaining_pool (fresh ()) s;
-      run_forward 0 s all_procs transitions all_unsafes
+      let _ = run_forward 0 s all_procs transitions all_unsafes in
+      ()
       with
 	| Exit -> ()
     end 
   else
     begin
       interpret_bfs original_env transitions all_procs all_unsafes;
-
-  (*if BFS finished to_do queue, there's no need to keep exploring down*)
       if !pool_size = 0 then ()
-      else continue_from_bfs all_procs transitions all_unsafes 
-    end  
+      else 
+	begin
+	  let _ = continue_from_bfs all_procs transitions all_unsafes in
+	  ()
+	end 
+    end
 
 let semaphore_init s =
   match s with

@@ -682,7 +682,7 @@ let init_to_states env procs s =
       List.rev_append sts acc
     ) [] l_inits in
   List.map (fun st -> 0, st) sts
-  
+
 
 let atom_to_st_req env = function
   | Atom.Comp (t1, op, t2) -> 
@@ -797,8 +797,26 @@ let update_to_actions procs sigma env acc
     swts_to_stites env at sigma swts :: acc
   ) acc indexes
 
-let missing_reqs_to_actions env acct =
-  List.fold_left (fun acc -> function
+  let rec print_action env fmt = function
+  | St_ignore -> ()
+  | St_arith (i, v, c) -> 
+      fprintf fmt "%a + %d" Atom.print 
+	(Atom.Comp (id_to_term env i, Eq, id_to_term env v)) c
+  | St_assign (i, -1) -> 
+      fprintf fmt "%a = ." Term.print (id_to_term env i)
+  | St_assign (i, v) -> 
+      fprintf fmt "%a" Atom.print 
+	(Atom.Comp (id_to_term env i, Eq, id_to_term env v))
+  | St_ite (l, a1, a2) ->
+      fprintf fmt "ITE (";
+      List.iter (fun (i, op, v) -> 
+	eprintf "%a && " Atom.print 
+	  (Atom.Comp (id_to_term env i, op, id_to_term env v))
+      ) l;
+      fprintf fmt ", %a , %a )" (print_action env) a1 (print_action env) a2
+
+let missing_reqs_to_actions env acct aa=
+  let a =List.fold_left (fun acc -> function
       | (a, Eq, b) ->
         (* variable on lhs *)
         let a, b =
@@ -808,7 +826,12 @@ let missing_reqs_to_actions env acct =
             (function St_assign (a', _) -> a = a' | _ -> false) acct
         then acc
         else (St_assign (a,b)) :: acc
-      | _ -> acc) acct
+      | _ -> acc) acct aa
+      in 
+            List.iter (fun a -> 
+	eprintf "====>         %a\n" (print_action env) a;
+      ) a; 
+      a
 
 let value_in_state env st i =
   if i <> -1 && i < env.nb_vars then st.(i) else i
@@ -1277,8 +1300,8 @@ let search procs init =
   let env = init_tables procs init in
   let st_inits = init_to_states env procs init in
   if debug then 
-    List.iter (fun (_, st) ->
-      eprintf "init : %a\n@." SAtom.print (state_to_cube env st))
+    List.iter (fun (iii, st) ->
+      eprintf "init : %d %a\n@." iii SAtom.print (state_to_cube env st))
       st_inits;
   let env = { env with st_trs = transitions_to_func procs env init.t_trans } in
   global_envs := env :: !global_envs;
