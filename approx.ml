@@ -179,8 +179,8 @@ let useless_candidate sa =
   let open Atom in
   SAtom.exists (function
     (* heuristic: remove proc variables *)
-    | (Comp (Elem (p, Var), _, _) as a)
-    | (Comp (_, _, Elem (p, Var)) as a) -> not (proc_present p a sa)
+(*    | (Comp (Elem (p, Var), _, _) as a)
+    | (Comp (_, _, Elem (p, Var)) as a) -> not (proc_present p a sa)*)
 
     | (Comp (Access (s, [p]), _, _) as a)
     | (Comp (_, _, Access (s, [p])) as a) ->
