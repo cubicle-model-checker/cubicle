@@ -76,6 +76,16 @@ module Type = struct
     H.add decl_symbs c 
       (Symbols.name ~kind:Symbols.Constructor c, [], ty)
 
+  let declare_enum t constrs = 
+    if H.mem decl_types t then raise (Error (DuplicateTypeName t));
+    match constrs with
+      | [] -> 
+	H.add decl_types t (Ty.Tabstract t)
+      | _ -> 
+	let ty = Ty.Tsum (t, constrs) in
+	H.add decl_types t ty;
+	List.iter (fun c -> declare_constructor t c) constrs
+
   let declare t constrs = 
     if H.mem decl_types t then raise (Error (DuplicateTypeName t));
     match constrs with

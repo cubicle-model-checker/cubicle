@@ -254,9 +254,9 @@ module AltErgo = struct
     
   let rec add_assign_list globals fmt = function
     | [] -> globals
-    | [g,t] -> fprintf fmt "%a" print_assign (g,t);
+    | [g,t,_] -> fprintf fmt "%a" print_assign (g,t);
 	       HSet.remove g globals
-    | (g,t) :: r ->
+    | (g,t,_) :: r ->
        fprintf fmt "%a and\n" print_assign (g,t);
        add_assign_list (HSet.remove g globals) fmt r
 
@@ -267,12 +267,12 @@ module AltErgo = struct
 		      print_assigns_unchanged r
 
 
-  let print_assigns globals fmt ass =
+  let print_assigns globals fmt ags =
     let globals = List.fold_left (fun acc g -> HSet.add g acc)
 				 HSet.empty globals in
-    let remaining = add_assign_list globals fmt ass in
+    let remaining = add_assign_list globals fmt ags in
     let remaining = HSet.elements remaining in
-    if ass <> [] && remaining <> [] then fprintf fmt " and\n";
+    if ags <> [] && remaining <> [] then fprintf fmt " and\n";
     print_assigns_unchanged fmt remaining
 
   let print_update fmt {up_arr=a; up_arg=args; up_swts=swts} =
@@ -394,8 +394,8 @@ module AltErgo = struct
 			  print_args args print_distinct args
     end;
     fprintf fmt "( (* requires *)\n";
-    print_satom ~prime:false fmt t.tr_reqs;
-    List.iter (fun (j, disj) ->
+    print_satom ~prime:false fmt (fst t.tr_reqs);
+    List.iter (fun (j, disj, _) ->
       fprintf fmt "\nand (forall %a:int." print_proc j;
       distinct_from_params_imp fmt j args;
       fprintf fmt "\n%a" (print_disj ~prime:false) disj;
@@ -787,9 +787,9 @@ module Why3 = struct
 
   let rec add_assign_list globals fmt = function
     | [] -> globals
-    | [g,t] -> fprintf fmt "%a" print_assign (g,t);
+    | [g,t,_] -> fprintf fmt "%a" print_assign (g,t);
 	       HSet.remove g globals
-    | (g,t) :: r ->
+    | (g,t,_) :: r ->
        fprintf fmt "%a /\\@ " print_assign (g,t);
        add_assign_list (HSet.remove g globals) fmt r
 
@@ -929,8 +929,8 @@ module Why3 = struct
 			  print_args args print_distinct args
     end;
     fprintf fmt "@[<hov 2>( (* requires *)@\n";
-    print_satom ~prime:false fmt t.tr_reqs;
-    List.iter (fun (j, disj) ->
+    print_satom ~prime:false fmt (fst t.tr_reqs);
+    List.iter (fun (j, disj, _) ->
       fprintf fmt "\n/\\ (forall %a:int." print_proc j;
       distinct_from_params_imp fmt j args;
       fprintf fmt "\n%a" (print_disj ~prime:false) disj;
@@ -1590,9 +1590,9 @@ module Why3_INST = struct
 
   let rec add_assign_list globals fmt = function
     | [] -> globals
-    | [g,t] -> fprintf fmt "%a" print_assign (g,t);
+    | [g,t,_] -> fprintf fmt "%a" print_assign (g,t);
 	       HSet.remove g globals
-    | (g,t) :: r ->
+    | (g,t,_) :: r ->
        fprintf fmt "%a /\\\n" print_assign (g,t);
        add_assign_list (HSet.remove g globals) fmt r
 
@@ -1730,8 +1730,8 @@ module Why3_INST = struct
 			  print_args args print_distinct args
     end;
     fprintf fmt "( (* requires *)\n";
-    print_satom ~prime:false fmt t.tr_reqs;
-    List.iter (fun (j, disj) ->
+    print_satom ~prime:false fmt (fst t.tr_reqs);
+    List.iter (fun (j, disj, _) ->
       fprintf fmt "\n/\\ (forall %a:int." print_proc j;
       distinct_from_params_imp fmt j args;
       fprintf fmt "\n%a" (print_disj ~prime:false) disj;

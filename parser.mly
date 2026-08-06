@@ -24,7 +24,7 @@
 
 
   (* Helper functions for location info *)
-
+ 
   let loc () = (symbol_start_pos (), symbol_end_pos ())
   let loc_i i = (rhs_start_pos i, rhs_end_pos i)
   let loc_ij i j = (rhs_start_pos i, rhs_end_pos j)
@@ -109,10 +109,12 @@
 %right OR
 %right AND
 %nonassoc prec_ite
-/* %left prec_relation EQ NEQ LT LE GT GE */
-/* %left PLUS MINUS */
+  /* %left prec_relation EQ NEQ LT LE GT GE */
+%left PLUS MINUS
+%left TIMES
 %nonassoc NOT
-/* %left BAR */
+  /* %left BAR */
+%left DOT
 
 %type <Ast.system> system
 %start system
@@ -128,7 +130,7 @@ EOF
   Smt.set_sum true;
   let b = [Hstring.make "@MTrue"; Hstring.make "@MFalse"] in
   List.iter Constructors.add b;
-  let ptype_defs = (loc (), (Hstring.make "mbool", b)) :: ptype_defs in
+  let ptype_defs = Constructors ((loc (), (Hstring.make "mbool", b))) :: ptype_defs in
   let pconsts, pglobals, parrays = $3 in
   psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs $4
    |> encode_psystem 
@@ -200,13 +202,14 @@ size_proc:
   | { () }
   | SIZEPROC INT { Options.size_proc := Num.int_of_num $2 }
 ;
+
       
 type_def:
-  | TYPE lident { (loc (), ($2, [])) }
+  | TYPE lident { Constructors ((loc (), ($2, []))) }
   | TYPE lident EQ constructors 
-      { Smt.set_sum true; List.iter Constructors.add $4; (loc (), ($2, $4)) }
+      { Smt.set_sum true; List.iter Constructors.add $4; Constructors ((loc (), ($2, $4))) }
   | TYPE lident EQ BAR constructors 
-      { Smt.set_sum true; List.iter Constructors.add $5; (loc (), ($2, $5)) }
+      { Smt.set_sum true; List.iter Constructors.add $5; Constructors ((loc (), ($2, $5))) }  						       
 ;
 
 constructors:
@@ -254,7 +257,7 @@ let_assigns_nondets_updates:
   | assigns_nondets_updates { [], $1 }
   | LET lident EQ term IN let_assigns_nondets_updates {
 	  let lets, l = $6 in
-	  ($2, $4) :: lets, l}
+	  ($2, TTerm $4) :: lets, l}
 ;
   
 assigns_nondets_updates:
@@ -262,7 +265,7 @@ assigns_nondets_updates:
   | assign_nondet_update 
       {  
 	match $1 with
-	  | Assign (x, y) -> [x, y], [], []
+	  | Assign (x, y) -> [x, y,loc()], [], []
 	  | Nondet x -> [], [x], []
 	  | Upd x -> [], [], [x]
       }
@@ -270,7 +273,7 @@ assigns_nondets_updates:
       { 
 	let assigns, nondets, upds = $3 in
 	match $1 with
-	  | Assign (x, y) -> (x, y) :: assigns, nondets, upds
+	  | Assign (x, y) -> (x, y, loc()) :: assigns, nondets, upds
 	  | Nondet x -> assigns, x :: nondets, upds
 	  | Upd x -> assigns, nondets, x :: upds
       }
@@ -283,31 +286,18 @@ assign_nondet_update:
 ;
 
 assignment:
-  | mident AFFECT term
-    {
-      if Consts.mem $1 then raise Parsing.Parse_error;
-      Assign ($1, PUTerm $3)
-    }
-  | mident AFFECT CASE switchs
-    { Assign ($1, PUCase $4) }
+  | mident AFFECT term { Assign ($1, PUTerm (TTerm $3)) }
+  | mident AFFECT CASE switchs { Assign ($1, PUCase $4) }
 ;
 
 nondet:
-  | mident AFFECT DOT
-    {
-      if Consts.mem $1 then raise Parsing.Parse_error;
-      Nondet $1
-    }
-  | mident AFFECT QMARK
-    {
-     if Consts.mem $1 then raise Parsing.Parse_error;
-      Nondet $1
-    }
+  | mident AFFECT DOT { Nondet $1 }
+  | mident AFFECT QMARK { Nondet $1 }
 ;
 
 require:
-  | { PAtom (AAtom (Atom.True)) }
-  | REQUIRE LEFTBR expr RIGHTBR { $3 }
+  | { PAtom (AAtom (Atom.True)),loc() }
+  | REQUIRE LEFTBR expr RIGHTBR { $3,loc() }
 ;
 
 update:
@@ -325,83 +315,43 @@ update:
             c :: cube, j :: rjs) ([], []) $3 in
         let a = PAnd cube in
         let js = List.rev rjs in
-	let sw = [(a, $6); (PAtom (AAtom Atom.True), TTerm (Access($1, js)))] in
+	let sw = [(a, TTerm $6); (PAtom (AAtom Atom.True), TTerm (Access($1, js)))] in
 	Upd { pup_loc = loc (); pup_arr = $1; pup_arg = js; pup_swts = sw}  }
+
 ;
 
 switchs:
-  | BAR UNDERSCORE COLON term { [(PAtom (AAtom (Atom.True)), $4)] }
+  | BAR UNDERSCORE COLON term { [(PAtom (AAtom (Atom.True)), TTerm $4)] }
   | BAR switch { [$2] }
   | BAR switch switchs { $2::$3 }
 ;
 
 switch:
-  | expr COLON term { $1, $3 }
+  | expr COLON term { $1, TTerm $3 }
 ;
 
-
-constnum:
-  | REAL { ConstReal $1 }
-  | INT { ConstInt $1 }
-;
-
-var_term:
-  | mident { 
-      if Consts.mem $1 then Const (MConst.add (ConstName $1) 1 MConst.empty)
-      else Elem ($1, sort $1) }
-  | proc_name { Elem ($1, Var) }
-;
-
-top_id_term:
-  | var_term { match $1 with
-                 | Elem (v, Var) -> TVar v
-                 | _ -> TTerm $1 }
-;
-
-
-array_term:
-  | mident LEFTSQ proc_name_list_plus RIGHTSQ {
-    Access ($1, $3)
-  }
-;
-
-var_or_array_term:
-  | var_term { $1 }
-  | array_term { $1 }
-;
-
-arith_term:
-  | var_or_array_term PLUS constnum 
-      { Arith($1, MConst.add $3 1 MConst.empty) }
-  | var_or_array_term MINUS constnum 
-      { Arith($1, MConst.add $3 (-1) MConst.empty) }
-  | var_or_array_term PLUS mident 
-    {
-      if not (Consts.mem $3) then raise Parsing.Parse_error;
-      Arith($1, MConst.add (ConstName $3) 1 MConst.empty)
-    }
-  | var_or_array_term PLUS INT TIMES mident
-      { Arith($1, MConst.add (ConstName $5) (Num.int_of_num $3) MConst.empty) }
-  | var_or_array_term PLUS mident TIMES INT
-      { Arith($1, MConst.add (ConstName $3) (Num.int_of_num $5) MConst.empty) }
-  | var_or_array_term MINUS mident 
-      { Arith($1, MConst.add (ConstName $3) (-1) MConst.empty) }
-  | var_or_array_term MINUS INT TIMES mident 
-      { Arith($1, MConst.add (ConstName $5) (- (Num.int_of_num $3)) MConst.empty) }
-  | var_or_array_term MINUS mident TIMES INT 
-      { Arith($1, MConst.add (ConstName $3) (- (Num.int_of_num $5)) MConst.empty) }
-  | INT TIMES mident 
-      { Const(MConst.add (ConstName $3) (Num.int_of_num $1) MConst.empty) }
-  | MINUS INT TIMES mident 
-      { Const(MConst.add (ConstName $4) (- (Num.int_of_num $2)) MConst.empty) }
-  | constnum { Const (MConst.add $1 1 MConst.empty) }
-;
+  
 
 term:
-  | top_id_term { $1 } 
-  | array_term { TTerm $1 }
-  | arith_term { Smt.set_arith true; TTerm $1 }
-  ;
+  | REAL { Const (MConst.add (ConstReal $1) 1 MConst.empty) }
+  | INT { Const (MConst.add (ConstInt $1) 1 MConst.empty) }
+  | proc_name { Elem ($1, Var) }
+  | mident {
+    let t = if Consts.mem $1 then Const (MConst.add (ConstName $1) 1 MConst.empty)
+      else Elem ($1, sort $1) in  t
+      }
+  | mident LEFTSQ proc_name_list_plus RIGHTSQ { Access ($1, $3) }
+
+    /*| MINUS term { UnOp(UMinus, $2) }
+  | term PLUS term { BinOp($1, Addition, $3) }
+  | term MINUS term { BinOp($1, Subtraction, $3) }
+  | term TIMES term {  BinOp($1, Multiplication, $3) }*/
+      
+  | term PLUS INT { Arith($1, MConst.add (ConstInt $3) 1 MConst.empty) }
+  | term PLUS mident { Arith($1, MConst.add (ConstName $3) 1 MConst.empty) }
+  | term MINUS INT { Arith($1, MConst.add (ConstInt $3) (-1) MConst.empty) }
+  | term MINUS mident { Arith($1, MConst.add (ConstName $3) (-1) MConst.empty) }
+;
 
 lident:
   | LIDENT { Hstring.make $1 }
@@ -465,12 +415,12 @@ literal:
   | TRUE { AAtom Atom.True }
   | FALSE { AAtom Atom.False }
   /* | lident { AVar $1 } RR conflict with proc_name */
-  | term EQ term { AEq ($1, $3) }
-  | term NEQ term { ANeq ($1, $3) }
-  | term LT term { Smt.set_arith true; ALt ($1, $3) }
-  | term LE term { Smt.set_arith true; ALe ($1, $3) }
-  | term GT term { Smt.set_arith true; ALt ($3, $1) }
-  | term GE term { Smt.set_arith true; ALe ($3, $1) }
+  | term EQ term { AEq (TTerm $1, TTerm $3) }
+  | term NEQ term { ANeq (TTerm $1, TTerm $3) }
+  | term LT term { Smt.set_arith true; ALt (TTerm $1, TTerm $3) }
+  | term LE term { Smt.set_arith true; ALe (TTerm $1, TTerm $3) }
+  | term GT term { Smt.set_arith true; ALt (TTerm $3, TTerm $1) }
+  | term GE term { Smt.set_arith true; ALe (TTerm $3, TTerm $1) }
 ;
 
 expr:
@@ -494,11 +444,12 @@ simple_expr:
 ;
 
 
-
 expr_or_term_comma_list:
   | { [] }
-  | term  { [PT $1] }
+  | term  { [PT (TTerm $1)] }
   | expr  { [PF $1] }
-  | term COMMA expr_or_term_comma_list { PT $1 :: $3 }
+  | term COMMA expr_or_term_comma_list { PT (TTerm $1) :: $3 }
   | expr COMMA expr_or_term_comma_list { PF $1 :: $3 }
 ;
+
+

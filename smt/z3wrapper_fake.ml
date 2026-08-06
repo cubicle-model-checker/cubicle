@@ -39,6 +39,7 @@ module Type = struct
   let type_bool = hfake
   let type_proc = hfake
   let declare _ _ = unsupported ()
+  let declare_enum _ _ = unsupported ()
   let all_constructors _ = unsupported ()
   let constructors _ = unsupported ()
   let declared_types _ = unsupported ()

@@ -19,8 +19,6 @@ open Util
 open Ast
 open Format
 
-
-
 type term =
   | TVar of Variable.t
   | TTerm of Term.t
@@ -145,7 +143,7 @@ let print_subst fmt =
 
 type pswts = (cformula * term) list
 
-type pglob_update = PUTerm of term | PUCase of pswts
+type pglob_update = PUTerm of term | PUCase of pswts 
 
 type pupdate = {
   pup_loc : loc;
@@ -154,22 +152,32 @@ type pupdate = {
   pup_swts : pswts;
 }
 
+type parraye_update = {
+  paup : loc;
+  pup_array : Hstring.t;
+  pup_index: Num.num;
+  paup_swts :pswts;
+}
+    
+    
+
 type ptransition = {
   ptr_lets : (Hstring.t * term) list;
   ptr_name : Hstring.t;
   ptr_args : Variable.t list;
-  ptr_reqs : cformula;
-  ptr_assigns : (Hstring.t * pglob_update) list;
+  ptr_reqs : cformula * loc ;
+  ptr_assigns : (Hstring.t * pglob_update * loc) list;
   ptr_upds : pupdate list;
   ptr_nondets : Hstring.t list;
   ptr_loc : loc;
 }
 
 type psystem = {
-  pglobals : (loc * Hstring.t * Smt.Type.t) list;
-  pconsts : (loc * Hstring.t * Smt.Type.t) list;
-  parrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
-  ptype_defs : (loc * Ast.type_constructors) list;
+  pglobals : (loc * Hstring.t * Hstring.t) list;
+  pconsts : (loc * Hstring.t * Hstring.t) list;
+  parrays : (loc * Hstring.t * (Hstring.t list * Hstring.t)) list;
+  (*ptype_defs : (loc * Ast.type_constructors) list;*)
+  ptype_defs : Ast.type_defs list;
   pinit : loc * Variable.t list * cformula;
   pinvs : (loc * Variable.t list * cformula) list;
   punsafe : (loc * Variable.t list * cformula) list;
@@ -288,7 +296,7 @@ let rec apply_subst sigma (f:formula) = match f with
 let app_fun name args =
   try
     let vars, f = Hstring.H.find function_defs name in
-    (* eprintf "app fun %a (%a)@." Hstring.print name Variable.print_vars vars; *)
+    eprintf "app fun %a (%a)@." Hstring.print name Variable.print_vars vars; 
     let nvars, nargs = List.length vars, List.length args in
     if nvars <> nargs then
       failwith (asprintf
@@ -438,7 +446,7 @@ let rec up_quantifiers = function
   | PAnd l ->
     let l' = List.map up_quantifiers l in
     foralls_above_and ([],[]) l'
-  | POr l ->
+  | POr l -> 
     let l' = List.map up_quantifiers l in
     exists_above_or ([],[]) l'
   | PEquiv _ | PImp _ | PIte _ | PNot _  -> assert false
@@ -469,15 +477,17 @@ let satom_of_atom_list =
       | x -> eprintf "%a@." print x;  assert false
     ) SAtom.empty
   
-let satom_of_cube = function
-  | PAtom a -> SAtom.singleton (conv_atom a)
-  | PAnd l -> satom_of_atom_list l
-  | _ -> assert false
+let satom_of_cube c =
+  match c with 
+    | PAtom a -> SAtom.singleton (conv_atom a)
+    | PAnd l -> satom_of_atom_list l
+    | _ -> assert false
 
-let satoms_of_dnf = function
-  | PAtom _ | PAnd _ as c -> [satom_of_cube c]
-  | POr l -> List.map satom_of_cube l
-  | _ -> assert false
+let satoms_of_dnf dnf =
+  match dnf with 
+    | PAtom _ | PAnd _ as c -> [satom_of_cube c]
+    | POr l -> List.map satom_of_cube l
+    | _ -> assert false
 
 let unsafes_of_formula f =
   match up_quantifiers (dnf f) with
@@ -491,13 +501,13 @@ let inits_of_formula f =
 
 let rec forall_to_others tr_args f = match f with
   | PAtom _ -> f
-  | PNot f1 ->
+  | PNot f1 -> 
     let f1' = forall_to_others tr_args f1 in
     if f1 == f1' then f else PNot f1'
-  | PAnd l ->
+  | PAnd l -> 
     let l' = List.map (forall_to_others tr_args) l in
     if List.for_all2 (==) l l' then f else PAnd l'
-  | POr l ->
+  | POr l -> 
     let l' = List.map (forall_to_others tr_args) l in
     if List.for_all2 (==) l l' then f else POr l'
   | PImp (a, b) ->
@@ -519,8 +529,8 @@ let rec forall_to_others tr_args f = match f with
   | PForall  _ | PExists _ | PForall_other _ | PExists_other _ -> f
  
 
-let uguard_of_formula = function
-  | PForall_other ([v], f) -> v, satoms_of_dnf f
+let uguard_of_formula loc = function
+  | PForall_other ([v], f) -> v, satoms_of_dnf f, loc
   | _ -> assert false
 
 let rec classify_guards (req, ureq) = function
@@ -529,28 +539,30 @@ let rec classify_guards (req, ureq) = function
   | PAtom _ as f :: l -> classify_guards (f :: req, ureq) l
   | _ -> assert false
 
-let rec guard_of_formula_aux = function
-  | PAtom _ as f -> [satom_of_cube f, []]
-  | PAnd l ->
+let rec guard_of_formula_aux loc f =
+  match f with 
+  | PAtom _ -> [satom_of_cube f, []]
+  | PAnd l -> 
     let req, ureq = classify_guards ([],[]) l in
-    [satom_of_cube req, List.map uguard_of_formula ureq]
-  | POr l -> List.map guard_of_formula_aux l |> List.flatten
-  | f ->
+    [satom_of_cube req, List.map (uguard_of_formula loc) ureq]
+  | POr l -> List.map (guard_of_formula_aux loc) l |> List.flatten
+  | _ -> 
     let req, ureq = classify_guards ([],[]) [f] in
-    [satom_of_cube req, List.map uguard_of_formula ureq]
+    [satom_of_cube req, List.map (uguard_of_formula loc) ureq]
   (* | _ -> assert false *)
 
-let guard_of_formula tr_args f =
+let guard_of_formula tr_args (f,loc) =
   match f |> forall_to_others tr_args |> dnf |> up_quantifiers with
   | PForall _ | PExists _ | PExists_other _ -> assert false
-  | f -> guard_of_formula_aux f
+  | f -> guard_of_formula_aux loc f 
 
 
 (* Encodings of Ptree systems to AST systems *)
 
-let encode_term = function
-  | TVar v -> Elem (v, Var)
-  | TTerm t -> t
+let encode_term t =
+  match t with 
+    | TVar v -> Elem (v, Var)
+    | TTerm e -> e
 
 
 let encode_pswts pswts =
@@ -561,35 +573,43 @@ let encode_pswts pswts =
     ) [] pswts
   |> List.rev
 
-let encode_pglob_update = function
-  | PUTerm t -> UTerm (encode_term t)
-  | PUCase pswts -> UCase (encode_pswts pswts)
+let encode_pglob_update u =
+  match u with
+    | PUTerm t -> UTerm (encode_term t)
+    | PUCase pswts -> UCase (encode_pswts pswts)
+  
 
-let encode_pupdate {pup_loc; pup_arr; pup_arg; pup_swts} =
-  {  up_loc = pup_loc;
-     up_arr = pup_arr;
-     up_arg = pup_arg;
-     up_swts = encode_pswts pup_swts;
+let encode_pupdate up =
+  {  up_loc = up.pup_loc;
+     up_arr = up.pup_arr;
+     up_arg = up.pup_arg;
+     up_swts = encode_pswts up.pup_swts;
   }
+(*
+let encode_array_update up =
+  {
+    up_loc = up.pup_loc;
+    up_array = up.pup_array;
+    up_arg = up.pup_arg;
+    up_swts = encode_pswts up.pup_swts;
+  }*)
 
-let encode_ptransition
-    {ptr_lets; ptr_name; ptr_args; ptr_reqs; ptr_assigns;
-     ptr_upds; ptr_nondets; ptr_loc;} =
-  let dguards = guard_of_formula ptr_args ptr_reqs in
-  let tr_assigns = List.map (fun (i, pgu) ->
-      (i, encode_pglob_update pgu)) ptr_assigns in
-  let tr_upds = List.map encode_pupdate ptr_upds in
-  let tr_lets = List.map (fun (x, t) -> (x, encode_term t)) ptr_lets in
+let encode_ptransition tr =
+  let dguards = guard_of_formula tr.ptr_args tr.ptr_reqs in
+  let tr_assigns =
+    List.map (fun (i, pgu,loc) -> (i, encode_pglob_update pgu,loc)) tr.ptr_assigns in 
+  let tr_upds = List.map encode_pupdate tr.ptr_upds in
+  let tr_lets = List.map (fun (x, t) -> (x, encode_term t)) tr.ptr_lets in
   List.rev_map (fun (req, ureq) ->
-      {  tr_name = ptr_name;
-         tr_args = ptr_args;
-         tr_reqs = req;
+      {  tr_name = tr.ptr_name;
+         tr_args = tr.ptr_args;
+         tr_reqs = (req, snd tr.ptr_reqs);
          tr_ureq = ureq;
 	 tr_lets = tr_lets;
          tr_assigns;
          tr_upds;
-         tr_nondets = ptr_nondets;
-         tr_loc = ptr_loc }
+         tr_nondets = tr.ptr_nondets;
+         tr_loc = tr.ptr_loc }
     ) dguards
 
 
@@ -620,14 +640,14 @@ let encode_psystem
     List.fold_left (fun acc ptr ->
         List.fold_left (fun acc tr -> tr :: acc) acc (encode_ptransition ptr)
       ) [] ptrans
-    |> List.sort (fun t1 t2  ->
+  |> List.sort (fun t1 t2  ->
         let c = compare (List.length t1.tr_args) (List.length t2.tr_args) in
         if c <> 0 then c else
         let c = compare (List.length t1.tr_upds) (List.length t2.tr_upds) in
         if c <> 0 then c else
         let c = compare (List.length t1.tr_ureq) (List.length t2.tr_ureq) in
         if c <> 0 then c else
-        compare (SAtom.cardinal t1.tr_reqs) (SAtom.cardinal t2.tr_reqs)
+        compare (SAtom.cardinal (fst t1.tr_reqs)) (SAtom.cardinal (fst t2.tr_reqs)) 
       )
   in
   {
@@ -643,7 +663,7 @@ let encode_psystem
       
 
 
-let psystem_of_decls ~pglobals ~pconsts ~parrays ~ptype_defs pdecls =
+let psystem_of_decls ~pglobals ~pconsts ~parrays  ~ptype_defs pdecls =
   let inits, pinvs, punsafe, ptrans =
     List.fold_left (fun (inits, invs, unsafes, trans) -> function
         | PInit i -> i :: inits, invs, unsafes, trans
@@ -678,7 +698,7 @@ let print_type_defs fmt =
           Hstring.print ty
           (Pretty.print_list
              (fun fmt -> fprintf fmt "@{<fg_blue>%a@}" Hstring.print)
-             "@ | ") cstrs
+             "@ | ") cstrs (*TODO: new types*)
     )
 
 let print_globals fmt  =
@@ -730,11 +750,11 @@ let print_invs fmt =
 
 
 let print_reqs fmt (tr_reqs, tr_ureq) =
-  if SAtom.for_all Atom.(equal True) tr_reqs && tr_ureq = [] then ()
+  if SAtom.for_all Atom.(equal True) (fst tr_reqs) && tr_ureq = [] then ()
   else
     fprintf fmt "@{<fg_magenta>requires@} @[<hov 2>{@ %a%a@ }@]@,"
-      SAtom.print_inline tr_reqs
-      (fun fmt -> List.iter (fun (v, u) ->
+      SAtom.print_inline (fst tr_reqs)
+      (fun fmt -> List.iter (fun (v, u, _) ->
            fprintf fmt "@ &&@ @[<hov 1>(@{<fg_magenta>forall_other@} %a.@ %a)@]"
              Variable.print v print_dnf u
          )) tr_ureq
@@ -757,7 +777,7 @@ let print_swts fmt swts =
   | _ -> assert false
 
 let print_assigns fmt tr_assigns =
-  List.iter (fun (g, gu) ->
+  List.iter (fun (g, gu, location) ->
       fprintf fmt "@[<hov>%a@ =@ " Hstring.print g;
       match gu with
       | UTerm t -> fprintf fmt "%a;@]@," Term.print t
@@ -801,12 +821,16 @@ let print_trans fmt =
 
 let print_system fmt { type_defs;
                        globals;
-                       arrays;
+		       arrays;
                        consts;
                        init;
                        invs;
                        unsafe;
                        trans } =
+  let type_defs =
+    List.fold_left (fun (constrs) -> function
+      | Constructors i -> i::constrs
+    ) ([]) type_defs in
   print_type_defs fmt type_defs;
   pp_print_newline fmt ();
   print_globals fmt globals;

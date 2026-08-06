@@ -69,8 +69,7 @@ type cformula = formula
 
 type pswts = (cformula * term) list
 
-type pglob_update = PUTerm of term | PUCase of pswts
-
+type pglob_update = PUTerm of term | PUCase of pswts 
 type pupdate = {
   pup_loc : loc;
   pup_arr : Hstring.t;
@@ -78,22 +77,31 @@ type pupdate = {
   pup_swts : pswts;
 }
 
+
+type parraye_update = {
+  paup : loc;
+  pup_array : Hstring.t;
+  pup_index: Num.num;
+  paup_swts :pswts;
+}
+    
 type ptransition = {
   ptr_lets : (Hstring.t * term) list;
   ptr_name : Hstring.t;
   ptr_args : Variable.t list;
-  ptr_reqs : cformula;
-  ptr_assigns : (Hstring.t * pglob_update) list;
+  ptr_reqs : cformula * loc;
+  ptr_assigns : (Hstring.t * pglob_update * loc) list;
   ptr_upds : pupdate list;
   ptr_nondets : Hstring.t list;
   ptr_loc : loc;
 }
 
 type psystem = {
-  pglobals : (loc * Hstring.t * Smt.Type.t) list;
-  pconsts : (loc * Hstring.t * Smt.Type.t) list;
-  parrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
-  ptype_defs : (loc * Ast.type_constructors) list;
+  pglobals : (loc * Hstring.t * Hstring.t) list;
+  pconsts : (loc * Hstring.t * Hstring.t) list;
+  parrays : (loc * Hstring.t * (Hstring.t list * Hstring.t)) list;
+  (* ptype_defs : (loc * Ast.type_constructors) list;*)
+  ptype_defs : Ast.type_defs list;
   pinit : loc * Variable.t list * cformula;
   pinvs : (loc * Variable.t list * cformula) list;
   punsafe : (loc * Variable.t list * cformula) list;
@@ -116,12 +124,16 @@ val app_fun : Hstring.t -> term_or_formula list -> formula
 val encode_psystem : psystem -> Ast.system
 
 val psystem_of_decls:
-  pglobals : (loc * Hstring.t * Smt.Type.t) list ->
-  pconsts : (loc * Hstring.t * Smt.Type.t) list ->
-  parrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list ->
-  ptype_defs : (loc * Ast.type_constructors) list ->
+  pglobals : (loc * Hstring.t * Hstring.t) list ->
+  pconsts : (loc * Hstring.t * Hstring.t) list ->
+  parrays : (loc * Hstring.t * (Hstring.t list * Hstring.t)) list ->
+
+(*ptype_defs : (loc * Ast.type_constructors) list*) ptype_defs : Ast.type_defs list ->
   pdecl list -> psystem
 
 (** {2 Pretty printing ASTs} *)
 
+
+val print_swts : Format.formatter -> Ast.swts -> unit
+val print_trans: Format.formatter -> Ast.transition_info list -> unit
 val print_system : Format.formatter -> Ast.system -> unit

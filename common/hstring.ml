@@ -40,6 +40,11 @@ module HS = struct
     | [] -> raise Not_found
     | (y, v) :: l -> if equal x y then v else list_assoc x l
 
+  let rec list_assoc_triplet x = function
+    | [] -> raise Not_found
+    | (y, v, k) :: l -> if equal x y then v,k else list_assoc_triplet x l
+	
+
   let rec list_assoc_inv x = function
     | [] -> raise Not_found
     | (y, v) :: l -> if equal x v then y else list_assoc_inv x l

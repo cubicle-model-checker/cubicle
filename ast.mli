@@ -50,11 +50,11 @@ type transition_info = {
   tr_name : Hstring.t; (** name of the transition *)
   tr_args : Variable.t list;
   (** existentially quantified parameters of the transision *)
-  tr_reqs : SAtom.t; (** guard *)
-  tr_ureq : (Variable.t * dnf) list;
+  tr_reqs : SAtom.t * loc; (** guard *)
+  tr_ureq : (Variable.t * dnf * loc) list;
   (** global condition of the guard, i.e. universally quantified DNF *)
   tr_lets : (Hstring.t * Term.t) list;
-  tr_assigns : (Hstring.t * glob_update) list; (** updates of global variables *)
+  tr_assigns : (Hstring.t * glob_update * loc) list; (** updates of global variables *)
   tr_upds : update list; (** updates of arrays *)
   tr_nondets : Hstring.t list;
   (** non deterministic updates (only for global variables) *)
@@ -72,11 +72,14 @@ type transition = {
   tr_reset : unit -> unit;
 }
 
+type type_defs =
+  | Constructors of (loc * type_constructors)
+
 type system = {
   globals : (loc * Hstring.t * Smt.Type.t) list;
   consts : (loc * Hstring.t * Smt.Type.t) list;
-  arrays : (loc * Hstring.t * (Smt.Type.t list * Smt.Type.t)) list;
-  type_defs : (loc * type_constructors) list;
+  arrays : (loc * Hstring.t * (Hstring.t list * Hstring.t)) list;
+  type_defs : type_defs list;
   init : loc * Variable.t list * dnf;
   invs : (loc * Variable.t list * SAtom.t) list;
   unsafe : (loc * Variable.t list * SAtom.t) list;  
